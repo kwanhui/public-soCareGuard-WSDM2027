@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoCareGuard</title>
+<link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">privacy and professional-conduct guardrail proxy for social service practice</span></div>
+  {% if sandbox %}<div class="banner">Synthetic-data sandbox. Do not enter real client information. Every note here is fictional; the model provider receives only the pseudonymised column.</div>{% endif %}
+</header>
+<main>
+  <section class="compose">
+    <form id="compose">
+      <div class="row">
+        <label>Policy pack
+          <select name="pack" id="pack">{% for p in packs %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select>
+        </label>
+        <label>Model
+          <select name="model" id="model">{% for m in models %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select>
+        </label>
+        <label class="grow">Try a scenario
+          <span class="chips">{% for s in scenarios %}<button type="button" class="chip" data-scenario="{{ s.id }}">UC{{ s.use_case }} {{ s.pack }}</button>{% endfor %}</span>
+        </label>
+      </div>
+      <label>What you ask the assistant to do
+        <input name="instruction" id="instruction" placeholder="Summarise this note and draft three next steps" required>
+      </label>
+      <label>Your case note (what you typed)
+        <textarea name="note" id="note" rows="9" placeholder="Paste or type the note here" required></textarea>
+      </label>
+      <div class="row actions">
+        <button type="submit" id="send">Send through the guardrail</button>
+        <span id="status" class="status"></span>
+      </div>
+    </form>
+  </section>
+
+  <section id="result" hidden>
+    <div class="decision" id="decision"></div>
+    <div class="columns">
+      <article><h2>1. What you typed</h2><pre id="col-typed"></pre></article>
+      <article><h2>2. What left the premises</h2><pre id="col-out"></pre><p class="hint">Direct identifiers replaced by consistent surrogates; quasi-identifiers and sensitive attributes generalised. The vault holding the mapping never leaves this server.</p></article>
+      <article><h2>3. What came back</h2><pre id="col-back"></pre><p class="hint">The model's reply as received. It is screened in this form, before anything is re-identified.</p></article>
+      <article><h2>4. What you see</h2><pre id="col-seen"></pre></article>
+    </div>
+    <div class="flags" id="flags"></div>
+    <div class="override" id="override" hidden>
+      <form id="override-form">
+        <label>Keep the draft anyway (recorded in the ledger with your reason)
+          <input id="override-reason" placeholder="Reason for the override" required>
+        </label>
+        <button type="submit">Override</button>
+        <span id="override-status" class="status"></span>
+      </form>
+    </div>
+    <details class="events"><summary>Event stream and ledger</summary><pre id="events"></pre></details>
+  </section>
+</main>
+<footer>
+  <span>Built on LiteLLM, Presidio, GLiNER2-PII and a clause-grounded judge; the policy layer, the generalisation rules, the audience gate and the ledger are the contribution.</span>
+  <span><a href="/v1/ledger/verify">verify ledger</a></span>
+</footer>
+<script>window.SCENARIOS = {{ scenarios_json | safe }};</script>
+<script src="/static/panel.js"></script>
+</body>
+</html>

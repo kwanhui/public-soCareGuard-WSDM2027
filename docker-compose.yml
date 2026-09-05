@@ -1,0 +1,19 @@
+# On-premise deployment: one proxy container, state on a named volume. Presidio and GLiNER run
+# inside the container as libraries, so nothing else is required. Provider keys come from .env.
+services:
+  socareguard:
+    build: .
+    image: socareguard:latest
+    env_file: .env
+    environment:
+      SOCAREGUARD_SANDBOX: "0"
+      SOCAREGUARD_VAULT: /app/vault/socareguard.sqlite
+      SOCAREGUARD_LEDGER: /app/vault/ledger.jsonl
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - socareguard-vault:/app/vault
+    restart: unless-stopped
+volumes:
+  socareguard-vault:

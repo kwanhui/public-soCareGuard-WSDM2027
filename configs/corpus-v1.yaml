@@ -1,0 +1,31 @@
+# Corpus v1 generation config. Append-only once results are reported against it.
+seed: 20260905
+reference_date: 2026-09-01
+
+generation:
+  provider: openai
+  model: gpt-5-mini   # chosen on a 6-note trial: 6/6 valid vs 5/6 for gpt-4.1 and gpt-4.1-mini
+  temperature: 0.9  # ignored by gpt-5 models, recorded for the log
+  workers: 6
+
+drafts:
+  model: gpt-4.1-mini
+  temperature: 0.7
+
+packs:
+  disability: { n_notes: 100 }
+  domestic-violence: { n_notes: 100 }
+  youth-offending: { n_notes: 100 }
+
+# Share of notes carrying a code-switched verbatim quote, and the language mix among them.
+# Malay, Mandarin and Tamil fall back to Singlish when the client's name origin does not match.
+code_switch_share: 0.2
+code_switch_langs: { singlish: 0.5, malay: 0.2, mandarin: 0.2, tamil: 0.1 }
+
+# Client name origin mix, equal share so recall-by-origin has balanced support.
+name_origins: { chinese: 0.2, malay: 0.2, indian: 0.2, eurasian: 0.2, western: 0.2 }
+
+paths:
+  templates: corpus/templates
+  notes: corpus/notes
+  drafts: corpus/drafts

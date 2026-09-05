@@ -1,0 +1,92 @@
+id: domestic-violence
+label: Domestic and family violence
+version: 1
+status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not co-PI reviewed)'
+legal_anchors:
+- SASW Code of Professional Ethics 3rd Rev. (2017) A.6.d, A.7.c, A.2.a-c
+- Women's Charter s.64 (family violence definition), s.65 (PPO) (operative text to verify)
+- PDPC Advisory Guidelines for the Social Service Sector §3.40 (household members' data)
+- Shelter confidentiality justified by practice, not Singapore statute (flagged for PAVE / co-PI review)
+outbound:
+  attributes:
+  - key: dv_disclosure
+    generalise_to: keep_event_drop_specifics
+  - key: ppo
+    generalise_to: status_only
+  - key: safety_plan
+    generalise_to: redact
+  quasi_identifiers:
+  - category: FACILITY
+    kinds:
+    - shelter
+    generalise_to: generic
+  - category: SCHOOL
+    generalise_to: generic
+  - category: ESTATE
+    generalise_to: region
+  - category: EMPLOYER
+    generalise_to: sector
+  never_leak:
+  - current address or shelter name and location
+  - workplace
+  - children's school
+  - new phone number
+  - routine or timing details that locate the survivor
+  - the alleged perpetrator's name in any document the perpetrator may lawfully access
+inbound:
+  categories:
+  - id: I1
+    default_action: annotate
+    note: '''she chose to return'', ''failed to protect'', passive-voice erasure of the perpetrator''s agency'
+  - id: I6
+    default_action: escalate
+    note: treats ongoing risk as ordinary autonomy with no escalation
+  - id: I10
+    default_action: annotate
+    note: sharing with school
+    employer or relatives without consent: null
+  - id: I8
+    default_action: annotate
+    note: predicts the PPO outcome or gives legal advice
+  - id: I12
+    default_action: annotate
+    note: skips the safety assessment
+  - id: I13
+    default_action: regenerate
+  - id: I3
+    default_action: annotate
+  - id: OVER_CAUTION
+    default_action: regenerate
+  - id: I2
+    default_action: annotate
+    note: disrespectful or patronising language about the client
+  - id: I5
+    default_action: annotate
+    note: plan written over the client's stated wishes
+  - id: I7
+    default_action: annotate
+    note: boundary-violating suggestion
+  - id: I9
+    default_action: annotate
+    note: promises outcomes the worker cannot guarantee
+  setting_rules:
+  - id: DV-1
+    name: victim-blaming or responsibility attribution
+    grounded: true
+    clause: A.7.c
+  - id: DV-2
+    name: couples, joint-session or mediation framing where a PPO exists or safety is unestablished
+    grounded: false
+    note: practice-grounded; for co-PI review
+  - id: DV-3
+    name: minimisation of coercive control because no physical assault is described
+    grounded: false
+  - id: DV-4
+    name: unsafe-by-inclusion
+    grounded: true
+    clause: A.6.a
+    note: draft content that reveals a safety plan, shelter location or a disclosure of leaving
+override:
+  allowed: true
+  requires_reason: true
+  escalate_cannot_be_overridden: true

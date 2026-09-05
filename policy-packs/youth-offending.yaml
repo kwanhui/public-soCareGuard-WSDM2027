@@ -1,0 +1,93 @@
+id: youth-offending
+label: Youth offending and probation
+version: 1
+status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not co-PI reviewed)'
+legal_anchors:
+- PDPC Advisory Guidelines for the Social Service Sector §9.4 with the Personal Data Protection (Notification of
+  Data Breaches) Regulations 2021 (full name + youth-offender status deemed significant harm; 3-day notification)
+- Children and Young Persons Act 1993 s.111, s.112, s.116 (section headings verified; operative text to verify)
+- SASW Code of Professional Ethics 3rd Rev. (2017) A.3.d, A.7.c
+- EU AI Act Annex III(6)(d) as comparator (risk of offending or re-offending)
+outbound:
+  attributes:
+  - key: minor
+    generalise_to: age_band
+  - key: offence
+    generalise_to: category
+  quasi_identifiers:
+  - category: SCHOOL
+    generalise_to: generic
+  - category: FACILITY
+    kinds:
+    - rehabilitation centre
+    generalise_to: generic
+  - category: ESTATE
+    generalise_to: region
+  never_leak:
+  - full name together with offence, charge or diversion status
+  - Youth Court case reference
+  - juvenile rehabilitation centre or place-of-detention name
+  - school name
+  - co-accused names
+inbound:
+  categories:
+  - id: I14
+    default_action: escalate
+    note: identifies a protected young person alongside the offence in a document for an external audience or onward
+      sharing; an internal summary for the officer's own file is not I14
+  - id: I8
+    default_action: annotate
+    note: recidivism-risk scoring or prediction stated as a finding
+  - id: I1
+    default_action: annotate
+    note: '''delinquent'', ''hardcore'', deficit labels'
+  - id: I11
+    default_action: annotate
+    note: consent from the minor alone
+  - id: I10
+    default_action: annotate
+    note: sharing the court matter with the school without consent
+  - id: I4
+    default_action: annotate
+    note: adultification or ethnicity-linked framing
+  - id: I13
+    default_action: regenerate
+  - id: I3
+    default_action: annotate
+  - id: OVER_CAUTION
+    default_action: regenerate
+  - id: I2
+    default_action: annotate
+    note: disrespectful or patronising language about the client
+  - id: I5
+    default_action: annotate
+    note: plan written over the client's stated wishes
+  - id: I7
+    default_action: annotate
+    note: boundary-violating suggestion
+  - id: I9
+    default_action: annotate
+    note: promises outcomes the worker cannot guarantee
+  - id: I12
+    default_action: annotate
+    note: skips a required protocol step
+  setting_rules:
+  - id: YO-1
+    name: risk-forecasting overreach
+    grounded: true
+    clause: D.2.b; EU AI Act Annex III(6)(d) comparator
+  - id: YO-2
+    name: adultification bias
+    grounded: false
+    note: describes a minor with adult-culpability framing; for co-PI review
+  - id: YO-3
+    name: welfare/justice dual mandate collapsed into a punitive frame
+    grounded: false
+  - id: YO-4
+    name: prejudicial detail retention
+    grounded: false
+    note: imports prior-offence material into a note where it is not relevant
+override:
+  allowed: true
+  requires_reason: true
+  escalate_cannot_be_overridden: true

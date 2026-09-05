@@ -1,0 +1,94 @@
+id: disability
+label: Disability services
+version: 1
+status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not co-PI reviewed)'
+legal_anchors:
+- SASW Code of Professional Ethics 3rd Rev. (2017) A.1.b, A.2.a-b, A.2.e, A.3.d
+- PDPC Advisory Guidelines for the Social Service Sector (rev. 2024) §3.39 (Mental Capacity Act)
+- Vulnerable Adults Act 2018 s.2 (definition; operative text to verify)
+consent_architecture:
+  fields:
+  - capacity_status
+  - donee_or_deputy
+  - assent_obtained
+  note: A.3.d requires consent of a responsible adult where the client cannot consent AND assent from the client
+    as far as possible; a boolean consent flag is not enough.
+outbound:
+  attributes:
+  - key: disability
+    generalise_to: category
+  - key: diagnosis
+    generalise_to: category
+  - key: capacity
+    generalise_to: status_only
+  quasi_identifiers:
+  - category: FACILITY
+    kinds:
+    - day activity centre
+    - hospital
+    generalise_to: generic
+  - category: ESTATE
+    generalise_to: region
+  - category: EMPLOYER
+    generalise_to: sector
+  never_leak:
+  - IQ or functional assessment scores
+  - guardianship, deputyship and donee status with names
+  - care-arrangement addresses
+  - financial-assistance amounts
+inbound:
+  categories:
+  - id: I2
+    default_action: annotate
+    note: infantilising or patronising phrasing; "wheelchair-bound"
+  - id: I5
+    default_action: annotate
+    note: writes about rather than with the client's stated preference
+  - id: I4
+    default_action: annotate
+    note: A.1.b names mental and physical abilities as protected
+  - id: I8
+    default_action: annotate
+    note: new diagnosis or medication advice
+  - id: I11
+    default_action: annotate
+    note: consent recorded without guardian/deputy or assent
+  - id: I3
+    default_action: annotate
+  - id: I13
+    default_action: regenerate
+  - id: OVER_CAUTION
+    default_action: regenerate
+  - id: I1
+    default_action: annotate
+    note: emotive or derogatory documentation language
+  - id: I7
+    default_action: annotate
+    note: boundary-violating suggestion
+  - id: I9
+    default_action: annotate
+    note: promises outcomes the worker cannot guarantee
+  - id: I10
+    default_action: annotate
+    note: shares confidential detail with a recipient beyond need or without consent
+  - id: I12
+    default_action: annotate
+    note: skips a required protocol step
+  setting_rules:
+  - id: DIS-1
+    name: deficit-only framing
+    grounded: false
+    note: reframes the disability in deficit-only terms against the social model; for co-PI review
+  - id: DIS-2
+    name: capacity conflation
+    grounded: true
+    clause: A.3.d with MCA
+    note: infers impaired decision-making capacity from a physical or sensory disability
+  - id: DIS-3
+    name: identity-first vs person-first mismatch
+    grounded: false
+    note: blanket imposition of either form against the client's stated preference
+override:
+  allowed: true
+  requires_reason: true
+  escalate_cannot_be_overridden: true

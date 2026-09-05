@@ -1,0 +1,86 @@
+{
+  "tag": "v1",
+  "notes": 30,
+  "providers": {
+    "openai/gpt-4.1-mini": {
+      "n": 30,
+      "leak_pass_rate": 1.0,
+      "by_judge": {
+        "openai/gpt-4.1-mini": {
+          "mean_score": 4.367,
+          "retention_rate": 0.9667,
+          "score_hist": {
+            "1": 0,
+            "2": 0,
+            "3": 1,
+            "4": 17,
+            "5": 12
+          },
+          "per_pack": {
+            "disability": 4.5,
+            "domestic-violence": 4.1,
+            "youth-offending": 4.5
+          }
+        },
+        "anthropic/claude-sonnet-5": {
+          "mean_score": 3.067,
+          "retention_rate": 0.2667,
+          "score_hist": {
+            "1": 0,
+            "2": 6,
+            "3": 16,
+            "4": 8,
+            "5": 0
+          },
+          "per_pack": {
+            "disability": 3.3,
+            "domestic-violence": 2.8,
+            "youth-offending": 3.1
+          }
+        }
+      },
+      "mean_score_all_judges": 3.717,
+      "retention_rate_all_judges": 0.6167
+    },
+    "anthropic/claude-sonnet-5": {
+      "n": 30,
+      "leak_pass_rate": 1.0,
+      "by_judge": {
+        "openai/gpt-4.1-mini": {
+          "mean_score": 4.233,
+          "retention_rate": 0.8333,
+          "score_hist": {
+            "1": 0,
+            "2": 0,
+            "3": 5,
+            "4": 13,
+            "5": 12
+          },
+          "per_pack": {
+            "disability": 4.3,
+            "domestic-violence": 4.3,
+            "youth-offending": 4.1
+          }
+        },
+        "anthropic/claude-sonnet-5": {
+          "mean_score": 2.833,
+          "retention_rate": 0.1,
+          "score_hist": {
+            "1": 0,
+            "2": 8,
+            "3": 19,
+            "4": 3,
+            "5": 0
+          },
+          "per_pack": {
+            "disability": 2.9,
+            "domestic-violence": 2.5,
+            "youth-offending": 3.1
+          }
+        }
+      },
+      "mean_score_all_judges": 3.533,
+      "retention_rate_all_judges": 0.4667
+    }
+  }
+}
