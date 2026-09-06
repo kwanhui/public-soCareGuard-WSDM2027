@@ -73,7 +73,10 @@ class Guard:
         replacements: list[dict[str, str]] = []
         for m in messages:
             if m.get("role") in ("user", "system") and m.get("content"):
-                s = san.sanitise(m["content"], session=session, seed=seed, seq_start=seq)
+                # The practitioner's instruction (first paragraph) is substituted but never
+                # generalised: an attribute cue such as "probation" in an instruction must not
+                # rewrite the instruction itself. Attributes are generalised in the note body.
+                s = _sanitise_message(san, m["content"], session, seed, seq)
                 out_msgs.append({"role": m["role"], "content": s.text})
                 events += s.events
                 seq += 3
@@ -257,6 +260,15 @@ class Guard:
                 "decision": "override",
             }
         )
+
+
+def _sanitise_message(san: Sanitiser, content: str, session: str, seed: int | None, seq: int):
+    """One pass over the whole message. Attribute generalisation is suppressed inside the first
+    paragraph, which is the practitioner's instruction, so a cue such as "probation" there cannot
+    rewrite the instruction; entities in the instruction are still substituted."""
+    head, sep, _body = content.partition("\n\n")
+    floor = len(head) + len(sep) if sep else 0
+    return san.sanitise(content, session=session, seed=seed, seq_start=seq, attribute_floor=floor)
 
 
 def _instruction(messages: list[dict[str, str]]) -> str:

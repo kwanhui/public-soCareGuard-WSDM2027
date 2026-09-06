@@ -61,6 +61,22 @@ AGENCY_STOPLIST = {
     "wsg",
     "e2i",
 }
+_LEADING_STOP = {
+    "attends",
+    "attend",
+    "client",
+    "visited",
+    "lives",
+    "referred",
+    "at",
+    "the",
+    "from",
+    "to",
+    "in",
+    "contact",
+    "met",
+    "seen",
+}
 _LINK_WORDS = {
     "bin",
     "binti",
@@ -129,6 +145,8 @@ def _sane(h: Hit) -> bool:
         return False
     if h.category == "NRIC" and not re.fullmatch(r"[STFGMstfgm]\d{7}[A-Za-z]", t):
         return False
+    if h.category == "NAME" and not any(c.isupper() for c in t):
+        return False
     return not (
         h.category == "NAME"
         and (not re.search(r"[A-Za-z]", t) or len(t) < 2 or t.lower() in _LINK_WORDS)
@@ -195,8 +213,18 @@ def _merge_addresses(text: str, hits: list[Hit]) -> list[Hit]:
     return out
 
 
+def _trim_leading(h: Hit) -> Hit:
+    """'Attends Sunbeam Day Activity Centre' -> 'Sunbeam Day Activity Centre'."""
+    if h.category not in {"FACILITY", "SCHOOL"}:
+        return h
+    first, _, rest = h.text.partition(" ")
+    if first.lower() in _LEADING_STOP and rest:
+        return Hit(h.start + len(first) + 1, h.end, rest, h.category, h.detector, h.score)
+    return h
+
+
 def _resolve(hits: list[Hit]) -> list[Hit]:
-    hits = [h for h in hits if h.category != "DATE" and _sane(h)]
+    hits = [_trim_leading(h) for h in hits if h.category != "DATE" and _sane(h)]
     ranked = sorted(
         hits,
         key=lambda h: (

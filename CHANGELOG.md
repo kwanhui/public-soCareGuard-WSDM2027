@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased (2026-09-06)
+
+- `demo/record_video.py` rewritten to the lab house style: title and end cards, burned-in
+  full-sentence captions, no audio, live waits trimmed to eight seconds with the measured
+  latency stated, manifest, trim plan, cut summary and review frames. Final cut 2:31.
+- Sanitiser fixes found by the takes: the instruction line before the first blank line is never
+  generalised (`attribute_floor`); a NAME needs an uppercase letter; a leading verb such as
+  "Attends" is trimmed from facility and school spans; adjacent identical generalised phrases
+  collapse to one; the article before a generalised phrase is dropped ("at a cafe" becomes "at an
+  employer", not "at a an employer"), including when a generalised attribute precedes it; a
+  two-letter surname gets its derived restore form.
+- The panel endpoint lists derived vault pairs; scenario fixtures re-recorded on the fixed code.
+
 ## demo-v1 (2026-09-05)
 
 - Transparency panel at `/`: four columns with highlighted substitutions, flag cards with
@@ -7,7 +20,8 @@
 - Sandbox mode with banner and per-address rate limit; `Dockerfile` for a Hugging Face Space
   with models warmed into the image; `docker-compose.yml` for an agency server.
 - Public snapshot script and deploy-only workflow; `demo/record_video.py` (Playwright,
-  text-to-speech, ffmpeg) produced a 154 s narrated video, stored in the paper repo.
+  text-to-speech, ffmpeg) produced a 154 s narrated video, stored in the paper repo
+  (superseded by the captions-only cut, see Unreleased).
 
 ## screen-v1 (2026-09-05)
 

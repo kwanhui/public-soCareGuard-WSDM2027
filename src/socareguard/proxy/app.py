@@ -215,7 +215,18 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         res = app.state.sessions.get(session)
         if not res:
             raise HTTPException(404, "unknown session")
-        return {"session": session, "replacements": res.replacements}
+        derived = [
+            {
+                "original": m.original,
+                "outbound": m.surrogate,
+                "category": m.category,
+                "type": "DIRECT",
+                "kind": "derived",
+            }
+            for m in app.state.guard.vault.mappings(session)
+            if m.kind == "derived"
+        ]
+        return {"session": session, "replacements": res.replacements + derived}
 
     @app.get("/v1/ledger/verify")
     def verify():

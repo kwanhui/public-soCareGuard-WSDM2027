@@ -93,12 +93,19 @@ class Sanitiser:
         return getattr(factory, method)(h.text), "surrogate", None
 
     def sanitise(
-        self, text: str, session: str, seed: int | None = None, seq_start: int = 1
+        self,
+        text: str,
+        session: str,
+        seed: int | None = None,
+        seq_start: int = 1,
+        attributes: bool = True,
+        attribute_floor: int = 0,
     ) -> Sanitised:
         det = detect(
             text,
             use_presidio=self.use_presidio,
             use_gliner=self.use_gliner,
+            attributes=attributes,
             attribute_keys={r.key for r in self.pack.outbound.attributes},
         )
         # An attribute clause may absorb name spans (the generalised phrase names the role, not the
@@ -107,6 +114,8 @@ class Sanitiser:
         names = {"NAME", "THIRD_PARTY_NAME"}
         spans = list(det.entities)
         for a_hit in det.attributes:
+            if a_hit.start < attribute_floor:
+                continue
             overlapping = [e for e in det.entities if e.start < a_hit.end and a_hit.start < e.end]
             if all(e.category in names for e in overlapping):
                 spans = [e for e in spans if e not in overlapping] + [a_hit]
@@ -137,7 +146,25 @@ class Sanitiser:
                 and _at_sentence_start("".join(out) + text[pos : h.start])
             ):
                 new = new[0].upper() + new[1:]
-            out.append(text[pos : h.start])
+            gap = text[pos : h.start]
+            if kind == "generalised" and new and new.split(" ", 1)[0].lower() in {"a", "an", "the"}:
+                # "at a cafe" -> "at an employer": drop the article that precedes the generalised phrase
+                m_art = re.search(r"\b(a|an|the)\s*$", gap, re.IGNORECASE)
+                if m_art:
+                    gap = gap[: m_art.start()]
+                elif not gap.strip() and out:
+                    m_out = re.search(r"\b(a|an|the)\s*$", out[-1], re.IGNORECASE)
+                    if m_out:
+                        out[-1] = out[-1][: m_out.start()]
+            if kind == "generalised" and replacements and replacements[-1][2] == "generalised":
+                prev_hit, prev_new, _ = replacements[-1]
+                between = text[prev_hit.end : h.start]
+                if (
+                    prev_new.lower().rstrip(".") == new.lower().rstrip(".")
+                    and len(between.strip(" ;,.")) == 0
+                ):
+                    new = ""  # the same generalised statement twice in a row: keep one
+            out.append(gap)
             out.append(new)
             pos = h.end
             replacements.append((h, new, kind))
@@ -244,7 +271,7 @@ def _derived_forms(category: str, original: str, surrogate: str) -> list[tuple[s
             o
             and n
             and o != n
-            and len(n) >= 3
+            and len(n) >= 2
             and n.lower() not in _COMMON_WORDS
             and o.lower() != original.lower()
         ):
