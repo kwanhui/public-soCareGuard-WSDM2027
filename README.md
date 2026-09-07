@@ -12,7 +12,7 @@ short_description: Privacy and professional-conduct guardrail proxy for social s
 
 # SoCareGuard
 
-> **Status:** in-progress (build step 4 of 5: demo surface done; paper next)
+> **Status:** public snapshot of the system demonstrated in the WSDM 2027 submission. Pinned versions in `requirements-lock.txt`.
 
 An on-premise, OpenAI-compatible guardrail proxy that lets Singapore social service
 agencies use commercial LLMs for drafting without sending client material across the
@@ -45,7 +45,7 @@ Singapore quasi-identifier model, and the accountability ledger.
 ## Install
 
 ```bash
-git clone https://github.com/kwanhui/public-soCareGuard-WSDM2027.git
+git clone https://github.com/kwanhui/public-SoCareGuard-WSDM2027.git
 cd public-soCareGuard-WSDM2027
 uv python install 3.12 && uv venv --python 3.12 .venv && source .venv/bin/activate
 make install            # package + dev tools
@@ -202,6 +202,42 @@ make test     # pytest
 make lint     # ruff check
 make format   # ruff format
 ```
+
+## Operating the proxy
+
+Environment variables read at start-up (all optional):
+
+| Variable | Default | What it does |
+|---|---|---|
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` | | provider keys for the drafting model, the judge and the moderation baseline |
+| `SOCAREGUARD_DEFAULT_MODEL`, `SOCAREGUARD_MODELS` | `openai/gpt-4.1-mini`; `openai/gpt-4.1-mini,anthropic/claude-sonnet-5` | drafting models offered; an unknown model falls back to the default and the response says `model_defaulted` |
+| `SOCAREGUARD_JUDGE_MODEL` | `openai/gpt-4.1` | the conduct judge |
+| `SOCAREGUARD_DEFAULT_PACK` | `domestic-violence` | pack used when a request carries no `X-SoCareGuard-Pack` (the response says `pack_defaulted`) |
+| `SOCAREGUARD_API_KEYS` | unset | comma-separated bearer keys; when set every `/v1` route requires one and ledger actors are marked attested |
+| `SOCAREGUARD_SUPERVISOR_KEYS` | unset | keys allowed to release a withheld draft (`GET /v1/sessions/{id}/withheld`) |
+| `SOCAREGUARD_SANDBOX` | `0` | banner, self-asserted actors, 24-hour retention |
+| `SOCAREGUARD_MAX_REQUESTS_PER_HOUR` | `0` (unlimited; the Space image sets 20) | per-address rate limit |
+| `SOCAREGUARD_TRUST_PROXY` | `0` | honour `X-Forwarded-For` (set only behind a reverse proxy you control) |
+| `SOCAREGUARD_RETENTION_HOURS` | `24` in sandbox, else `0` | purge vault mappings older than this; `0` keeps them until `DELETE /v1/sessions/{id}` |
+| `SOCAREGUARD_MAX_SESSIONS` | `500` | in-memory session results kept for the panel |
+| `SOCAREGUARD_VAULT`, `SOCAREGUARD_LEDGER`, `SOCAREGUARD_VAULT_KEY` | `vault/socareguard.sqlite`, `vault/ledger.jsonl`, key file beside the vault | where state lives; the proxy refuses to mint a new key over an existing vault unless `SOCAREGUARD_VAULT_NEW_KEY=1` |
+| `SOCAREGUARD_SCREEN` | `auto` | `off` disables the conduct screen (tests) |
+
+Deploying for an agency: run `docker compose up` behind the agency's reverse proxy with TLS, set
+`SOCAREGUARD_API_KEYS` (one key per client application) and `SOCAREGUARD_SUPERVISOR_KEYS`, put the
+staff identity in `X-SoCareGuard-Actor` from the calling application (the ledger marks a key-backed
+actor as attested), set `SOCAREGUARD_TRANSFER_BASIS` to the agency's contractual basis with the
+provider, and back up `vault/socareguard.key` separately from the vault volume (without the key the
+mappings are unreadable; with a snapshot of both they are readable). If a provider or the judge
+fails the request fails closed with HTTP 503 and nothing is drafted. Detection is not perfect:
+column 2 of the panel is what left, and a practitioner should read it before relying on the guard.
+
+Endpoints: `POST /v1/chat/completions` (headers `X-SoCareGuard-Pack`, `X-SoCareGuard-Session`,
+`X-SoCareGuard-Actor`, `X-SoCareGuard-Audience`), `GET /v1/models`, `GET /v1/packs`,
+`GET /v1/packs/{id}`, `GET /v1/sessions/{id}` and `/panel` (require the session token returned
+with the completion, or an API key), `GET /v1/sessions/{id}/withheld` (supervisor),
+`DELETE /v1/sessions/{id}` (purge, ledgered), `GET /v1/ledger?session=`, `GET /v1/ledger/verify`,
+`GET /healthz`. Errors use the OpenAI `error` envelope.
 
 ## Citation
 

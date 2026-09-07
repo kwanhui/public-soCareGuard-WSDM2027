@@ -69,7 +69,7 @@ FACILITY_RE = re.compile(
 )
 
 AGE_RE = re.compile(
-    r"(?:\b(?:aged?|age:?)\s*(\d{1,2})\b|\b(\d{1,2})\s*(?:-|\s)?(?:year[- ]old|yo|y/o|years?\s+old|years)\b|\((\d{1,2})\)|\b(\d{1,2})\s?[MF]\b)",
+    r"(?:\b(?:aged?|age:?)\s*(\d{1,2})\b|\b(\d{1,2})\s*(?:-|\s)?(?:year[- ]old|yo|y/o|years?\s+old|years)\b|(?<=[A-Za-z])\s?\((\d{1,2})\)|\b(\d{1,2})\s?[MF]\b)",
     re.IGNORECASE,
 )
 
@@ -108,6 +108,12 @@ def find_ages(text: str) -> list[Hit]:
         num = next(g for g in m.groups() if g)
         if not 0 < int(num) < 110:
             continue
+        if m.group(3):
+            # "(8)" is an age only after a capitalised word, a name: "Aqil (8)". After a lower-case
+            # word it is a list marker or a count: "appeal (2)".
+            before = text[: m.start()].rstrip()
+            if not re.search(r"[A-Z][a-z]*$", before):
+                continue
         # Report the number only, so the surrounding words are untouched by substitution.
         s = m.start() + m.group(0).index(num)
         out.append(Hit(s, s + len(num), num, "AGE", "sg.age", 0.8))

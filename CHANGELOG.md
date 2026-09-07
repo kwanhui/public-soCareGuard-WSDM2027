@@ -1,6 +1,22 @@
 # Changelog
 
-## Unreleased (2026-09-06)
+## Unreleased (2026-09-07): five stakeholder review rounds
+
+- Reports, fix logs and a summary under `docs/reviews/2026-09-07-stakeholder-rounds/`. In brief:
+  per-request identity map and session tokens; escalation withholds the draft, flags included, and
+  a supervisor releases it with a reason; vault keyed per entity with ambiguity-safe restoration
+  and surrogate reuse within a session; enforceable never_leak patterns; offence, capacity and PPO
+  polarity rules with a regression suite and scenario-level outbound tests; audience gate with
+  external recipients winning and pack-specific statutory recipients; hospital, passport, bank,
+  handle and vehicle recognisers; titled names; role words, scheme names and order acronyms never
+  substituted; ledger rows carry recipients, actor attestation, pack hash, rules fired, build,
+  audience and leak detail; retention sweep; fail-closed 503; OpenAI error envelope, /v1/models,
+  /v1/packs, /v1/ledger, session purge. Panel: legend, plain-language flag cards with the judge's
+  reason, per-flag overrides, rewrite acceptance, regenerate with a compare strip, same-session
+  audience gate, escalation chip with supervisor release, replay of the recorded reply by default
+  on shipped chips, integration snippet, operator docs.
+
+## 2026-09-06
 
 - `demo/record_video.py` rewritten to the lab house style: title and end cards, burned-in
   full-sentence captions, no audio, live waits trimmed to eight seconds with the measured

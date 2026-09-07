@@ -21,6 +21,7 @@ _TITLES = ("mdm", "ms", "mr", "mrs", "master", "encik", "cik", "puan")
 _LINK_TOKENS = {
     "bin",
     "binti",
+    "binte",
     "bte",
     "s/o",
     "d/o",
@@ -38,7 +39,7 @@ _LINK_TOKENS = {
 
 def guess_origin(name: str) -> str:
     n = name.lower()
-    if re.search(r"\b(bin|binti|bte|bt)\b", n):
+    if re.search(r"\b(bin|binti|binte|bte|bt)\b", n):
         return "malay"
     if re.search(r"\b(s/o|d/o|a/l|a/p)\b", n):
         return "indian"
@@ -83,7 +84,7 @@ def title_token(name: str) -> str | None:
 
 def guess_gender(name: str) -> str:
     n = name.lower()
-    if re.search(r"\b(binti|bte|bt|d/o|a/p|mdm|ms|mrs|puan|cik|nur|siti)\b", n):
+    if re.search(r"\b(binti|binte|bte|bt|d/o|a/p|mdm|ms|mrs|puan|cik|nur|siti)\b", n):
         return "female"
     if re.search(r"\b(bin|s/o|a/l|mr|master|encik|muhammad|mohamed|mohammad)\b", n):
         return "male"
@@ -173,13 +174,19 @@ class SurrogateFactory:
             if origin == "chinese" and (len(p.full.split()) == 4) != english_given:
                 continue
             toks = {t.lower() for t in re.split(r"[\s,()/]+", p.full) if len(t) >= 3} - _LINK_TOKENS
+            tt = (title_token(p.full) or "").lower()
             if (
                 p.full.lower() in self.used
+                or p.short.lower() in self.used
+                or (tt and tt in self.used)
                 or p.full.lower() in self.forbidden
+                or p.short.lower() in self.forbidden
                 or toks & self.forbidden_tokens
+                or toks & self.used
             ):
                 continue
-            self.used.update({p.full.lower(), p.short.lower()})
+            # Two people in one session never share a full name, a short form or a title token.
+            self.used.update({p.full.lower(), p.short.lower()} | toks | ({tt} if tt else set()))
             return p
         raise RuntimeError("no fresh name")
 
@@ -279,14 +286,25 @@ class SurrogateFactory:
     def email(self, original: str) -> str:
         return self._fresh(lambda: f"user{self.rng.randint(100, 99999)}@example.org")
 
+    def passport(self, original: str) -> str:
+        prefix = original[0].upper() if original and original[0].isalpha() else "E"
+        return self._fresh(
+            lambda: (
+                prefix
+                + "".join(str(self.rng.randint(0, 9)) for _ in range(7))
+                + self.rng.choice("ABCDEFGHJKLMNPQRSTUVWXYZ")
+            )
+        )
+
+    def handle(self, original: str) -> str:
+        """A social handle is replaced by a neutral one: the original often carries a real name."""
+        return self._fresh(lambda: f"@user{self.rng.randint(1000, 999999)}")
+
     def generic(self, original: str) -> str:
         """Re-digit if there are digits, otherwise re-letter the same shape."""
         if re.search(r"\d", original):
             return self._fresh(
                 lambda: re.sub(r"\d", lambda m: str(self.rng.randint(0, 9)), original)
             )
-        return self._fresh(
-            lambda: re.sub(
-                r"[A-Za-z]", lambda m: self.rng.choice("abcdefghijklmnopqrstuvwxyz"), original
-            )
-        )
+        # Letters only: a re-lettered string reads as gibberish, so name the kind instead.
+        return self._fresh(lambda: f"an organisation ({self.rng.randint(1, 99)})")

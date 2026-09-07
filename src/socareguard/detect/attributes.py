@@ -24,7 +24,7 @@ CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "safety_plan": re.compile(
-        r"\b(safety plan\w*|safety steps|packed bag|spare (?:set of )?keys?|code word|escape (?:route|plan)|exit plan)\b",
+        r"\b(safety plan\w*|safety steps|safety measures|harm reduction|packed bag|go[- ]bag|spare (?:set of )?keys?|code word|escape (?:route|plan)|exit plan|safe (?:place|room|house)|hides? (?:her|his|the) (?:passport|documents|phone))\b",
         re.IGNORECASE,
     ),
     "minor": re.compile(
@@ -40,7 +40,8 @@ CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "diagnosis": re.compile(
-        r"\b(diagnos\w*|schizophreni\w*|bipolar|depressi\w*|anxiety disorder|epilep\w*|dementia|stroke|cerebral palsy|autis\w*|ADHD|down syndrome|psychiatric|IMH follow[- ]up|medication)\b",
+        r"\b(diagnos\w*|schizophreni\w*|bipolar|depressi\w*|anxiety disorder|epilep\w*|dementia|stroke|cerebral palsy|autis\w*|ADHD|down syndrome|psychiatric|IMH follow[- ]up|medication"
+        r"|(?:mild|moderate|severe|profound)?\s*(?:intellectual|learning|developmental) (?:disability|delay)|global developmental delay|spondylosis|lumbar|cardiac|diabet\w*|hypertens\w*|cancer|renal|dialysis)\b",
         re.IGNORECASE,
     ),
     "disability": re.compile(
@@ -48,7 +49,7 @@ CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
 }
-_BOUNDARY = re.compile(r"[.;\n]|(?<=[a-z]),\s+(?=(?:and|but|which|who)\b)")
+_BOUNDARY = re.compile(r"[;\n]|\.(?=\s|$)|(?<=[a-z]),\s+(?=(?:and|but|which|who)\b)")
 
 
 def _clause(text: str, pos: int) -> tuple[int, int]:

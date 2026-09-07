@@ -8,22 +8,35 @@
 </head>
 <body>
 <header>
-  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">privacy and professional-conduct guardrail proxy for social service practice</span></div>
-  {% if sandbox %}<div class="banner">Synthetic-data sandbox. Do not enter real client information. Every note here is fictional; the model provider receives only the pseudonymised column.</div>{% endif %}
+  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">an on-premise guardrail proxy between a social worker's tools and a commercial model</span></div>
+  {% if sandbox %}<div class="banner">Synthetic-data sandbox. Do not enter real client information. Every note here is fictional. The model provider receives column 2 only; the identity map stays on this server.</div>{% endif %}
 </header>
 <main>
   <section class="compose">
     <form id="compose">
+      <div class="chiprow" role="group" aria-label="Load a scenario">
+        <span class="chiplabel">Start with a scenario</span>
+        {% for s in scenarios %}<button type="button" class="chip" data-scenario="{{ s.id }}" title="{{ s.summary }}">{% if s.use_case <= 4 %}UC{{ s.use_case }} · {% endif %}{{ s.short }}</button>{% endfor %}
+        <span class="chiplabel muted">or type your own note below</span>
+      </div>
+      <p id="scenario-summary" class="summary" hidden></p>
+      <p id="replay-row" class="summary" hidden><label class="inline"><input type="checkbox" id="replay"> Replay this scenario's recorded model reply instead of calling the provider (the guard, the judge and the ledger still run live; the outcome then matches the paper's account).</label></p>
       <div class="row">
         <label>Policy pack
           <select name="pack" id="pack">{% for p in packs %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select>
         </label>
-        <label>Model
+        <label>Drafting model
           <select name="model" id="model">{% for m in models %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select>
         </label>
-        <label class="grow">Try a scenario
-          <span class="chips">{% for s in scenarios %}<button type="button" class="chip" data-scenario="{{ s.id }}">UC{{ s.use_case }} {{ s.pack }}</button>{% endfor %}</span>
+        <label>Your staff id (written to the ledger)
+          <input name="actor" id="actor" value="{{ 'sandbox-visitor' if sandbox else '' }}" placeholder="e.g. sw-042">
         </label>
+        <label title="Disclosure categories (I10, I14) apply to an external audience. Auto reads it from your instruction.">Audience of the draft
+          <select id="audience"><option value="auto">auto (from the instruction)</option><option value="internal">internal: my case file or supervisor</option><option value="external">external: school, employer, court, admin</option></select>
+        </label>
+        {% if auth_required %}<label>API key (this deployment requires one)
+          <input id="apikey" type="password" placeholder="Bearer key">
+        </label>{% endif %}
       </div>
       <label>What you ask the assistant to do
         <input name="instruction" id="instruction" placeholder="Summarise this note and draft three next steps" required>
@@ -33,37 +46,66 @@
       </label>
       <div class="row actions">
         <button type="submit" id="send">Send through the guardrail</button>
-        <span id="status" class="status"></span>
+        <span id="status" class="status" role="status" aria-live="polite"></span>
       </div>
+      <div id="error" class="error" role="alert" hidden></div>
     </form>
+    <details class="integrate">
+      <summary>Use this from your own application</summary>
+      <p>SoCareGuard is an OpenAI-compatible endpoint. Point any client at it and add one header naming the policy pack.</p>
+<pre>from openai import OpenAI
+client = OpenAI(base_url="{{ base_url }}/v1", api_key="{{ 'your-key' if auth_required else 'not-required' }}")
+reply = client.chat.completions.create(
+    model="{{ models[0] }}",
+    messages=[{"role": "user", "content": "Summarise this note...\n\n&lt;case note&gt;"}],
+    extra_headers={"X-SoCareGuard-Pack": "<span id="snippet-pack">{{ default_pack }}</span>", "X-SoCareGuard-Actor": "<span id="snippet-actor">sw-042</span>"},
+)</pre>
+      <p>The reply carries a <code>socareguard</code> object with the decision, flags (evidence and rewrite already re-identified), event stream, every recipient of the pseudonymised text, the session token that opens the session's identity map, and the ledger row. <code>X-SoCareGuard-Audience: internal|external</code> overrides the audience read from the instruction. <code>GET /v1/ledger?session=…</code> lists the rows; <code>GET /v1/ledger/verify</code> recomputes the chain; <code>DELETE /v1/sessions/…</code> purges a session's identity map and records that it did.</p>
+    </details>
   </section>
 
   <section id="result" hidden>
-    <div class="decision" id="decision"></div>
+    <div id="compare" class="compare" hidden></div>
+    <div class="decision" id="decision" role="status" aria-live="polite"></div>
+    <p class="glossary" id="glossary"></p>
+    <div class="legend" id="legend"></div>
     <div class="columns">
-      <article><h2>1. What you typed</h2><pre id="col-typed"></pre></article>
-      <article><h2>2. What left the premises</h2><pre id="col-out"></pre><p class="hint">Direct identifiers replaced by consistent surrogates; quasi-identifiers and sensitive attributes generalised. The vault holding the mapping never leaves this server.</p></article>
-      <article><h2>3. What came back</h2><pre id="col-back"></pre><p class="hint">The model's reply as received. It is screened in this form, before anything is re-identified.</p></article>
-      <article><h2>4. What you see</h2><pre id="col-seen"></pre></article>
+      <article><h2>1. What you typed</h2><pre id="col-typed" tabindex="0"></pre><p class="hint">Highlights show what the guard changed before anything left. Hover a highlight for the rule.</p></article>
+      <article><h2>2. What left the premises</h2><pre id="col-out" tabindex="0"></pre><p class="hint">Direct identifiers replaced by consistent surrogates; quasi-identifiers and sensitive attributes generalised. The instruction line (first paragraph) is pseudonymised but not generalised. Detection is not perfect: this column is exactly what left, so read it before relying on the guard. The identity map never leaves this server.</p></article>
+      <article><h2>3. What came back</h2><pre id="col-back" tabindex="0"></pre><p class="hint">The model's reply as received. It is screened in this form, before anything is re-identified.</p></article>
+      <article><h2>4. What you see</h2><pre id="col-seen" tabindex="0"></pre><p class="hint">Re-identified on this server. Flagged text is underlined in red; a generalised phrase that cannot come back keeps its colour (hover for what the record says); an orange mark is a surrogate fragment the model reformatted.</p></article>
     </div>
+    <p class="closing" id="closing" hidden>No conduct flag. The draft in column 4 is ready to use; the ledger row below records what left and to whom.</p>
     <div class="flags" id="flags"></div>
-    <div class="override" id="override" hidden>
-      <form id="override-form">
-        <label>Keep the draft anyway (recorded in the ledger with your reason)
-          <input id="override-reason" placeholder="Reason for the override" required>
-        </label>
-        <button type="submit">Override</button>
-        <span id="override-status" class="status"></span>
+    <div class="escalate-note" id="escalate-note" hidden></div>
+    <div class="release" id="release" hidden>
+      <form id="release-form">
+        <p class="cap">Supervisor release</p>
+        <p class="summary"><strong>What to do as the practitioner:</strong> give your supervisor the session id shown above the columns, or redraft the note for an internal audience. A supervisor can release the withheld draft here with a reason. {% if auth_required %}This deployment checks the supervisor key.{% else %}In this sandbox the role is self-asserted and the ledger row says so.{% endif %} Reasons are kept on this server in the ledger as typed; do not put client details in them.</p>
+        <label>Supervisor id<input id="release-actor" placeholder="e.g. sup-007" required></label>
+        <label>Reason for the release<textarea id="release-reason" rows="2" required placeholder="Why the draft is being released"></textarea></label>
+        <button type="submit" class="secondary">Release to me as supervisor</button>
+        <span id="release-status" class="status"></span>
       </form>
+      <div id="released" hidden><p class="cap">Released draft (supervisor view)</p><pre id="released-text" tabindex="0"></pre></div>
     </div>
-    <details class="events"><summary>Event stream and ledger</summary><pre id="events"></pre></details>
+    <div class="regen" id="regen"><button type="button" class="secondary" id="regenerate" hidden>Regenerate the draft with the flags as instructions</button></div>
+    <details class="ledger" id="ledger-details">
+      <summary>Ledger rows for this request</summary>
+      <div id="ledger"></div>
+    </details>
+    <details class="rules">
+      <summary>Policy pack rules that fired</summary>
+      <div id="rules"></div>
+    </details>
+    <details class="events"><summary>Event stream (the full pipeline record)</summary><pre id="events" tabindex="0"></pre></details>
   </section>
 </main>
 <footer>
   <span>Built on LiteLLM, Presidio, GLiNER2-PII and a clause-grounded judge; the policy layer, the generalisation rules, the audience gate and the ledger are the contribution.</span>
-  <span><a href="/v1/ledger/verify">verify ledger</a></span>
+  <span><a href="/v1/ledger/verify">verify ledger chain</a> · <a href="/v1/packs/{{ default_pack }}">view a policy pack</a></span>
 </footer>
-<script>window.SCENARIOS = {{ scenarios_json | safe }};</script>
+<script>window.SCENARIOS = {{ scenarios_json | safe }}; window.TAXONOMY = {{ taxonomy_json | safe }}; window.SOCAREGUARD_AUTH = {{ 'true' if auth_required else 'false' }};</script>
 <script src="/static/panel.js"></script>
 </body>
 </html>

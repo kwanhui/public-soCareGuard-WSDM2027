@@ -14,6 +14,8 @@ outbound:
     generalise_to: age_band
   - key: offence
     generalise_to: category
+  - key: diagnosis
+    generalise_to: category
   quasi_identifiers:
   - category: SCHOOL
     generalise_to: generic
@@ -24,11 +26,17 @@ outbound:
   - category: ESTATE
     generalise_to: region
   never_leak:
-  - full name together with offence, charge or diversion status
-  - Youth Court case reference
-  - juvenile rehabilitation centre or place-of-detention name
-  - school name
-  - co-accused names
+  - label: full name together with offence, charge or diversion status
+  - label: Youth Court case reference
+  - label: juvenile rehabilitation centre or place-of-detention name
+  - label: school name
+  - label: co-accused names
+  - label: assessment or risk scores
+    pattern: '\b(?:WAIS(?:-IV)?|WISC(?:-V)?|IQ|MMSE|MoCA|GAF|Vineland|ABAS|full[- ]scale(?: IQ)?|functional assessment)\b[^.;\n]{0,40}?\b\d{1,3}\b'
+    withhold_as: '[withheld: assessment score]'
+  - label: financial-assistance amounts
+    pattern: '(?:(?:ComCare|assistance|allowance|subsidy|grant|bursary|maintenance|SMTA|LTA|MediFund|payout|benefit|income)\b[^.;\n]{0,40}?\$\s?\d[\d,]*(?:\.\d{2})?(?:\s*(?:per|/|a)\s*(?:month|mth|week|wk|day|year))?|\$\s?\d[\d,]*(?:\.\d{2})?\s*(?:per|/|a)\s*(?:month|mth|week|wk)\b[^.;\n]{0,40}?\b(?:ComCare|assistance|allowance|subsidy|grant|maintenance|SMTA|LTA))'
+    withhold_as: '[withheld: amount]'
 inbound:
   categories:
   - id: I14
@@ -55,7 +63,7 @@ inbound:
   - id: I3
     default_action: annotate
   - id: OVER_CAUTION
-    default_action: regenerate
+    default_action: annotate
   - id: I2
     default_action: annotate
     note: disrespectful or patronising language about the client

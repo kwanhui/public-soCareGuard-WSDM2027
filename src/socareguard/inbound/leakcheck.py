@@ -5,11 +5,14 @@ Three questions, answered before the practitioner sees anything:
    model guessed or the outbound step missed it. Either way it is logged.)
 2. After restoration, does the reply contain a direct identifier that is neither an original
    nor a surrogate from this session? (An invented identifier: conduct category I13.)
-3. Is any surrogate left unrestored? (Zero by construction; checked anyway.)
+3. Is any surrogate, or a distinctive fragment of one, left unrestored?
+``passed`` covers 1 and 3; 2 is reported as an I13 flag so that a model hallucination is never
+displayed as a privacy failure.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from socareguard.detect.pipeline import DIRECT, detect
@@ -30,7 +33,41 @@ class LeakResult:
             DetectedSpan(start=0, end=0, text=t, type="DIRECT", category="ECHO", detector="vault")
             for t in self.original_echoed
         ]
-        return LeakCheck(seq=seq, passed=self.passed, leaks=leaks)
+        return LeakCheck(
+            seq=seq,
+            passed=self.passed,
+            leaks=leaks,
+            n_echoed=len(self.original_echoed),
+            n_invented=len(self.invented),
+            n_unrestored=len(self.unrestored),
+            unrestored=list(self.unrestored),
+        )
+
+
+_MONTHS = {
+    "january": "jan", "february": "feb", "march": "mar", "april": "apr", "june": "jun",
+    "july": "jul", "august": "aug", "september": "sep", "sept": "sep", "october": "oct",
+    "november": "nov", "december": "dec",
+}  # fmt: skip
+_PLACES = {"ESTATE", "SCHOOL", "FACILITY"}
+
+
+_WORDS = {
+    "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7",
+    "eight": "8", "nine": "9", "ten": "10", "secondary": "sec", "primary": "pri", "block": "blk",
+    "road": "rd", "avenue": "ave", "street": "st", "family service centre": "fsc",
+    "day activity centre": "dac", "institute of mental health": "imh",
+}  # fmt: skip
+
+
+def _norm(t: str) -> str:
+    """Lower-case, month names and number words shortened, punctuation and spacing collapsed:
+    '24 August' and '24 Aug', 'Secondary three' and 'Sec 3', '9925 3982' and '99253982' compare
+    equal."""
+    t = t.lower()
+    for long, short in list(_MONTHS.items()) + list(_WORDS.items()):
+        t = re.sub(r"\b" + long + r"\b", short, t)
+    return re.sub(r"[^a-z0-9]+", "", t)
 
 
 def leak_check(
@@ -41,6 +78,8 @@ def leak_check(
     known_texts: set[str],
     use_presidio: bool = True,
     use_gliner: bool = True,
+    source_text: str = "",
+    outbound_text: str = "",
 ) -> LeakResult:
     maps = vault.mappings(session)
     originals = {m.original for m in maps if m.kind == "surrogate"}
@@ -51,13 +90,18 @@ def leak_check(
         | {m.original.lower() for m in maps}
         | {m.surrogate.lower() for m in maps}
     )
+    # Anything in the note or in what the guard itself sent (surrogates, generalised phrases such
+    # as "the east") cannot have been invented by the model.
+    source_norm = _norm(source_text + "\n" + outbound_text)
     invented = []
     for h in det.entities:
+        norm = _norm(h.text)
         if (
-            h.category in DIRECT
+            (h.category in DIRECT or h.category in _PLACES)
             and h.category != "NAME"
             and h.text.lower() not in known
             and not any(h.text.lower() in k or k in h.text.lower() for k in known)
+            and not (source_norm and len(norm) >= 3 and norm in source_norm)
         ):
             invented.append(
                 DetectedSpan(
@@ -70,7 +114,9 @@ def leak_check(
                     score=h.score,
                 )
             )
-    passed = not echoed and not invented and not restored.unrestored_surrogates
+    # ``passed`` is the privacy claim: nothing original came back and every surrogate was
+    # restored. An identifier the model invented is a conduct finding (I13), not a leak.
+    passed = not echoed and not restored.unrestored_surrogates
     return LeakResult(
         passed=passed,
         original_echoed=echoed,

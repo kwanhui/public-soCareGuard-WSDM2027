@@ -9,6 +9,13 @@ from socareguard.screen.judge import Judge, JudgeFlag, LLMJudge
 from socareguard.taxonomy import BY_ID
 
 SEVERITY_ORDER = {"pass": 0, "info": 0, "annotate": 1, "regenerate": 2, "escalate": 3}
+
+
+def _name_of(label: str) -> str:
+    c = BY_ID.get(label)
+    return c.name if c else label
+
+
 DECISION_FOR = {0: "pass", 1: "annotate", 2: "regenerate", 3: "escalate"}
 
 
@@ -21,7 +28,13 @@ class Screener:
         self.min_confidence = min_confidence
 
     def flags_for(
-        self, draft: str, pack: Pack, instruction: str, leaks: list | None = None, context: str = ""
+        self,
+        draft: str,
+        pack: Pack,
+        instruction: str,
+        leaks: list | None = None,
+        context: str = "",
+        audience: str | None = None,
     ) -> list[Flag]:
         out: list[Flag] = []
         oc = rules.over_caution(draft, instruction)
@@ -30,7 +43,11 @@ class Screener:
         inv = rules.invented_identifiers(leaks or [])
         if inv and pack.action_for("I13"):
             out.append(inv.model_copy(update={"severity": pack.action_for("I13")}))
-        external = rules.audience_is_external(instruction)
+        external = (
+            audience == "external"
+            if audience in ("internal", "external")
+            else rules.audience_is_external(instruction, pack.id)
+        )
         for jf in self.judge(pack, instruction, draft, context):
             if jf.label in rules.AUDIENCE_DEPENDENT and not external:
                 continue
@@ -44,9 +61,12 @@ class Screener:
                     severity=action if action in SEVERITY_ORDER else "annotate",
                     evidence=jf.evidence,
                     rewrite=jf.rewrite,
+                    name=BY_ID[jf.label].name,
+                    reason=getattr(jf, "reason", "") or "",
+                    confidence=round(float(jf.confidence), 2),
                 )
             )
-        return out
+        return [f.model_copy(update={"name": f.name or _name_of(f.label)}) for f in out]
 
     def screen(
         self,
@@ -56,8 +76,14 @@ class Screener:
         instruction: str = "",
         leaks: list | None = None,
         context: str = "",
+        audience: str | None = None,
     ) -> tuple[list[Flag], str, list]:
-        flags = self.flags_for(draft, pack, instruction, leaks, context)
+        flags = self.flags_for(draft, pack, instruction, leaks, context, audience)
+        external = (
+            audience == "external"
+            if audience in ("internal", "external")
+            else rules.audience_is_external(instruction, pack.id)
+        )
         baseline: list[str] = []
         if self.use_baseline:
             from socareguard.screen.baseline import moderation_flags
@@ -68,7 +94,28 @@ class Screener:
                 baseline = []
         level = max((SEVERITY_ORDER.get(f.severity, 1) for f in flags), default=0)
         decision = DECISION_FOR[level]
-        return flags, decision, [Screen(seq=seq, flags=flags, baseline_flags=baseline)]
+        return (
+            flags,
+            decision,
+            [
+                Screen(
+                    seq=seq,
+                    flags=flags,
+                    baseline_flags=baseline,
+                    judge_model=getattr(self.judge, "model", None),
+                    baseline_model=self.baseline_model,
+                    audience="external" if external else "internal",
+                )
+            ],
+        )
+
+    @property
+    def baseline_model(self) -> str | None:
+        import os
+
+        if self.use_baseline and os.environ.get("OPENAI_API_KEY"):
+            return "openai/omni-moderation-latest"
+        return None
 
 
 __all__ = ["Action", "JudgeFlag", "Screener"]

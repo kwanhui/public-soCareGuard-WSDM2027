@@ -59,8 +59,11 @@ class Generalise(BaseModel):
 class Substitute(BaseModel):
     kind: Literal["substitute"] = "substitute"
     seq: int
-    n_spans: int
+    n_spans: int = Field(description="spans replaced by a surrogate")
     n_entities: int
+    n_generalised: int = 0
+    n_kept: int = Field(0, description="attribute spans with no rule in this pack, sent as typed")
+    n_withheld: int = Field(0, description="never_leak spans withheld outright")
     vault_session: str
 
 
@@ -90,13 +93,25 @@ class Reidentify(BaseModel):
     kind: Literal["reidentify"] = "reidentify"
     seq: int
     n_restored: int
+    ambiguous_generalised: list[str] = Field(
+        default_factory=list,
+        description="generalised phrases left as they are because two originals share them",
+    )
 
 
 class LeakCheck(BaseModel):
     kind: Literal["leakcheck"] = "leakcheck"
     seq: int
-    passed: bool
+    passed: bool = Field(
+        description="no original identifier echoed and no surrogate left unrestored"
+    )
     leaks: list[DetectedSpan] = Field(default_factory=list)
+    n_echoed: int = 0
+    n_invented: int = Field(
+        0, description="identifiers the model introduced; reported as I13, not as a leak"
+    )
+    n_unrestored: int = 0
+    unrestored: list[str] = Field(default_factory=list)
 
 
 class Flag(BaseModel):
@@ -105,6 +120,9 @@ class Flag(BaseModel):
     severity: Literal["info", "annotate", "regenerate", "escalate"]
     evidence: str
     rewrite: str | None = None
+    name: str = ""  # the category's plain-language name, for the practitioner
+    reason: str = ""  # the judge's one-sentence reason
+    confidence: float | None = None
 
 
 class Screen(BaseModel):
@@ -114,6 +132,9 @@ class Screen(BaseModel):
     baseline_flags: list[str] = Field(
         default_factory=list, description="what a generic harm screen flagged, for contrast"
     )
+    judge_model: str | None = None
+    baseline_model: str | None = None
+    audience: Literal["internal", "external"] = "internal"
 
 
 class Action(BaseModel):

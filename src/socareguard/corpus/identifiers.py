@@ -239,8 +239,8 @@ FACILITIES: dict[str, list[str]] = {
         "Star Shelter",
     ],
     "rehabilitation centre": [
-        "Pertapis Centre for Youth",
-        "Singapore Boys' Home",
+        "Northgate Centre for Youth",
+        "Meadowvale Boys' Home",
         "Riverside Youth Residence",
     ],
     "day activity centre": [
@@ -249,13 +249,18 @@ FACILITIES: dict[str, list[str]] = {
         "Lighthouse Day Activity Centre",
     ],
     "hospital": [
-        "Khoo Teck Puat Hospital",
-        "Changi General Hospital",
-        "Ng Teng Fong General Hospital",
-        "Institute of Mental Health",
+        "Eastgate General Hospital",
+        "Woodvale General Hospital",
+        "Sunrise Community Hospital",
+        "Hillview Institute of Mental Health",
     ],
-    "family service centre": ["Fei Yue FSC", "Care Corner FSC", "Montfort Care FSC", "AMKFSC"],
-    "polyclinic": ["Yishun Polyclinic", "Bedok Polyclinic", "Jurong Polyclinic"],
+    "family service centre": [
+        "Riverbend Family Service Centre",
+        "Harbourlight FSC",
+        "Meadowvale FSC",
+        "Northgate Family Service Centre",
+    ],
+    "polyclinic": ["Riverbend Polyclinic", "Harbourlight Polyclinic", "Meadowvale Polyclinic"],
 }
 
 

@@ -4,7 +4,7 @@ vault
 corpus/templates
 corpus/drafts
 docs/reviews
-tests
+
 *.log
 .env
 .env.*

@@ -15,6 +15,8 @@ outbound:
     generalise_to: status_only
   - key: safety_plan
     generalise_to: redact
+  - key: diagnosis
+    generalise_to: category
   quasi_identifiers:
   - category: FACILITY
     kinds:
@@ -27,12 +29,18 @@ outbound:
   - category: EMPLOYER
     generalise_to: sector
   never_leak:
-  - current address or shelter name and location
-  - workplace
-  - children's school
-  - new phone number
-  - routine or timing details that locate the survivor
-  - the alleged perpetrator's name in any document the perpetrator may lawfully access
+  - label: current address or shelter name and location
+  - label: workplace
+  - label: children's school
+  - label: new phone number
+  - label: routine or timing details that locate the survivor
+  - label: the alleged perpetrator's name in any document the perpetrator may lawfully access
+  - label: financial-assistance or maintenance amounts
+    pattern: '(?:(?:ComCare|assistance|allowance|subsidy|grant|bursary|maintenance|SMTA|LTA|MediFund|payout|benefit|income)\b[^.;\n]{0,40}?\$\s?\d[\d,]*(?:\.\d{2})?(?:\s*(?:per|/|a)\s*(?:month|mth|week|wk|day|year))?|\$\s?\d[\d,]*(?:\.\d{2})?\s*(?:per|/|a)\s*(?:month|mth|week|wk)\b[^.;\n]{0,40}?\b(?:ComCare|assistance|allowance|subsidy|grant|maintenance|SMTA|LTA))'
+    withhold_as: '[withheld: amount]'
+  - label: shelter address or unit
+    pattern: '\b(?:shelter|refuge)\b[^.;\n]{0,30}\b(?:address|unit|block|blk)\b[^.;\n]{0,60}'
+    withhold_as: '[withheld: shelter location]'
 inbound:
   categories:
   - id: I1
@@ -43,8 +51,7 @@ inbound:
     note: treats ongoing risk as ordinary autonomy with no escalation
   - id: I10
     default_action: annotate
-    note: sharing with school
-    employer or relatives without consent: null
+    note: "sharing with school, employer or relatives without consent"
   - id: I8
     default_action: annotate
     note: predicts the PPO outcome or gives legal advice
@@ -56,7 +63,7 @@ inbound:
   - id: I3
     default_action: annotate
   - id: OVER_CAUTION
-    default_action: regenerate
+    default_action: annotate
   - id: I2
     default_action: annotate
     note: disrespectful or patronising language about the client

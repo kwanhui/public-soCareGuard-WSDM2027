@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from socareguard.taxonomy import BY_ID
 
@@ -24,10 +24,21 @@ class QuasiRule(BaseModel):
     kinds: list[str] = Field(default_factory=list)
 
 
+class NeverLeak(BaseModel):
+    label: str
+    pattern: str | None = None  # regex; when present the span is withheld outbound
+    withhold_as: str | None = None  # the placeholder text; defaults to "[withheld: <label>]"
+
+
 class Outbound(BaseModel):
     attributes: list[AttributeRule]
     quasi_identifiers: list[QuasiRule]
-    never_leak: list[str]
+    never_leak: list[NeverLeak] = Field(default_factory=list)
+
+    @field_validator("never_leak", mode="before")
+    @classmethod
+    def _coerce(cls, v):
+        return [{"label": x} if isinstance(x, str) else x for x in (v or [])]
 
 
 class CategoryAction(BaseModel):

@@ -4,7 +4,7 @@ Materials for the WSDM 2027 Demonstrations submission and for reviewer-facing de
 
 ## Contents
 
-- `sample-inputs/scenarios/*.jsonl` — the four Use Case scripts as replayable JSONL event
+- `sample-inputs/scenarios/*.jsonl` — the four Use Case scripts (plus `escalation.jsonl`, a recorded reply for the escalation chip) as replayable JSONL event
   streams (built from `socareguard/scenarios/authoring.py`; rebuild with
   `python3 -m socareguard.scenarios build`). Each carries the practitioner's raw input, the
   pseudonymised payload, the model reply, and `expect` lines the proxy must satisfy.
@@ -29,7 +29,7 @@ live judge; all assertions pass at tag `screen-v1`.
 ## Hosted demo
 
 - **URL**: https://huggingface.co/spaces/kwanhui/socareguard (to be created and deployed by the PI: Space with Docker SDK, provider keys as Space secrets, then the `Deploy public snapshot to HF Space` workflow)
-- **Video**: final cut recorded 2026-09-06 (2:31, captions only, no audio); the file, production plan and provenance live in the paper repo under
+- **Video**: final cut recorded 2026-09-07 (2:32, captions only, no audio, live model replies); the file, production plan and provenance live in the paper repo under
   `submissions/WSDM2027/2026-09-05-demo-video/`; unlisted YouTube link pending
 - **Reproducibility**: `docker compose up` for the on-premise path; the Space is a labelled
   synthetic-data sandbox with a per-address rate limit (`SOCAREGUARD_MAX_REQUESTS_PER_HOUR`).

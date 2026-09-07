@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,9 @@ class Ledger:
         self.path = path or DEFAULT_PATH
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.touch(exist_ok=True)
+        # Appends from concurrent requests serialise here; otherwise two writers can read the
+        # same predecessor hash and fork the chain.
+        self.lock = threading.Lock()
 
     def last_hash(self) -> str | None:
         last = None
@@ -38,13 +42,16 @@ class Ledger:
         return last
 
     def append(self, fields: dict[str, Any]) -> dict[str, Any]:
-        prev = self.last_hash()
-        body = {"ts": time.time(), **fields, "prev_sha256": prev}
-        row_hash = hashlib.sha256(_canon(body).encode()).hexdigest()
-        row = {**body, "row_sha256": row_hash}
-        with self.path.open("a") as f:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-        return row
+        with self.lock:
+            prev = self.last_hash()
+            body = {"ts": time.time(), **fields, "prev_sha256": prev}
+            row_hash = hashlib.sha256(_canon(body).encode()).hexdigest()
+            row = {**body, "row_sha256": row_hash}
+            with self.path.open("a") as f:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+            return row
 
     def rows(self) -> list[dict[str, Any]]:
         return [json.loads(l) for l in self.path.read_text().splitlines() if l.strip()]

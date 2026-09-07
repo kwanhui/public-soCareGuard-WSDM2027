@@ -42,7 +42,7 @@ class SoCareGuardrail(CustomGuardrail):
             or self.pack
         )
         session = meta.get("socareguard_session") or uuid.uuid4().hex[:12]
-        out_msgs, _events, known, payload_hash, _payload, seq = self.guard.outbound(
+        out_msgs, _events, known, payload_hash, _payload, seq, _repl = self.guard.outbound(
             data["messages"], pack, session
         )
         data["messages"] = out_msgs

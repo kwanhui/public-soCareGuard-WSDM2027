@@ -31,6 +31,16 @@ def _master_key(path: Path) -> bytes:
     key_file = path.with_suffix(".key")
     if key_file.exists():
         return base64.b64decode(key_file.read_text().strip())
+    if (
+        path.exists()
+        and path.stat().st_size > 0
+        and not os.environ.get("SOCAREGUARD_VAULT_NEW_KEY")
+    ):
+        raise RuntimeError(
+            f"{path} exists but its key file {key_file} is missing: refusing to mint a new key "
+            "over an existing vault (the old mappings would become unreadable). Restore the key, "
+            f"set {KEY_ENV}, or set SOCAREGUARD_VAULT_NEW_KEY=1 to start a fresh vault knowingly."
+        )
     key = AESGCM.generate_key(bit_length=256)
     key_file.parent.mkdir(parents=True, exist_ok=True)
     key_file.touch(mode=0o600)
@@ -55,10 +65,22 @@ class Vault:
         self.key = _master_key(self.path)
         self.db = sqlite3.connect(self.path, check_same_thread=False)
         self.lock = threading.Lock()
+        # One row per (entity, surrogate): a full name and its short form are two entities that
+        # may share a surrogate, and two originals may share one generalised phrase. Restoration
+        # decides what to do with the duplicates; the vault keeps them all.
+        old = self.db.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='mappings'"
+        ).fetchone()
+        if old and "PRIMARY KEY (session, surrogate)" in old[0]:
+            self.db.execute("ALTER TABLE mappings RENAME TO mappings_v1")
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS mappings (session TEXT, entity_id TEXT, category TEXT, kind TEXT, "
-            "surrogate TEXT, nonce BLOB, original_enc BLOB, created REAL, PRIMARY KEY (session, surrogate))"
+            "surrogate TEXT, nonce BLOB, original_enc BLOB, created REAL, "
+            "PRIMARY KEY (session, entity_id, surrogate))"
         )
+        if old and "PRIMARY KEY (session, surrogate)" in old[0]:
+            self.db.execute("INSERT OR IGNORE INTO mappings SELECT * FROM mappings_v1")
+            self.db.execute("DROP TABLE mappings_v1")
         self.db.commit()
 
     def _enc(self, text: str) -> tuple[bytes, bytes]:
@@ -93,6 +115,15 @@ class Vault:
                     "SELECT surrogate FROM mappings WHERE session=?", (session,)
                 )
             }
+
+    def purge_older_than(self, seconds: float) -> int:
+        """Retention sweep: drop every mapping created more than ``seconds`` ago."""
+        with self.lock:
+            cur = self.db.execute(
+                "DELETE FROM mappings WHERE created < ?", (time.time() - seconds,)
+            )
+            self.db.commit()
+            return cur.rowcount
 
     def forget(self, session: str) -> int:
         with self.lock:

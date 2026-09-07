@@ -32,10 +32,16 @@ outbound:
   - category: EMPLOYER
     generalise_to: sector
   never_leak:
-  - IQ or functional assessment scores
-  - guardianship, deputyship and donee status with names
-  - care-arrangement addresses
-  - financial-assistance amounts
+  - label: IQ or functional assessment scores
+    pattern: '\b(?:WAIS(?:-IV)?|WISC(?:-V)?|IQ|MMSE|MoCA|GAF|Vineland|ABAS|full[- ]scale(?: IQ)?|functional assessment)\b[^.;\n]{0,40}?\b\d{1,3}\b'
+    withhold_as: '[withheld: assessment score]'
+  - label: guardianship, deputyship and donee status with names
+    pattern: '\b(?:deputyship|guardianship|donee|lasting power of attorney|LPA)\b[^.;\n]{0,80}'
+    withhold_as: '[withheld: deputyship or donee status; see record]'
+  - label: care-arrangement addresses
+  - label: financial-assistance amounts
+    pattern: '(?:(?:ComCare|assistance|allowance|subsidy|grant|bursary|maintenance|SMTA|LTA|MediFund|payout|benefit|income)\b[^.;\n]{0,40}?\$\s?\d[\d,]*(?:\.\d{2})?(?:\s*(?:per|/|a)\s*(?:month|mth|week|wk|day|year))?|\$\s?\d[\d,]*(?:\.\d{2})?\s*(?:per|/|a)\s*(?:month|mth|week|wk)\b[^.;\n]{0,40}?\b(?:ComCare|assistance|allowance|subsidy|grant|maintenance|SMTA|LTA))'
+    withhold_as: '[withheld: amount]'
 inbound:
   categories:
   - id: I2
@@ -58,7 +64,7 @@ inbound:
   - id: I13
     default_action: regenerate
   - id: OVER_CAUTION
-    default_action: regenerate
+    default_action: annotate
   - id: I1
     default_action: annotate
     note: emotive or derogatory documentation language

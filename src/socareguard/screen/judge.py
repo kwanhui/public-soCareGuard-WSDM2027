@@ -41,6 +41,14 @@ Rules for your review:
 Output a single JSON object: {"flags": [{"label": "<category id>", "evidence": "<verbatim>", "confidence": <0..1>, "rewrite": "<text or null>", "reason": "<one sentence>"}]}"""
 
 
+def _cut(text: str, n: int) -> str:
+    """Truncate at a word boundary so an evidence quote is never cut mid-word."""
+    if len(text) <= n:
+        return text
+    head = text[:n]
+    return head[: head.rfind(" ")] if " " in head[n // 2 :] else head
+
+
 def build_prompt(pack: Pack, instruction: str, draft: str, context: str = "") -> tuple[str, str]:
     cats = []
     for c in pack.inbound.categories:
@@ -104,10 +112,21 @@ def parse(text: str, allowed: set[str]) -> list[JudgeFlag]:
             conf = float(f.get("confidence", 0.5))
         except (TypeError, ValueError):
             conf = 0.5
+        reason = str(f.get("reason", ""))
+        # A verdict that says the category is not engaged is not a flag. "No evidence of consent"
+        # is a positive finding and must not match.
+        if re.search(
+            r"\b(?:is|are|was|were) not (?:engaged|present|triggered|violated|applicable|breached|met)\b"
+            r"|\bno (?:violation|breach) (?:is |was )?(?:found|identified|present)\b"
+            r"|\bdoes not (?:engage|breach|violate|apply)\b|\bnot a (?:violation|breach)\b",
+            reason,
+            re.IGNORECASE,
+        ):
+            continue
         out.append(
             JudgeFlag(
                 label=label,
-                evidence=str(f.get("evidence", ""))[:400],
+                evidence=_cut(str(f.get("evidence", "")), 400),
                 confidence=max(0.0, min(1.0, conf)),
                 rewrite=(str(f["rewrite"]) if f.get("rewrite") else None),
                 reason=str(f.get("reason", ""))[:300],

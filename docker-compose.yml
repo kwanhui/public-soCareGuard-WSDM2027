@@ -7,6 +7,9 @@ services:
     env_file: .env
     environment:
       SOCAREGUARD_SANDBOX: "0"
+      SOCAREGUARD_MAX_REQUESTS_PER_HOUR: "0"
+      SOCAREGUARD_TRUST_PROXY: "0"
+      SOCAREGUARD_RETENTION_HOURS: "0"
       SOCAREGUARD_VAULT: /app/vault/socareguard.sqlite
       SOCAREGUARD_LEDGER: /app/vault/ledger.jsonl
       PORT: "8080"

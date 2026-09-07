@@ -16,7 +16,21 @@ from socareguard.detect import backends, gazetteers, sg
 from socareguard.detect.attributes import find_attributes
 from socareguard.detect.sg import Hit
 
-DIRECT = {"NAME", "NRIC", "PHONE", "ADDRESS", "DOB", "CASE_REF", "EMAIL"}
+DIRECT = {
+    "NAME",
+    "NRIC",
+    "PHONE",
+    "ADDRESS",
+    "DOB",
+    "CASE_REF",
+    "EMAIL",
+    "PASSPORT",
+    "BANK_ACCOUNT",
+    "HANDLE",
+    "MRN",
+    "WARD_BED",
+    "VEHICLE",
+}
 QUASI = {"SCHOOL", "ESTATE", "AGE", "EMPLOYER", "FACILITY"}
 PRIORITY = {c: 2 for c in DIRECT} | {c: 1 for c in QUASI} | {"DATE": 0}
 
@@ -28,16 +42,56 @@ class Detection:
     detectors: list[str] = field(default_factory=list)
 
 
+# Role words and case-note abbreviations that name a relationship, never a person.
+ROLE_WORDS = {
+    "clt", "client", "pt", "patient", "dtr", "daughter", "son", "hubby", "husband", "wife",
+    "nok", "sis", "bro", "mum", "mom", "dad", "gran", "grandma", "grandpa", "granny", "auntie",
+    "uncle", "intern", "sw", "worker", "officer", "teacher", "supervisor", "principal", "admin",
+    "cw", "fsw", "msw", "po", "pp", "ic", "kin", "spouse", "partner", "mother", "father",
+    "self", "ward", "bed", "room", "mrn", "nurse", "doctor", "dr", "staff", "ot", "physio",
+    "attends", "lives", "works", "stays", "reports", "states", "says", "said", "denies", "presented",
+    "seen", "noted", "plan", "assessment", "observations", "contact", "referred", "declined",
+    "agreed", "attended", "called", "visited", "discussed", "advised", "informed", "confirmed",
+}  # fmt: skip
 AGENCY_STOPLIST = {
     "hdb",
+    "ppo",
+    "deo",
+    "cpo",
+    "fjc",
+    "cypa",
+    "mca",
+    "pdpa",
+    "comcare smta",
+    "comcare lta",
+    "comcare",
+    "smta",
+    "lta",
+    "moe fas",
+    "fas",
+    "medifund",
+    "medisave",
+    "medishield",
+    "chas",
+    "comlink",
+    "cpf",
+    "kkh",
+    "sgh",
+    "nuh",
+    "ttsh",
+    "cgh",
+    "ktph",
+    "ntfgh",
+    "cdc",
+    "pa",
+    "sg enable",
+    "agency for integrated care",
     "fsc",
     "sso",
     "msf",
     "moe",
-    "comcare",
     "dac",
     "imh",
-    "cpf",
     "spf",
     "ncss",
     "aic",
@@ -80,6 +134,7 @@ _LEADING_STOP = {
 _LINK_WORDS = {
     "bin",
     "binti",
+    "binte",
     "bte",
     "bt",
     "s/o",
@@ -99,14 +154,54 @@ _SURNAMES = {x.lower() for x in nm._CHINESE_SURNAMES + nm._EURASIAN_SURNAMES + n
 _TITLE_PREFIX = re.compile(r"^(?:Mdm|Mr|Mrs|Ms|Master|Encik|Cik|Puan|Dr)\.?\s", re.IGNORECASE)
 
 
+_PATRONYMIC = re.compile(
+    r"^\s(?:bin|binti|binte|bte|bt|s/o|d/o|a/l|a/p)\s[A-Z][a-z]+(?:\s[A-Z][a-z]+)?"
+)
+
+
+_ADDRESS_NEXT = {
+    "road", "rd", "street", "st", "avenue", "ave", "drive", "dr", "lane", "crescent", "cres",
+    "close", "walk", "way", "link", "loop", "rise", "view", "central", "north", "south", "east",
+    "west", "ring", "hill", "grove", "park", "terrace", "place", "heights", "gardens", "garden",
+    "lorong", "lor", "jalan", "jln", "taman", "kampong", "upper", "lower", "mount", "bukit",
+    "industrial", "estate", "town", "new", "old", "vale", "green", "field", "square", "boulevard",
+    "sector", "circle", "mall", "point", "plaza",
+}  # fmt: skip
+
+
+def _estate_in_org_name(text: str, hits: list[Hit]) -> list[Hit]:
+    """'Changi' in 'Changi Airport Terminal 3' or 'Bedok' in 'Bedok Youth Centre' names an
+    organisation, not the client's estate: extend over the capitalised words and treat it as a
+    facility so it is generalised as a service provider, never as a region."""
+    out = []
+    for h in hits:
+        if h.category == "ESTATE":
+            m = re.match(r"(?:\s+[A-Z][A-Za-z'’]+|\s+\d+[A-Z]?)+", text[h.end : h.end + 60])
+            if m:
+                nxt = m.group(0).split()[0].lower()
+                if nxt not in _ADDRESS_NEXT and not re.match(r"\d", nxt):
+                    end = h.end + m.end()
+                    out.append(
+                        Hit(h.start, end, text[h.start : end], "FACILITY", "gazetteer.org", 0.9)
+                    )
+                    continue
+        out.append(h)
+    return out
+
+
 def _extend_names(text: str, hits: list[Hit]) -> list[Hit]:
-    """A NAME hit preceded by a known surname token ('Teo' before 'Shu Fen') is extended to include it."""
+    """A NAME hit preceded by a known surname token ('Teo' before 'Shu Fen') is extended to include
+    it, and a hit followed by a patronymic ('Priya' before 'd/o Muthusamy') is extended over it."""
     out = []
     for h in hits:
         if h.category == "NAME":
             m = re.search(r"([A-Z][a-z]+)\s$", text[: h.start])
             if m and m.group(1).lower() in _SURNAMES:
                 h = Hit(m.start(1), h.end, text[m.start(1) : h.end], "NAME", h.detector, h.score)
+            m2 = _PATRONYMIC.match(text[h.end : h.end + 60])
+            if m2:
+                end = h.end + m2.end()
+                h = Hit(h.start, end, text[h.start : end], "NAME", h.detector, h.score)
         out.append(h)
     return out
 
@@ -134,10 +229,9 @@ def _sane(h: Hit) -> bool:
         if yr and int(yr.group(0)) >= _CURRENT_YEAR - 1:
             return False
     if h.category == "DOB" and not re.search(
-        r"(19|20)\d{2}|\d{1,2}\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
-        t,
-        re.IGNORECASE,
+        r"(19|20)\d{2}|\d{1,2}[/.-]\d{1,2}[/.-]\d{2}\b", t, re.IGNORECASE
     ):
+        # A date of birth carries a year. "2 Sep" is a date of contact, never a DOB.
         return False
     if h.category == "ADDRESS" and not re.search(r"\d", t):
         return False
@@ -145,6 +239,14 @@ def _sane(h: Hit) -> bool:
         return False
     if h.category == "NRIC" and not re.fullmatch(r"[STFGMstfgm]\d{7}[A-Za-z]", t):
         return False
+    if h.category == "NAME" and _TITLE_PREFIX.sub("", t).strip().lower() in ROLE_WORDS:
+        return False
+    if h.category == "NAME" and any(
+        w in ROLE_WORDS for w in re.split(r"\s+", _TITLE_PREFIX.sub("", t).lower())[:1]
+    ):
+        return False  # "Ward 9B", "Son says": the first token names a role or a place, not a person
+    if h.category in {"FACILITY", "SCHOOL", "EMPLOYER"} and not any(c.isupper() for c in t):
+        return False  # "the void deck", "a coffee shop": a place, not a named facility
     if h.category == "NAME" and not any(c.isupper() for c in t):
         return False
     return not (
@@ -164,6 +266,7 @@ def _propagate_names(text: str, hits: list[Hit]) -> list[Hit]:
                 len(tok) >= 3
                 and tok[0].isupper()
                 and tok.lower() not in _LINK_WORDS
+                and tok.lower() not in ROLE_WORDS
                 and tok.isalpha()
             ):
                 tokens.add(tok)
@@ -274,7 +377,7 @@ def detect(
         used.append(backends.gliner_backend_name())
         if attributes:
             attrs = _merge_attributes(attrs + backends.gliner_attribute_hits(text))
-    ents = _resolve([h for h in hits if h.score >= min_score])
+    ents = _resolve(_estate_in_org_name(text, [h for h in hits if h.score >= min_score]))
     ents = _resolve(_extend_names(text, ents))
     ents = _resolve(ents + _propagate_names(text, ents))
     ents = _merge_addresses(text, ents)
