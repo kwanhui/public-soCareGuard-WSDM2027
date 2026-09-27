@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: mit
-short_description: Privacy and professional-conduct guardrail proxy for social service practice (synthetic sandbox)
+short_description: Privacy and conduct guardrail proxy for social service LLMs
 ---
 
 # SoCareGuard
