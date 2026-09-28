@@ -11,8 +11,12 @@ the previous row, and both are inside the row's own hash. ``report`` therefore d
 to any row, a reordering, and a deleted middle row. A party with write access to the file can
 still rewrite every row from some point onwards, or cut the tail, and produce a file that
 verifies on its own. Every append therefore logs the new head hash and row count at INFO on the
-``socareguard.ledger`` logger; shipping that log off the host is the deployer's step, and a
+``socareguard.ledger`` logger. Shipping that log off the host is the deployer's step, and a
 verifier compares the file against the last shipped head (``expected_rows``, ``head_sha256``).
+
+The supervisor view reads the ledger through ``rows_since`` and ``action_kind``: a request row
+that escalated, a supervisor release, an override, an accepted rewrite and an opened review are
+the action kinds it lists.
 """
 
 from __future__ import annotations
@@ -30,6 +34,19 @@ DEFAULT_PATH = Path(os.environ.get("SOCAREGUARD_LEDGER", "vault/ledger.jsonl"))
 log = logging.getLogger("socareguard.ledger")
 
 
+# The rows a supervisor reviews, in the order the supervisor view lists their counts. A request row
+# counts as an escalation when its decision is ``escalate``; the others are named by their decision.
+ACTION_KINDS = ("escalation", "withheld_released", "override", "rewrite_accepted", "review_opened")
+
+
+def action_kind(row: dict[str, Any]) -> str | None:
+    """The action kind of a ledger row, or None for a row that is not a supervisor action."""
+    decision = row.get("decision")
+    if decision == "escalate":
+        return "escalation"
+    return decision if decision in ACTION_KINDS else None
+
+
 def _canon(d: dict[str, Any]) -> str:
     return json.dumps(d, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -42,6 +59,9 @@ class Ledger:
         # Appends from concurrent requests serialise here; otherwise two writers can read the
         # same predecessor hash and fork the chain.
         self.lock = threading.Lock()
+        # The head hash and row count of the last "ledger head" line this process logged, so the
+        # supervisor view can show it beside the file's own head. None until the first append.
+        self.last_logged: dict[str, Any] | None = None
 
     def _tail(self) -> tuple[str | None, int]:
         """The last row's hash and the number of rows."""
@@ -69,10 +89,24 @@ class Ledger:
             # The anchor line: a log shipper that copies it off the host lets a verifier detect
             # a rewritten suffix or a cut tail, which the file alone cannot show.
             log.info("ledger head %s rows %d", row_hash, n + 1)
+            self.last_logged = {"head_sha256": row_hash, "rows": n + 1, "ts": body["ts"]}
             return row
 
     def rows(self) -> list[dict[str, Any]]:
         return [json.loads(l) for l in self.path.read_text().splitlines() if l.strip()]
+
+    def rows_since(self, ts: float) -> list[dict[str, Any]]:
+        """The rows written at or after ``ts`` (seconds since the epoch), in file order, read in
+        one pass over the file. A row without a time is skipped."""
+        out = []
+        with self.path.open() as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if isinstance(row.get("ts"), (int, float)) and row["ts"] >= ts:
+                    out.append(row)
+        return out
 
     def report(self, expected_rows: int | None = None) -> dict[str, Any]:
         """Recompute the chain and the sequence.

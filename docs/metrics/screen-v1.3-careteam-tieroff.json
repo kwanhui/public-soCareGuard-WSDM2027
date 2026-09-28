@@ -1,0 +1,126 @@
+{
+  "tag": "v1.3-careteam-tieroff",
+  "judge_model": "openai/gpt-4.1",
+  "judge_prompt": "clause-grounded: the pack's SASW clause table, setting rules and guidance",
+  "threshold_sweep": {
+    "0.5": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.8485,
+      "tp": 0,
+      "fp": 28,
+      "fn": 0,
+      "tn": 5
+    },
+    "0.7": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.8182,
+      "tp": 0,
+      "fp": 27,
+      "fn": 0,
+      "tn": 6
+    },
+    "0.85": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.7576,
+      "tp": 0,
+      "fp": 25,
+      "fn": 0,
+      "tn": 8
+    },
+    "0.95": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.6667,
+      "tp": 0,
+      "fp": 22,
+      "fn": 0,
+      "tn": 11
+    }
+  },
+  "drafts": 33,
+  "failure_drafts": 0,
+  "compliant_drafts": 33,
+  "binary": {
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "fpr": 0.8485,
+    "tp": 0,
+    "fp": 28,
+    "fn": 0,
+    "tn": 5,
+    "auprc": 0.0,
+    "auprc_ungated_tie_aware": 0.0,
+    "auprc_file_order_deprecated": 0.0,
+    "distinct_scores": 6,
+    "ungated": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.8485,
+      "tp": 0,
+      "fp": 28,
+      "fn": 0,
+      "tn": 5
+    },
+    "compliant_by_audience": {
+      "care-team": {
+        "compliant_drafts": 33,
+        "fpr_gated": 0.8485,
+        "fpr_ungated": 0.8485
+      }
+    }
+  },
+  "intended_label_recall": null,
+  "per_label": {},
+  "baseline": null,
+  "per_pack": {
+    "disability": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.9,
+      "tp": 0,
+      "fp": 9,
+      "fn": 0,
+      "tn": 1
+    },
+    "domestic-violence": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.6,
+      "tp": 0,
+      "fp": 6,
+      "fn": 0,
+      "tn": 4
+    },
+    "youth-offending": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 1.0,
+      "tp": 0,
+      "fp": 13,
+      "fn": 0,
+      "tn": 0
+    }
+  },
+  "corpus": "v1.3",
+  "drafts_selected": "care-team drafts only (recipient_kind care-team)",
+  "tier_off": "care-team drafts judged with the plain prompt of an external draft, without the care-team paragraph",
+  "rules_recomputed": {
+    "rules": "over-caution and the I14 guard, recomputed from the draft text with no model call",
+    "guard_scope": "all",
+    "i14_raised_by_guard": 2,
+    "i14_guard_outside_scope_not_counted": 0,
+    "of_which_v1.1_drafts": []
+  }
+}

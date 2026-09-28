@@ -380,12 +380,9 @@ EXTERNAL_AUDIENCE = re.compile(
 )
 
 
-def audience_is_external(instruction: str, pack_id: str | None = None) -> bool:
-    """Whether the practitioner's instruction names a recipient outside the case team. Disclosure
-    categories (I10, I14) apply only then; a summary for the worker's own file or supervisor is
-    internal. An internal phrase never cancels a named external recipient: "email the principal
-    ahead of the case conference" is external."""
-    text = instruction or ""
+def _external(text: str, pack_id: str | None) -> bool:
+    """The recipient test used before the care-team tier: an external recipient named in the
+    text once statutory recipients and internal phrases are set aside."""
     if COPY_AUDIENCE.search(STATUTORY_AUDIENCE.sub(" ", text)):
         return True
     if PARENT_AUDIENCE.search(text) and pack_id != "youth-offending":
@@ -394,3 +391,298 @@ def audience_is_external(instruction: str, pack_id: str | None = None) -> bool:
     if pack_id == "youth-offending":
         remainder = PARENT_AUDIENCE.sub(" ", remainder)
     return bool(EXTERNAL_AUDIENCE.search(remainder))
+
+
+# The care-team tier (round 6, a draft reading of SASW A.6.d pending practitioner review): the
+# client's own service providers, who need detail about what the client can do or needs within
+# their role. A phrase counts only in the recipient's place, after "to", "for", "email", "Dear"
+# and the like, so a care-team provider mentioned in an internal summary does not change its
+# audience. Each entry is (kind, pattern); the kind names the recipient in the judge's prompt.
+_POSSESSIVE = r"(?:(?<=\bhis )|(?<=\bher )|(?<=\btheir )|(?<='s )|(?<=\u2019s ))"
+CARE_TEAM_AUDIENCE: list[tuple[str, str]] = [
+    (
+        "day activity centre",
+        (
+            r"(?:(?-i:[A-Z][\w'-]*)\s+){0,3}(?:day (?:activity|care|rehabilitation) centre|day centre"
+            r"|(?-i:DAC))s?(?:\s+(?:staff|team|coordinator|manager|programme))?"
+        ),
+    ),
+    (
+        "school counsellor",
+        (
+            r"school(?:'s|\u2019s)? counsell?or(?:s|ling (?:team|service|staff))?"
+            r"|school counsell?ing (?:team|service|staff)|counsell?or at (?:the |his |her |their )?school"
+        ),
+    ),
+    ("GP", r"(?-i:GP)s?|family doctor|general practitioner"),
+    ("polyclinic", r"(?:(?-i:[A-Z][\w'-]*)\s+){0,2}polyclinic(?:\s+(?:doctor|team|staff|nurse))?"),
+    ("clinic", _POSSESSIVE + r"clinic"),
+    ("psychiatrist", r"psychiatrist"),
+    (
+        "doctor",
+        (
+            r"(?:(?<=\bhis )|(?<=\bher )|(?<=\btheir )|(?<='s )|(?<=\u2019s )|(?<=treating )"
+            r"|(?<=attending ))doctor"
+        ),
+    ),
+    (
+        "shelter staff",
+        (
+            r"shelter (?:staff|caseworkers?|case workers?|social workers?|team|workers?)"
+            r"|(?:caseworkers?|case workers?|staff) (?:at|of) the shelter"
+        ),
+    ),
+    ("co-case agency", r"co-?cas(?:e|ing) (?:agency|agencies|workers?|partners?|social workers?)"),
+    (
+        "medical social worker",
+        (
+            r"(?:(?-i:MSW)s?|medical social workers?)\s+(?:at|of|from)\s+(?:the\s+)?"
+            r"(?-i:(?:[A-Z][\w'&.-]*\s+){1,5}Hospital|IMH|Institute of Mental Health|[A-Z]{2,4}H\b)"
+            r"|" + _POSSESSIVE + r"(?:(?-i:MSW)|medical social worker)"
+        ),
+    ),
+]
+# For a child client (the youth pack), the client's own teacher is part of the care team; for an
+# adult client a teacher is a third party.
+_CARE_TEAM_CHILD = (
+    "teacher",
+    r"(?:form|class|homeroom) teachers?(?:\s*/\s*year head)?|" + _POSSESSIVE + r"teachers?",
+)
+_RECIPIENT_MARK = (
+    r"(?:\b(?:to|for|cc|copy(?:ing)?|copied to|addressed to|with|e-?mail(?:ing)?|inform|notify"
+    r"|update|brief|write to|reply to|respond to|forward(?:ed|ing)? to|send(?:ing)? to"
+    r"|shar(?:e|ed|ing) with|call|phone|contact|refer(?:ral|ring|red)? to|dear)\s+"
+    r"|\b(?:attn|attention|to)\s*:\s*)"
+)
+_DET = (
+    r"(?:(?:the|his|her|their|its|our|a|an)\s+)?"
+    r"(?:(?:client|young person|child|student|family)(?:'s|\u2019s)\s+)?"
+    r"(?:(?:own|current|treating|attending|assigned|regular|named)\s+)?"
+)
+_DOC_NOUNS = re.compile(
+    r"\b(?:e-?mail|letter|memo|note|referral|refer\w*|report|reply|response|introduc\w*|message"
+    r"|update|summary)\b",
+    re.IGNORECASE,
+)
+# A second recipient left beside a care-team one: "the DAC and her employer".
+_OTHER_RECIPIENT = re.compile(
+    r"\b(?:to|for|cc|copy(?:ing)?|copied to|and|also|or|plus|with)\s+"
+    + _DET
+    + r"(?:\w+\s+)?(?:employers?|school|principal|vice-principal|teachers?|landlord|agency|agencies"
+    r"|organi[sz]ation|lawyer|solicitor|insurer|funder|donor|press|media|journalist|admin"
+    r"|HR|human resources|hospital|clinic|centre|shelter|relatives?|family members?|neighbours?"
+    r"|church|mosque|temple|friends?)\b|\ban?other (?:agency|organi[sz]ation|service)\b",
+    re.IGNORECASE,
+)
+
+
+def _care_team_patterns(pack_id: str | None) -> list[tuple[str, re.Pattern]]:
+    kinds = [*CARE_TEAM_AUDIENCE, *([_CARE_TEAM_CHILD] if pack_id == "youth-offending" else [])]
+    return [
+        (kind, re.compile(_RECIPIENT_MARK + _DET + r"(?:" + pat + r")(?![\w-])", re.IGNORECASE))
+        for kind, pat in kinds
+    ]
+
+
+_PATTERNS: dict[str | None, list[tuple[str, re.Pattern]]] = {}
+
+
+def _care_team_hits(text: str, pack_id: str | None) -> list[tuple[str, re.Match]]:
+    pats = _PATTERNS.get(pack_id)
+    if pats is None:
+        pats = _PATTERNS[pack_id] = _care_team_patterns(pack_id)
+    hits = [(kind, m) for kind, pat in pats for m in pat.finditer(text)]
+    return sorted(hits, key=lambda h: h[1].start())
+
+
+def care_team_kind(instruction: str, pack_id: str | None = None) -> str | None:
+    """The first care-team recipient the instruction names ("GP", "day activity centre"), or
+    None."""
+    hits = _care_team_hits(instruction or "", pack_id)
+    return hits[0][0] if hits else None
+
+
+AUDIENCES = ("internal", "care-team", "external")
+
+
+def resolve_audience(
+    instruction: str, pack_id: str | None = None, requested: str | None = None
+) -> str:
+    """The audience of one request: "internal", "care-team" or "external".
+
+    A header value wins. Otherwise a statutory recipient or an internal phrase is set aside as
+    before; an instruction that names any external recipient is external, even beside a care-team
+    one ("the DAC and her employer"); a statutory recipient beats a care-team one; an instruction
+    that names only the client's own providers (a day activity centre, the GP, a school counsellor)
+    is care-team; anything else is internal."""
+    if requested in AUDIENCES:
+        return requested
+    text = instruction or ""
+    hits = _care_team_hits(text, pack_id)
+    if not hits:
+        return "external" if _external(text, pack_id) else "internal"
+    rest, last = [], 0
+    for _kind, m in hits:
+        if m.start() >= last:
+            rest.append(text[last : m.start()])
+            last = m.end()
+    rest = _DOC_NOUNS.sub(" ", " ".join([*rest, text[last:]]))
+    set_aside = INTERNAL_AUDIENCE.sub(" ", STATUTORY_AUDIENCE.sub(" ", rest))
+    if pack_id == "youth-offending":
+        set_aside = PARENT_AUDIENCE.sub(" ", set_aside)
+    if _external(rest, pack_id) or _OTHER_RECIPIENT.search(set_aside):
+        return "external"
+    if STATUTORY_AUDIENCE.search(text):
+        return "internal"
+    return "care-team"
+
+
+def audience_is_external(instruction: str, pack_id: str | None = None) -> bool:
+    """Whether the practitioner's instruction names a recipient outside the case team. Disclosure
+    categories (I10, I14) apply only then; a summary for the worker's own file or supervisor is
+    internal. An internal phrase never cancels a named external recipient: "email the principal
+    ahead of the case conference" is external. A care-team recipient is outside the case team, so
+    I14 still applies to it under the Children and Young Persons Act."""
+    return resolve_audience(instruction, pack_id) != "internal"
+
+
+# The I14 guard (round 6). The care-team tier relaxes I10 only, whereas the youth pack escalates
+# any document for a recipient outside the agency that identifies a protected young person, and a
+# care-team recipient does not change that (policy-packs/README.md). The v1.3 tier-off comparison
+# found that the judge dropped I14 on the co-case agency notes once the care-team paragraph was in
+# its prompt, so this check raises I14 after the judge when the judge did not.
+_NAME_TOKEN = r"(?-i:[A-Z][a-z][\w'’-]*)"
+_NAME_PARTICLE = r"(?:(?:de|da|van|von|bin|binte|bte|s/o|d/o|a/l|a/p)[ \t]+)"
+_NAME = rf"{_NAME_TOKEN}(?:[ \t]+{_NAME_PARTICLE}?{_NAME_TOKEN}){{0,3}}"
+# A patronymic name: "Ravi s/o Pillai", "Muhammad Danish bin Jaafar".
+_PATRONYMIC = re.compile(
+    rf"(?<![\w-]){_NAME_TOKEN}(?:[ \t]+{_NAME_TOKEN})?[ \t]+(?:bin|binte|bte|s/o|d/o|a/l|a/p)[ \t]+"
+    rf"{_NAME_TOKEN}"
+)
+# A capitalised name that acts as a person: the subject of a verb, a possessive, or an apposition
+# such as "Kumar, a student at ...".
+_NAME_AS_PERSON = re.compile(
+    rf"(?<![\w-])(?P<name>{_NAME})(?:(?:'s|’s)(?!\w)|\s+(?:is|was|has|had|will|would|may|can|"
+    r"attends|attended|requires|required|needs|needed|prefers|agreed|admitted|completed|reported|"
+    r"missed|expressed|expresses|reports|seeks|feels|lives|resides|said|says|continues|remains|stole|"
+    r"took|and (?:his|her|their))\b|,\s+(?:a|an|aged|who|"
+    r"now|currently)\b)",
+)
+# The subject line of a letter or a note: "Re: Support for Adrian de Silva's school attendance".
+_SUBJECT_NAME = re.compile(
+    rf"^\s*(?:Re|Subject)\s*:[^\n]*?\b(?:for|of|regarding|re|about|concerning)\s+(?P<name>{_NAME})",
+    re.MULTILINE | re.IGNORECASE,
+)
+# A field that names the client: "Client: Daniel Johnson, 17 years old", "Client Loh Jian Wei, aged".
+_FIELD_NAME = re.compile(
+    rf"\b(?-i:Client|Name|Young person|Student)(?:[ \t]+name)?[ \t]*:?[ \t]+(?P<name>{_NAME})"
+    r"(?=[ \t]*(?:,|\(|\n|$))",
+    re.MULTILINE,
+)
+# First words that open a sentence or name a role, a place or an organisation rather than a person.
+_NOT_A_PERSON = {
+    "the", "this", "that", "these", "those", "he", "she", "they", "it", "i", "we", "our", "your",
+    "his", "her", "their", "a", "an", "please", "further", "dear", "thank", "thanks", "progress",
+    "school", "support", "appointment", "appointments", "attendance", "community", "court",
+    "youth", "family", "case", "probation", "police", "ministry", "centre", "agency", "service",
+    "services", "team", "programme", "program", "home", "sessions", "session", "no", "all",
+    "each", "both", "there", "here", "if", "when", "while", "since", "as", "following", "next",
+    "mr", "mrs", "ms", "mdm", "madam", "dr", "sir", "counsellor", "teacher", "officer", "worker",
+    "parent", "parents", "mother", "father", "monday", "tuesday", "wednesday", "thursday",
+    "friday", "saturday", "sunday", "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december", "singapore", "ite",
+    "client", "note", "notes", "birth", "date", "name", "referral", "subject", "social",
+}  # fmt: skip
+_ROLE_OR_PLACE_TAIL = re.compile(
+    r"\b(?:School|College|Centre|Center|Court|Courts|Service|Services|Officer|Counsellor|Agency|Worker"
+    r"|Team|Programme|Program|Home|Hospital|Clinic|Polytechnic|Ministry|Board|Office|Unit"
+    r"|Institute|Academy|Club|Group)\b"
+)
+_TITLED = re.compile(r"\b(?:Mr|Mrs|Ms|Mdm|Madam|Dr|Miss)\.?\s+$")
+_ADDRESS_LINE = re.compile(r"^\s*(?:To|From|Attn|Attention|Cc|Dear)\b", re.IGNORECASE)
+_AGE_OF_PERSON = re.compile(
+    r"\b(?:aged?\s+\d{1,2}|\d{1,2}[- ]years?[- ]old|\d{1,2}\s+years?\s+of\s+age)\b",
+    re.IGNORECASE,
+)
+_YOUTH_COURT_REF = re.compile(
+    r"\bYouth Court\b|\bJuvenile Court\b|\bYC[/-]\d{2,4}[/-]\d{3,4}\b", re.IGNORECASE
+)
+
+
+def _person_names(draft: str) -> list[tuple[int, str]]:
+    """Names in the draft that read as a person: a patronymic name, the name in a subject line, or
+    a capitalised name that is the subject of a verb, a possessive or an apposition. Names in the
+    address or salutation line, titled names (a teacher or an officer) and names that end in a
+    place or an organisation are left out. Each hit is (position, name)."""
+    out: list[tuple[int, str]] = []
+    for m in _PATRONYMIC.finditer(draft):
+        lead = re.match(r"(?:Client|Name|Student|Re)[ \t]+", m.group(0))
+        out.append(
+            (m.start() + (lead.end() if lead else 0), m.group(0)[lead.end() if lead else 0 :])
+        )
+    for pat in (_SUBJECT_NAME, _FIELD_NAME, _NAME_AS_PERSON):
+        for m in pat.finditer(draft):
+            name, start = m.group("name"), m.start("name")
+            first = name.split()[0].lower().rstrip("'’s")
+            if first in _NOT_A_PERSON or name.split()[0].lower() in _NOT_A_PERSON:
+                continue
+            if _ROLE_OR_PLACE_TAIL.search(name) or _TITLED.search(draft[max(0, start - 8) : start]):
+                continue
+            out.append((start, name))
+    line_of = lambda i: draft[draft.rfind("\n", 0, i) + 1 : i]
+    return sorted(
+        (i, n) for i, n in out if not _ADDRESS_LINE.match(line_of(i)) and not _quoted(draft, i)
+    )
+
+
+def _unquoted_hit(pat: re.Pattern, draft: str) -> bool:
+    return any(not _quoted(draft, m.start()) for m in pat.finditer(draft))
+
+
+def cypa_guard(draft: str, pack_id: str | None, audience: str | None) -> Flag | None:
+    """I14 raised deterministically under the youth-offending pack: a draft for a recipient
+    outside the agency (care-team or external) that names a young person, by name or by initials,
+    together with the offence, the school, the age or a Youth Court reference. Never for an
+    internal recipient, never on a draft that names no one, and never on a name or a detail that
+    sits in a quoted charge sheet or court document. The screener adds the card only when the
+    judge did not return I14."""
+    if pack_id != "youth-offending" or audience not in ("care-team", "external"):
+        return None
+    names = _person_names(draft)
+    initials = [
+        (m.start(), m.group(0).strip())
+        for m in _INITIALS.finditer(draft)
+        if not _quoted(draft, m.start())
+    ]
+    who = names or initials
+    if not who:
+        return None
+    ctx = [
+        what
+        for what, pat in (
+            ("the offence", _OFFENCE_CONTEXT),
+            ("the school", _SCHOOL_CONTEXT),
+            ("the age", _AGE_OF_PERSON),
+            ("a Youth Court reference", _YOUTH_COURT_REF),
+        )
+        if _unquoted_hit(pat, draft)
+    ]
+    if not ctx:
+        return None
+    start, shown = who[0]
+    s0, e0 = _sentence_bounds(draft, start, start + len(shown))
+    by = "by initials " if not names else ""
+    return Flag(
+        label="I14",
+        clause="CYPA 1993 s.111, s.112, s.116",
+        severity="escalate",
+        evidence=draft[s0:e0].strip()[:400],
+        rewrite=None,
+        name="Identifies a protected child or young person in a document written for an external audience",
+        reason=(
+            "Deterministic check: names a protected young person with the offence for a recipient "
+            f"outside the agency; CYPA. The draft names {shown} {by}together with "
+            f"{' and '.join([', '.join(ctx[:-1]), ctx[-1]] if len(ctx) > 1 else ctx)}, and a "
+            "care-team recipient does not change I14 (policy-packs/README.md)."
+        ),
+    )

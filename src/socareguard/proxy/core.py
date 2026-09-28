@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from socareguard.inbound.leakcheck import leak_check
-from socareguard.inbound.restore import restore
+from socareguard.inbound.restore import ambiguous_person_flag, restore
 from socareguard.ledger import Ledger
 from socareguard.outbound.sanitise import Sanitiser
 from socareguard.outbound.vault import Vault
@@ -199,6 +199,11 @@ class Guard:
         left = rules.unrestored_surrogate(r.text, lk.unrestored, lk.partial)
         if left is not None:
             flags = [*flags, left]
+        # A titled surname that two household members share gets a card saying that it could be
+        # either of two people, and it is restored to their shared surname.
+        either = ambiguous_person_flag(reply_raw, r.ambiguous_people)
+        if either is not None:
+            flags = [*flags, either]
         n = len(events)
         events += [
             Reidentify(
@@ -226,15 +231,10 @@ class Guard:
         audience_header: str | None = None,
     ) -> GuardedResult:
         session = session or uuid.uuid4().hex[:12]
-        # The audience decides how a named employer leaves: the header's value, or else the one
-        # the instruction implies, as the screen reads it.
-        resolved_audience = (
-            audience
-            if audience in ("internal", "external")
-            else "external"
-            if rules.audience_is_external(_instruction(messages), pack_id)
-            else "internal"
-        )
+        # One resolution per request: the header's value, or else the one the instruction
+        # implies. The sanitiser (how a named employer leaves), the screen (I10, I14 and the
+        # care-team paragraph) and the ledger all read this value.
+        resolved_audience = rules.resolve_audience(_instruction(messages), pack_id, audience)
         out_msgs, events, known, payload_hash, payload, seq, replacements = self.outbound(
             messages, pack_id, session, seed, audience=resolved_audience
         )
@@ -282,7 +282,7 @@ class Guard:
             instruction=_instruction(messages),
             context=payload,
             source_text="\n".join(str(m.get("content") or "") for m in messages),
-            audience=audience,
+            audience=resolved_audience,
         )
         events += in_events
         seq += len(in_events)
@@ -325,7 +325,7 @@ class Guard:
         recipients = [{"role": "drafting model", "model": model}]
         screen_ev = next((e for e in in_events if e.kind == "screen"), None)
         if screen_ev is not None and screen_ev.judge_model:
-            recipients.append({"role": "conduct judge", "model": screen_ev.judge_model})
+            recipients.append({"role": "the screen's model", "model": screen_ev.judge_model})
         if screen_ev is not None and screen_ev.baseline_model:
             recipients.append(
                 {"role": "harm-classifier baseline", "model": screen_ev.baseline_model}
@@ -373,6 +373,8 @@ class Guard:
                     "unrestored": list(lk.unrestored),
                     "ambiguous_generalised": list(r.ambiguous_generalised),
                     "partial": list(lk.partial),
+                    "ambiguous_surrogates": list(r.ambiguous_surrogates),
+                    "ambiguous_people": list(lk.ambiguous_people),
                 },
                 "n_invented": len(lk.invented),
                 "flags": [f.label for f in flags],
@@ -425,7 +427,7 @@ class Guard:
             for f in flag_labels:
                 if pack.action_for(f) == "escalate":
                     raise ValueError(
-                        f"{f} escalates to supervisory review and cannot be overridden by the practitioner"
+                        f"{f} escalates to a supervisor and cannot be kept with a reason by the practitioner"
                     )
         return self.ledger.append(
             {
@@ -465,13 +467,14 @@ def _sanitise_message(
 
 def _employer_treatment(replacements: list[dict], audience: str) -> str | None:
     """How a named employer left the premises, for the ledger row and the panel: a reversible
-    surrogate (internal audience, restored in the draft) or its kind (external audience, not
-    restored). None when the note names no employer."""
+    surrogate (internal audience, restored in the draft) or its kind (external audience or a
+    care-team recipient, not restored). None when the note names no employer."""
     kinds = {r["kind"] for r in replacements if r["category"] == "EMPLOYER"}
+    who = "care-team recipient" if audience == "care-team" else f"{audience} audience"
     if "surrogate" in kinds:
-        return f"surrogate, restored in the draft ({audience} audience)"
+        return f"surrogate, restored in the draft ({who})"
     if "generalised" in kinds:
-        return f"generalised to its kind, not restored ({audience} audience)"
+        return f"generalised to its kind, not restored ({who})"
     return None
 
 

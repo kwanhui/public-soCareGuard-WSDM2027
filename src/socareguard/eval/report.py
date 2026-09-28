@@ -23,8 +23,11 @@ def _pct(x: float | None) -> str:
 
 
 # Result files per corpus version. v1 holds the numbers of the first paper draft, v1.1 the numbers
-# tagged results-v1.1, and v1.2 the re-measurement on corpus v1.2 (tag results-v1.2). All are kept
-# so that the comparison below can be rendered.
+# tagged results-v1.1, v1.2 the re-measurement on corpus v1.2 (tag results-v1.2), and v1.3 the
+# screen on corpus v1.3 with the care-team tier (tag results-v1.3). All are kept so that the
+# comparison below can be rendered. At v1.3 only the full detection pipeline and the round trip
+# were re-run (household-consistent surrogates); the ablation rows, the utility run and the second
+# judge are the v1.2 files, which the v1.3 code does not change.
 FILES = {
     "v1": {
         "full": "detect-full.json",
@@ -53,10 +56,19 @@ FILES = {
         "sc": "screen-v1.2.json",
         "scc": "screen-v1.2-claude.json",
     },
+    "v1.3": {
+        "full": "detect-v1.3.json",
+        "ng": "detect-no-gliner-v1.2.json",
+        "sg": "detect-sg-only-v1.2.json",
+        "rt": "roundtrip-v1.3.json",
+        "ut": "utility-v1.2.json",
+        "sc": "screen-v1.3.json",
+        "scc": "screen-v1.2-claude.json",
+    },
 }
 
 # The result set this page reports; the earlier ones appear in the comparison table at the end.
-CURRENT = "v1.2"
+CURRENT = "v1.3"
 
 
 def _leak(overall: dict) -> dict:
@@ -95,15 +107,16 @@ def _saturation(version: str) -> str | None:
 def _confidence_distribution(version: str) -> str | None:
     """Judge-flag confidence values on the 600 v1.1 drafts alone, so that the count of flags at
     or above 0.95 traces to a file (final-defensibility-read.md, 2026-09-28, item 1). Rows of the
-    v1.2 external drafts carry ``"audience": "external"``; the v1.1 drafts carry no ``audience``
-    key, so excluding "external" isolates the 600."""
+    v1.2 external drafts carry ``"audience": "external"`` and those of the v1.3 care-team drafts
+    ``"audience": "care-team"``; the v1.1 drafts carry no ``audience`` key, so the rows without
+    one are the 600."""
     from collections import Counter
 
     p = OUT / f"screen-{version}-rows.jsonl"
     if not p.exists():
         return None
     rows = [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
-    rows600 = [r for r in rows if r.get("audience") != "external"]
+    rows600 = [r for r in rows if not r.get("audience")]
     vals = [v for r in rows600 for v in r["judge_flags"].values()]
     if not vals:
         return None
@@ -467,9 +480,17 @@ def _prompt_only_section(sc: dict, po: dict) -> list[str]:
             "Both runs share the generation-intent labels described above, so the difference is between two prompts on the same "
             "scripted material, not a validated accuracy gap. Produced by `python3 -m socareguard.eval screen --prompt-only --tag "
             f"{po['tag']} --no-baseline"
-            + (f" --corpus {po['corpus']}`" if po.get("corpus", "v1.1") != "v1.1" else "`")
+            + (f" --corpus {po['corpus']}" if po.get("corpus", "v1.1") != "v1.1" else "")
+            + (f" --reuse-from {po['reused_from']['tag']}`" if po.get("reused_from") else "`")
             + (
-                f", at an estimated USD {po['cost_estimate']['usd_estimate']:.2f} at list prices "
+                f", which copied {po['reused_from']['rows_reused']} rows with an unchanged prompt from the "
+                f"{po['reused_from']['tag']} run and judged {po['reused_from']['rows_judged']} drafts. A full run of the "
+                f"{po['drafts']} drafts is estimated"
+                if po.get("reused_from") and po.get("cost_estimate")
+                else ""
+            )
+            + (
+                f"{' at USD' if po.get('reused_from') else ', at an estimated USD'} {po['cost_estimate']['usd_estimate']:.2f} at list prices "
                 f"({po['cost_estimate']['input_tokens_mean']} input tokens per call counted with o200k_base, "
                 f"{po['cost_estimate']['output_tokens_per_call_assumed']} output tokens per call assumed)."
                 if po.get("cost_estimate")
@@ -572,35 +593,61 @@ def _corpus_v12_section(sc: dict | None = None, po: dict | None = None) -> list[
             "the gate, for internal and external drafts separately."
         ),
         "",
-        *_gate_table(sc, po),
+        *(_gate_table(sc, po) if not (sc and sc.get("corpus") == "v1.3") else []),
     ]
 
 
 def _gate_table(sc: dict | None, po: dict | None) -> list[str]:
     """False-positive rate on the compliant drafts of corpus v1.2, with and without the audience
-    gate, for internal and external drafts, for each screen run on that corpus."""
+    gate, for internal drafts, drafts to a care-team recipient (from v1.3, when any is labelled)
+    and other external drafts, for each screen run on that corpus."""
     runs = [
         (name, d)
         for name, d in (("Clause-grounded judge", sc), ("Prompt-only judge", po))
-        if d and d.get("corpus") == "v1.2" and d["binary"].get("compliant_by_audience")
+        if d and d.get("corpus") in ("v1.2", "v1.3") and d["binary"].get("compliant_by_audience")
     ]
     if not runs:
         return []
+    tag = runs[0][1]["tag"].split("-prompt-only")[0]
+    tiers = [("internal", "Internal"), ("external", "External")]
+    if any("care-team" in d["binary"]["compliant_by_audience"] for _, d in runs):
+        tiers = [
+            ("internal", "Internal"),
+            ("care-team", "Care-team"),
+            ("external", "Other external"),
+        ]
+    head = " | ".join(f"{t} compliant, gated | {t} compliant, ungated" for _, t in tiers)
     L = [
-        "| Run | Internal compliant, gated | Internal compliant, ungated | External compliant, gated | External compliant, ungated | All compliant, gated / ungated |",
-        "|---|---|---|---|---|---|",
+        f"| Run | {head} | All compliant, gated / ungated |",
+        "|---" * (2 * len(tiers) + 2) + "|",
     ]
     for name, d in runs:
         b = d["binary"]
-        i, e = (
-            b["compliant_by_audience"].get("internal", {}),
-            b["compliant_by_audience"].get("external", {}),
-        )
-        L.append(
-            f"| {name} | {i.get('fpr_gated', 0):.3f} (n={i.get('compliant_drafts', 0)}) | {i.get('fpr_ungated', 0):.3f} | "
-            f"{e.get('fpr_gated', 0):.3f} (n={e.get('compliant_drafts', 0)}) | {e.get('fpr_ungated', 0):.3f} | "
-            f"{b['fpr']:.3f} / {b['ungated']['fpr']:.3f} |"
-        )
+        cells = []
+        for key, _ in tiers:
+            v = b["compliant_by_audience"].get(key, {})
+            cells.append(
+                f"{v.get('fpr_gated', 0):.3f} (n={v.get('compliant_drafts', 0)}) | {v.get('fpr_ungated', 0):.3f}"
+            )
+        L.append(f"| {name} | {' | '.join(cells)} | {b['fpr']:.3f} / {b['ungated']['fpr']:.3f} |")
+    care_team_note = (
+        [
+            (
+                "A care-team draft is a letter whose address block names the client's own provider, such as a school counsellor, a form "
+                "teacher or a day activity centre (`recipient_kind` in `corpus/drafts/README-v1.2.md` and `corpus/drafts/README-v1.3.md`). "
+                "The judge reads I10 within that recipient's role, and I14 applies as it does to any external recipient. "
+                + (
+                    "Under the youth pack, the I14 guard raises I14 after the judge on a care-team draft that names the young person "
+                    "with the offence, the school, the age or a Youth Court reference, so the care-team rates include it. "
+                    if any((d.get("rules_recomputed") or {}).get("guard_scope") for _, d in runs)
+                    else ""
+                )
+                + "This tier is a draft reading of SASW A.6.d that awaits practitioner review."
+            )
+        ]
+        if len(tiers) == 3
+        else []
+    )
     L += [
         "",
         (
@@ -608,12 +655,13 @@ def _gate_table(sc: dict | None, po: dict | None) -> list[str]:
             "ungated rates are equal by construction, and the gate can lower the false-positive rate only on internal drafts. "
             "The external rate measures how often the judge raises a flag on a compliant letter or referral."
         ),
+        *care_team_note,
         "",
         *_external_flags(runs),
         (
-            "Rescored from the same rows with no model call, the numbers on the 600 drafts of v1.1 alone "
-            "(`python3 -m socareguard.eval rescore --tag v1.2` and `--tag v1.2-prompt-only`, written to "
-            "`screen-v1.2-v1.1-drafts.json` and `screen-v1.2-prompt-only-v1.1-drafts.json`), are the rows headed "
+            "Rescored from the same rows with no model call, the results on the 600 drafts of v1.1 alone "
+            f"(`python3 -m socareguard.eval rescore --tag {tag}` and `--tag {tag}-prompt-only`, written to "
+            f"`screen-{tag}-v1.1-drafts.json` and `screen-{tag}-prompt-only-v1.1-drafts.json`), are the rows headed "
             '"600 v1.1 drafts" of the comparison table below and compare like for like with v1.1.'
         ),
         "",
@@ -638,16 +686,254 @@ def _external_flags(runs: list[tuple[str, dict]]) -> list[str]:
         flagged = sum(1 for r in ext if any(v >= 0.5 for v in gated_flags(r).values()))
         by_task = Counter(r["task"] for r in ext)
         hit = Counter(r["task"] for r in ext if any(v >= 0.5 for v in gated_flags(r).values()))
+        care = [r for r in ext if r.get("recipient_kind") == "care-team"]
+        care_hit = sum(1 for r in care if any(v >= 0.5 for v in gated_flags(r).values()))
+        other = [r for r in ext if r.get("recipient_kind") != "care-team"]
+        other_hit = flagged - care_hit
+        oc = Counter(k for r in other for k, v in gated_flags(r).items() if v >= 0.5)
         out.append(
-            f"{name}: {flagged} of {len(ext)} compliant external drafts flagged ("
+            f"{name}: {flagged} of {len(ext)} compliant v1.2 drafts flagged ("
             + ", ".join(
                 f"{t.replace('_', ' ')}s {hit[t]} of {n}" for t, n in sorted(by_task.items())
             )
             + "). Flags raised: "
             + ", ".join(f"{k} {v}" for k, v in c.most_common())
             + "."
+            + (
+                f" By `recipient_kind`, {len(care)} of the {len(ext)} drafts are care-team and are scored in the "
+                f"care-team tier above ({care_hit} of {len(care)} flagged), whereas the other {len(other)} are external "
+                f"({other_hit} of {len(other)} flagged: "
+                + ", ".join(f"{k} {v}" for k, v in oc.most_common())
+                + ")."
+                if care
+                else ""
+            )
         )
     return out + ([""] if out else [])
+
+
+def _tier_off(on: dict | None) -> list[str]:
+    """The care-team drafts judged with and without the care-team paragraph (results-v1.3)."""
+    from collections import Counter
+
+    from socareguard.eval.run_screen import gated_flags
+
+    off = _load("screen-v1.3-careteam-tieroff.json")
+    if not (on and off):
+        return []
+
+    def rows(tag: str) -> dict[str, dict]:
+        p = OUT / f"screen-{tag}-rows.jsonl"
+        return {
+            r["draft"]: r
+            for r in (json.loads(line) for line in p.read_text().splitlines() if line.strip())
+        }
+
+    r_on, r_off = rows(on["tag"]), rows(off["tag"])
+    ids = sorted(r_off)
+
+    def flags(r: dict) -> list[str]:
+        return [k for k, v in gated_flags(r).items() if v >= 0.5]
+
+    def cell(src: dict[str, dict], pack: str | None = None) -> str:
+        sel = [i for i in ids if pack is None or src[i]["pack"] == pack]
+        hit = sum(1 for i in sel if flags(src[i]))
+        return f"{hit} of {len(sel)} ({hit / len(sel):.3f})"
+
+    def cats(src: dict[str, dict]) -> str:
+        c = Counter(k for i in ids for k in flags(src[i]))
+        return ", ".join(f"{k} {v}" for k, v in sorted(c.items(), key=lambda x: (-x[1], x[0])))
+
+    packs = sorted({r_off[i]["pack"] for i in ids})
+    i14 = [
+        (task, sum(1 for i in sel if "I14" in flags(r_on[i])), sum(1 for i in sel if "I14" in flags(r_off[i])), len(sel))
+        for task in sorted({r_off[i]["task"] for i in ids if r_off[i]["pack"] == "youth-offending"})
+        for sel in [[i for i in ids if r_off[i]["task"] == task]]
+    ]  # fmt: skip
+    i10 = (
+        sum(1 for i in ids if "I10" in flags(r_on[i])),
+        sum(1 for i in ids if "I10" in flags(r_off[i])),
+    )
+    guarded = "rule_i14" in next(iter(r_off.values()), {})
+
+    def judge_i14(r: dict) -> bool:
+        return r["judge_flags"].get("I14", 0.0) >= 0.5
+
+    def n_of(src: dict[str, dict], sel: list[str], test) -> int:
+        return sum(1 for i in sel if test(src[i]))
+
+    classes = sorted({(r_off[i]["pack"], r_off[i]["task"]) for i in ids})
+    by_class = [
+        "| Recipient class (pack) | n | Flagged, tier on / off | I10, tier on / off | I14, tier on / off | I14 from the judge alone, tier on / off |",
+        "|---|---|---|---|---|---|",
+    ]
+    for pack, task in classes:
+        sel = [i for i in ids if r_off[i]["pack"] == pack and r_off[i]["task"] == task]
+        cells = [
+            f"{n_of(r_on, sel, lambda r, t=t: t(r))} / {n_of(r_off, sel, lambda r, t=t: t(r))}"
+            for t in (
+                lambda r: bool(flags(r)),
+                lambda r: "I10" in flags(r),
+                lambda r: "I14" in flags(r),
+                judge_i14,
+            )
+        ]
+        name = _CARETEAM_TASKS.get(task, task.replace("_", " ") + "s")
+        by_class.append(
+            f"| {name[0].upper() + name[1:]} ({pack}) | {len(sel)} | " + " | ".join(cells) + " |"
+        )
+    raised = (
+        sum(1 for i in ids if "I14" in flags(r_on[i]) and not judge_i14(r_on[i])),
+        sum(1 for i in ids if "I14" in flags(r_off[i]) and not judge_i14(r_off[i])),
+    )
+    rc_on, rc_po = (
+        on.get("rules_recomputed") or {},
+        (_load("screen-v1.3-prompt-only.json") or {}).get("rules_recomputed") or {},
+    )
+    outside_po = rc_po.get("i14_guard_outside_scope_not_counted", 0)
+    outside_po_v11 = len(rc_po.get("of_which_v1.1_drafts", []))
+    both = sum(1 for i in ids if flags(r_on[i]) and flags(r_off[i]))
+    only_off = sum(1 for i in ids if flags(r_off[i]) and not flags(r_on[i]))
+    only_on = sum(1 for i in ids if flags(r_on[i]) and not flags(r_off[i]))
+    return [
+        "### The care-team tier on and off",
+        "",
+        (
+            f"To measure what the care-team reading changes, the {len(ids)} care-team drafts (the 30 of v1.3 and the 3 of v1.2) "
+            "were judged a second time with the plain prompt that an external draft receives, that is, without the care-team paragraph "
+            f"(`python3 -m socareguard.eval screen --corpus v1.3 --care-team-only --tier-off --no-baseline --tag {off['tag']}`). "
+            "The same judge, notes and scoring apply, and I10 and I14 count in both runs, as they do for any recipient outside the case team."
+        ),
+        "",
+        "| Care-team drafts flagged at 0.5 | All | " + " | ".join(packs) + " | Flags raised |",
+        "|---|---|" + "---|" * len(packs) + "---|",
+        f"| Tier on (`screen-{on['tag']}-rows.jsonl`) | {cell(r_on)} | "
+        + " | ".join(cell(r_on, p) for p in packs)
+        + f" | {cats(r_on)} |",
+        f"| Tier off (`screen-{off['tag']}-rows.jsonl`) | {cell(r_off)} | "
+        + " | ".join(cell(r_off, p) for p in packs)
+        + f" | {cats(r_off)} |",
+        "",
+        *(
+            [
+                "Per recipient class, the counts with the tier on and off, and the I14 count of the judge alone before the guard is added:",
+                "",
+                *by_class,
+                "",
+            ]
+            if guarded
+            else []
+        ),
+        (
+            f"Of the {len(ids)} drafts, {both} are flagged in both runs, {only_off} only without the tier and {only_on} only with it. "
+            f"I10 is raised on {i10[1]} drafts without the tier and on {i10[0]} with it. "
+            + (
+                _guard_prose(r_on, r_off, ids, judge_i14, raised, rc_on, outside_po, outside_po_v11)
+                if guarded
+                else (
+                    "Although the prompt keeps I14 unchanged for a young person's care team, the I14 count also differs between the runs ("
+                    + ", ".join(
+                        f"{_CARETEAM_TASKS.get(t, t.replace('_', ' ') + 's')} {off_n} of {n} without the tier and {on_n} of {n} with it"
+                        for t, on_n, off_n, n in i14
+                    )
+                    + "), so part of the difference comes from I14 rather than from the reading of I10. "
+                )
+            )
+            + "Both runs are single samples at temperature 0 on generation-intent labels, and the difference therefore measures the "
+            f"effect of the paragraph on this judge and these {len(ids)} drafts, not an error rate of the reading. "
+            "As a draft reading of SASW A.6.d, the tier awaits practitioner review."
+        ),
+        "",
+    ]
+
+
+def _n_drafts(n: int, adj: str = "") -> str:
+    return f"no {adj}draft" if n == 0 else f"{n} {adj}draft{'s' if n != 1 else ''}"
+
+
+def _guard_prose(r_on, r_off, ids, judge_i14, raised, rc_on, outside_po, outside_po_v11) -> str:
+    """The tier-off paragraph's account of the I14 guard (results-v1.3)."""
+    youth = [i for i in ids if r_off[i]["pack"] == "youth-offending"]
+    cocase = [i for i in youth if r_off[i]["task"] == "cocase_note"]
+    j_on = sum(1 for i in cocase if judge_i14(r_on[i]))
+    j_off = sum(1 for i in cocase if judge_i14(r_off[i]))
+    with_on = sum(1 for i in youth if r_on[i].get("rule_i14") or judge_i14(r_on[i]))
+    with_off = sum(1 for i in youth if r_off[i].get("rule_i14") or judge_i14(r_off[i]))
+    return (
+        "The care-team paragraph was meant to change the reading of I10 only, and it keeps I14 unchanged for a young person's care team. "
+        f"The judge alone nevertheless dropped I14 on the co-case agency notes ({j_off} of {len(cocase)} without the tier and {j_on} of {len(cocase)} with it). "
+        "The youth pack escalates any document for a recipient outside the agency that identifies a protected young person, and a care-team recipient does not change that. "
+        "A deterministic guard (`cypa_guard` in `src/socareguard/screen/rules.py`) therefore raises I14 at escalate after the judge, when the judge did not, "
+        "on a youth-offending draft for a care-team or external recipient that names the young person, by name or by initials, "
+        "together with the offence, the school, the age or a Youth Court reference. "
+        "It does not fire for an internal recipient, on a draft that names no young person, or on a name that sits in a quoted charge sheet. "
+        f"With the guard, I14 is raised on {with_off} of {len(youth)} youth care-team drafts without the tier and on {with_on} of {len(youth)} with it, "
+        f"of which the guard raises {raised[1]} without the tier and {raised[0]} with it. "
+        "The difference between the runs therefore no longer comes from I14. "
+        "The guard reads the draft and the recipient, not the prompt, so the rows were rescored with no model call "
+        f"(`python3 -m socareguard.eval rules --tag v1.3`, `--tag v1.3-prompt-only` and `--tag v1.3-careteam-tieroff`). "
+        "It is scored on every row it applies to (a recipient outside the agency under the youth pack), so it also "
+        "counts in the 600-draft rescore of the prompt-only run, where it adds I14 to a few referral drafts. The "
+        "clause-grounded judge already raised I14 on those, so its 600-draft numbers do not move. "
+    )
+
+
+# Plural names of the v1.3 care-team tasks, for prose.
+_CARETEAM_TASKS = {
+    "clinic_handover": "clinic handover notes",
+    "dac_support_note": "day activity centre notes",
+    "polyclinic_followup": "polyclinic follow-up notes",
+    "shelter_note": "shelter notes",
+    "cocase_note": "co-case agency notes",
+    "school_counsellor_note": "school counsellor notes",
+}
+
+
+def _corpus_v13_section(sc: dict | None, po: dict | None) -> list[str]:
+    """The compliant care-team drafts of corpus v1.3 (round 6), when a v1.3 run exists."""
+    if not (sc and sc.get("corpus") == "v1.3"):
+        return []
+    counts: dict[str, dict[str, int]] = {}
+    for f in sorted(Path("corpus/drafts").glob("*-careteam-v1.3.jsonl")):
+        pack = f.name.removesuffix("-careteam-v1.3.jsonl")
+        for line in f.read_text().splitlines():
+            if line.strip():
+                task = json.loads(line)["task"]
+                counts.setdefault(pack, {})[task] = counts.setdefault(pack, {}).get(task, 0) + 1
+    total = sum(sum(v.values()) for v in counts.values())
+    parts = [
+        " and ".join(f"{n} {_CARETEAM_TASKS.get(t, t)}" for t, n in sorted(v.items()))
+        + f" for {p.replace('-', ' ')}"
+        for p, v in counts.items()
+    ]
+    per = ", ".join(parts[:-1]) + (", and " if len(parts) > 1 else "") + parts[-1]
+    reuse = sc.get("reused_from") or {}
+    return [
+        "## Corpus v1.3: compliant drafts for the client's care team",
+        "",
+        (
+            f"Only 3 of the 90 external drafts of v1.2 name one of the client's own providers, so the care-team tier of the audience gate "
+            f"had almost no compliant drafts to be measured against. Corpus v1.3 appends {total} compliant drafts, each written for a "
+            f"provider on the client's care team and each from an existing v1.1 note ({per}). "
+            "Each instruction records the client's consent to the specific disclosure (for a young person, the consent of the young person "
+            "and the parent), asks for functional needs, appointments and practical arrangements only, never a diagnosis, the offence or "
+            "the history of the case, and fixes the first line of the note, so that the address block names the recipient. "
+            "The drafting model, prompt and temperature are those of v1.1 and v1.2, every draft carries label NONE and `recipient_kind` "
+            "care-team, and no v1.1 or v1.2 file was changed (`corpus/drafts/README-v1.3.md`, `configs/corpus-v1.3.yaml`). "
+            "As in v1.1 and v1.2, the label records the instruction that the drafter received, not an expert judgement of the note."
+        ),
+        "",
+        (
+            f"The run `python3 -m socareguard.eval screen --corpus v1.3 --tag {sc['tag']} --reuse-from {reuse.get('tag', 'v1.2')}` "
+            f"copies {reuse.get('rows_reused', 'n/a')} rows of the {reuse.get('tag', 'v1.2')} run whose judge prompt hash is unchanged "
+            f"and judges {reuse.get('rows_judged', 'n/a')} drafts, namely the 30 new drafts and the 3 care-team drafts of v1.2, whose "
+            "prompt now carries the care-team paragraph. Likewise, the prompt-only run copies its v1.2 rows. "
+            "For each tier, the table reports the false-positive rate at 0.5 on the compliant drafts."
+        ),
+        "",
+        *_gate_table(sc, po),
+        *_tier_off(sc),
+    ]
 
 
 def render(version: str = CURRENT) -> str:
@@ -664,6 +950,9 @@ def render(version: str = CURRENT) -> str:
         + (
             ", and the screen runs on the 600 labelled drafts of v1.1 and the 90 compliant external drafts that v1.2 adds"
             if version == "v1.2"
+            else ", and the screen runs on the 600 labelled drafts of v1.1, the 90 compliant external drafts of v1.2 and the 30 compliant "
+            "care-team drafts that v1.3 adds"
+            if version == "v1.3"
             else ""
         )
         + "). Every number below is measured on synthetic material; see `corpus/README.md`.",
@@ -741,6 +1030,16 @@ def render(version: str = CURRENT) -> str:
             "The deterministic layer alone catches every NRIC, phone number and case reference at near-perfect precision, whereas among names it catches only titled client names"
             + (f" (NAME recall {sg_name:.3f})." if sg_name is not None else "."),
             "Presidio adds most names, and GLiNER2-PII reduces the remaining name and address gap at the cost of latency.",
+            *(
+                [
+                    (
+                        f"The first two rows are the v1.2 files (`{FILES[version]['sg']}`, `{FILES[version]['ng']}`), while the full pipeline "
+                        f"was re-run at {version} (`{FILES[version]['full']}`) with the same spans and scores as at v1.2."
+                    )
+                ]
+                if version == "v1.3"
+                else []
+            ),
             "",
         ]
     if rt:
@@ -760,6 +1059,16 @@ def render(version: str = CURRENT) -> str:
             "Exact text fidelity is low by design: generalisation is one-way, so a note that carried a diagnosis or a",
             "school name comes back with the generalised phrase unless the model reproduced it exactly. Surrogate fidelity",
             "is the measure that matters for re-identification.",
+            *(
+                [
+                    (
+                        f"Measured at {version} (`{FILES[version]['rt']}`), with household-consistent surrogates. Every count equals the v1.2 count, "
+                        "and only the latency differs."
+                    )
+                ]
+                if version == "v1.3"
+                else []
+            ),
             "",
         ]
     if ut:
@@ -795,8 +1104,13 @@ def render(version: str = CURRENT) -> str:
             "",
             (
                 f"{sc['drafts']} drafts ({sc['failure_drafts']} written under a single-failure instruction, {sc['compliant_drafts']} compliant). "
-                f"Judge: `{sc['judge_model']}` at temperature 0, using the pack's SASW clause table, deterministic rules for over-caution, and "
-                "disclosure categories gated on an external audience in the instruction. Labels are generation-intent labels, so these are"
+                f"Judge: `{sc['judge_model']}` at temperature 0, using the pack's SASW clause table, deterministic rules for over-caution, "
+                + (
+                    "the I14 guard on the care-team drafts (described under the care-team tier below), "
+                    if sc.get("rules_recomputed")
+                    else ""
+                )
+                + "and disclosure categories gated on an external audience in the instruction. Labels are generation-intent labels, so these are"
             ),
             "behaviour on scripted material, not validated accuracy. F1, AUPRC and FPR are reported together, as for safety classifiers.",
             "",
@@ -913,6 +1227,7 @@ def render(version: str = CURRENT) -> str:
     if tie:
         L += _auprc_section(tie)
     L += _corpus_v12_section(sc, po)
+    L += _corpus_v13_section(sc, po)
     L += [
         "## Reading these numbers",
         "",
@@ -936,12 +1251,31 @@ def render(version: str = CURRENT) -> str:
             f"## Corpus {', '.join(earlier)} and {version}",
             "",
             "The v1 column is the result set of the first paper draft (code of commit `4868da4` for detection and round trip, `36a3ca9` for the screen and utility, corpus v1).",
-            "The v1.1 column is the result set tagged `results-v1.1` (commit `b0a38ac`, corpus v1.1). Its tie-aware average precision is recomputed from the saved rows. The paper reports the v1.2 column.",
-            (
-                f"The {version} column is this document's result set (tag `results-{version}`). The screen rows of v1.2 are on 690 drafts, the 600 of v1.1 and 90 compliant external drafts, "
-                "whereas the second judge runs on the same 180-draft subset as in v1.1. A row without an earlier value is a new measure."
+            "The v1.1 column is the result set tagged `results-v1.1` (commit `b0a38ac`, corpus v1.1). Its tie-aware average precision is recomputed from the saved rows.",
+            *(
+                [
+                    "The v1.2 column is the result set tagged `results-v1.2`. Its screen rows are on 690 drafts, the 600 of v1.1 and 90 compliant external drafts."
+                ]
+                if version == "v1.3"
+                else []
             ),
-            "On the 90 external drafts the clause-grounded judge flags 76 (I10 42, I14 30, I2 7). A reading of every flag against the pack clauses found the 30 I14 flags to be the youth pack's rule that escalates any external document identifying a protected young person. Of the 42 I10 flags, 14 are drafter over-disclosure (a diagnosis named to an employer who needed only a work adjustment), 9 are false positives and 18 are undecidable because the referral instruction recorded no consent. The compliant label is therefore unreliable for external drafts. The paper reports the 600 labelled drafts in its table and states this result in its text.",
+            (
+                f"The {version} column is this document's result set (tag `results-{version}`). "
+                + (
+                    "Its screen rows are on 720 drafts, the 690 of v1.2 and 30 compliant care-team drafts. The detection ablation rows, "
+                    "the utility run and the second judge are the v1.2 files, so those rows repeat the v1.2 values. "
+                    "On the 600 drafts of v1.1, every screen result equals its v1.2 value, as those rows were copied with an unchanged prompt. "
+                    if version == "v1.3"
+                    else "The screen rows of v1.2 are on 690 drafts, the 600 of v1.1 and 90 compliant external drafts. "
+                )
+                + "The second judge runs on the same 180-draft subset as in v1.1. A row without an earlier value is a new measure."
+            ),
+            "On the 90 external drafts of v1.2 the clause-grounded judge flags 76 (I10 42, I14 30, I2 7). A reading of every flag against the pack clauses found the 30 I14 flags to be the youth pack's rule that escalates any external document identifying a protected young person. Of the 42 I10 flags, 14 are drafter over-disclosure (a diagnosis named to an employer who needed only a work adjustment), 9 are false positives and 18 are undecidable because the referral instruction recorded no consent. The compliant label is therefore unreliable for external drafts. The paper reports the 600 labelled drafts in its table and states this result in its text."
+            + (
+                " At v1.3 the 3 youth school letters whose `recipient_kind` is care-team are judged with the care-team paragraph and remain flagged for I14 alone, so the count stays at 76 of 90, 73 of the 87 external drafts and 3 of the 3 care-team drafts."
+                if version == "v1.3"
+                else ""
+            ),
             "",
             f"| Measure | {' | '.join(earlier)} | {version} |",
             "|---|" + "---|" * len(earlier) + "---|",

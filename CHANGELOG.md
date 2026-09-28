@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased (round 6, 2026-10-01)
+
+### Supervisor view
+
+- `GET /supervisor` shows the ledger chain check (rows, head hash, first gap, and the head hash
+  that the server last logged), the withheld drafts that no supervisor has released yet, filter
+  chips for pack, category, actor, kind and dates, one period of escalations, releases, overrides,
+  accepted rewrites and opened reviews, and the counts for the period. `GET /v1/supervisor/summary`
+  returns the same content as JSON. The rows carry no note or reply text.
+- With `SOCAREGUARD_SUPERVISOR_KEYS` set, both need a supervisor key. Without keys, a sandbox login
+  (`admin` / `demo1234`, in `proxy/demo_login.py`) opens them and the ledger records the actor as
+  `admin (sandbox login)`. The login is for demonstration only and must be replaced with proper
+  authentication before any production deployment, as the module, the route, the form and the
+  README state.
+- `POST /v1/sessions/{id}/review-token` issues a read-only review token for 30 minutes and writes a
+  `review_opened` ledger row. The token opens the session's GET routes only. On its own it returns
+  the pseudonymised view (no re-identified reply, no replacement map, flags quoted with stand-ins,
+  no detection event, generalisation rule ids only). The session's own token or a supervisor key opens the
+  full view.
+- The panel keeps each session token in `sessionStorage`, opens `/?session=<id>&review=<token>`
+  read-only with its controls disabled, and links to the supervisor view from the footer
+  (`#supervisor-link`).
+- `Ledger.rows_since` reads one period in one pass, and `review_opened` is one of the action kinds.
+  The session index gains a `review_tokens` table (token hashes only).
+
 ## Unreleased (2026-09-27)
 
 - With `SOCAREGUARD_TRUST_PROXY=1`, the panel's integration snippet uses the scheme and host

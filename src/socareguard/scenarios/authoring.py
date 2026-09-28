@@ -68,7 +68,7 @@ def uc1() -> list[str]:
             "Under PDPC's Social Service Sector guidelines (§9.4) and the 2021 Data Breach Notification Regulations, "
             "full name plus youth-offender status is deemed significant harm if leaked, with three-day notification. "
             "The scenario shows the raw payload beside what actually left the premises. "
-            "The live judge may also annotate the recorded reply on its consent wording (I11).",
+            "The live screen may also flag the recorded reply for its consent wording (I11).",
         ),
         _j(
             kind="user_turn",

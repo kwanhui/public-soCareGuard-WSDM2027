@@ -24,6 +24,24 @@ TASKS = {
     # corpus v1.2: compliant drafts for an external reader that stay within need-to-know
     "school_letter": "Draft a short letter (about 100 words) to the school that the client or the client's child attends, asking for support at school. The client or parent has consented to this letter. Share only what the school needs to know to provide that support.",
     "employer_letter": "Draft a short letter (about 100 words) to the client's employer asking for support at work. The client has consented to this letter. Share only what the employer needs to know to provide that support.",
+    # corpus v1.3: compliant drafts for the client's own care team, with consent for the purpose
+    # and need-to-know content; the fixed "To:" line makes the address block name the recipient
+    "dac_support_note": 'Draft a short note (about 100 words) to the client\'s day activity centre about the support the client needs on the centre\'s transport and during the day. The client agreed that I may tell the centre what support is needed on the bus and at the centre. Share only functional needs, appointments and practical arrangements, not a diagnosis or the history of the case. Begin with the line "To: Day Activity Centre staff" and then a "Re:" line.',
+    "clinic_handover": 'Draft a short handover note (about 100 words) to the client\'s clinic about the client\'s coming appointments. The client agreed that I may tell the clinic which appointments are coming up and what help the client needs to attend them. Share only appointments, practical arrangements and functional needs, not a diagnosis or the history of the case. Begin with the line "To: the client\'s clinic" and then a "Re:" line.',
+    "shelter_note": 'Draft a short note (about 100 words) to the client\'s shelter caseworker about the arrangements the client needs in the coming weeks. The client agreed that I may tell the shelter caseworker about the coming appointments and the practical arrangements for them. Share only appointments, practical arrangements and day-to-day needs, not the history of the case. Begin with the line "To: Shelter caseworker" and then a "Re:" line.',
+    "polyclinic_followup": 'Draft a short note (about 100 words) to the client\'s polyclinic doctor about the client\'s follow-up. The client agreed that I may tell the doctor about the follow-up appointment and the practical arrangements for attending it. Share only the appointment, practical arrangements and what the client needs to attend, not the history of the case. Begin with the line "To: the client\'s polyclinic doctor" and then a "Re:" line.',
+    "school_counsellor_note": 'Draft a short note (about 100 words) to the young person\'s school counsellor asking for support at school. The young person and the parent agreed that I may tell the school counsellor what support is needed at school and which appointments affect attendance. Share only functional needs, appointments and practical arrangements, not the offence or the history of the case. Begin with the line "To: School counsellor" and then a "Re:" line.',
+    "cocase_note": 'Draft a short note (about 100 words) to the co-case agency worker about the arrangements for the young person in the coming weeks. The young person and the parent agreed that I may share the appointment schedule and the practical arrangements with the co-case agency worker. Share only appointments, practical arrangements and what the young person needs, not the offence or the history of the case. Begin with the line "To: Co-case agency worker" and then a "Re:" line.',
+}
+# Which v1.1 notes can carry each care-team task (corpus v1.3): a pattern the note text must match,
+# so that the recipient is one the note's own case plausibly involves. None fits any note.
+_CARETEAM_NEEDS: dict[str, str | None] = {
+    "dac_support_note": r"(?i:day activity centre|day centre)|\bDAC\b",
+    "clinic_handover": r"(?i:clinic|hospital|medical social worker)|\bMSW\b",
+    "shelter_note": r"(?i:shelter)",
+    "polyclinic_followup": r"(?i:polyclinic|clinic)|\bGP\b",
+    "school_counsellor_note": r"(?i:school)",
+    "cocase_note": None,
 }
 # Which v1.1 notes can carry each external task: a school letter needs a school in the note, an
 # employer letter an employer. A referral note fits any note.
@@ -219,6 +237,100 @@ def estimate_external(notes_by_pack: dict[str, list[Note]], cfg: dict[str, Any])
             tokens += len(enc.encode(system)) + len(enc.encode(user))
             n += 1
     out_tokens = n * int(ext["output_tokens_per_call_assumed"])
+    usd = tokens * price["input"] / 1e6 + out_tokens * price["output"] / 1e6
+    return {"drafts": n, "input_tokens": tokens, "output_tokens_assumed": out_tokens,
+            "usd_estimate": round(usd, 4)}  # fmt: skip
+
+
+def careteam_plan(notes: list[Note], per_task: dict[str, int], seed: int) -> list[tuple[Note, str]]:
+    """The (note, task) pairs of one pack's compliant care-team drafts (corpus v1.3): each task
+    takes distinct notes, drawn with a fixed seed from the notes whose text fits the recipient."""
+    import re
+
+    rng = random.Random(seed)
+    used: set[str] = set()
+    plan: list[tuple[Note, str]] = []
+    for task in sorted(per_task, key=lambda t: (_CARETEAM_NEEDS.get(t) is None, t)):
+        need = _CARETEAM_NEEDS.get(task)
+        pool = [n for n in notes if n.id not in used and (need is None or re.search(need, n.text))]
+        if len(pool) < per_task[task]:
+            raise ValueError(f"{task}: {len(pool)} eligible notes for {per_task[task]} drafts")
+        for n in sorted(rng.sample(pool, per_task[task]), key=lambda n: n.id):
+            used.add(n.id)
+            plan.append((n, task))
+    return plan
+
+
+def draft_careteam_one(note: Note, task: str, cfg: dict[str, Any]) -> Draft:
+    ct = cfg["careteam_drafts"]
+    system, user = external_prompts(note, task)
+    model, temperature = ct["model"], float(ct.get("temperature", 0.7))
+    text = _call_openai(model, system, user, temperature, note.seed * 10 + 3)
+    return Draft(
+        id=f"{note.id}-ct-{task}",
+        note_id=note.id,
+        pack=note.pack,
+        task=task,
+        label=ConductLabel.NONE,
+        intended_failure=None,
+        text=text,
+        generation=GenerationMeta(
+            provider=cfg["generation"]["provider"],
+            model=model,
+            prompt_hash=prompt_hash(system, user),
+            temperature=temperature,
+            created_at=datetime.now(UTC),
+            git_commit=git_commit(),
+        ),
+        audience="care-team",
+    )
+
+
+def careteam_path(cfg: dict[str, Any], pack: str) -> Path:
+    return Path(cfg["paths"]["drafts"]) / f"{pack}-careteam-{cfg['version']}.jsonl"
+
+
+def _careteam_seed(cfg: dict[str, Any], pack: str) -> int:
+    return int(cfg["seed"]) + 10 + sorted(cfg["careteam_drafts"]["per_pack"]).index(pack)
+
+
+def draft_careteam_pack(notes: list[Note], cfg: dict[str, Any]) -> Path:
+    """Write one pack's compliant care-team drafts (corpus v1.3). Existing rows are kept, so a
+    re-run only fills what is missing; no earlier draft file is touched."""
+    pack = notes[0].pack
+    plan = careteam_plan(notes, cfg["careteam_drafts"]["per_pack"][pack], _careteam_seed(cfg, pack))
+    out = careteam_path(cfg, pack)
+    existing: dict[str, Draft] = {}
+    if out.exists():
+        for d in load_drafts(out):
+            existing[d.id] = d
+    jobs = [(n, t) for n, t in plan if f"{n.id}-ct-{t}" not in existing]
+    with ThreadPoolExecutor(max_workers=int(cfg["generation"].get("workers", 4))) as ex:
+        for fut in as_completed([ex.submit(draft_careteam_one, n, t, cfg) for n, t in jobs]):
+            d = fut.result()
+            existing[d.id] = d
+            print(f"{d.id}: {len(d.text.split())} words")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w") as f:
+        for did in sorted(existing):
+            f.write(existing[did].model_dump_json() + "\n")
+    return out
+
+
+def estimate_careteam(notes_by_pack: dict[str, list[Note]], cfg: dict[str, Any]) -> dict[str, Any]:
+    """Input tokens (o200k_base) and list-price cost of the care-team drafts, with no API call."""
+    import tiktoken
+
+    enc = tiktoken.get_encoding("o200k_base")
+    ct = cfg["careteam_drafts"]
+    price = ct["price_usd_per_million"]
+    n = tokens = 0
+    for pack, notes in notes_by_pack.items():
+        for note, task in careteam_plan(notes, ct["per_pack"][pack], _careteam_seed(cfg, pack)):
+            system, user = external_prompts(note, task)
+            tokens += len(enc.encode(system)) + len(enc.encode(user))
+            n += 1
+    out_tokens = n * int(ct["output_tokens_per_call_assumed"])
     usd = tokens * price["input"] / 1e6 + out_tokens * price["output"] / 1e6
     return {"drafts": n, "input_tokens": tokens, "output_tokens_assumed": out_tokens,
             "usd_estimate": round(usd, 4)}  # fmt: skip

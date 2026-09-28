@@ -371,7 +371,7 @@ def test_the_unrestored_card_is_major_and_the_legend_counts_its_list():
     js = PANEL_JS.read_text()
     assert "const unrestored = unrestoredWords(leak);" in js
     assert "[].concat(leak.unrestored || [], leak.partial || [])" in js
-    assert "unrestored surrogate: ${unrestored.length}" in js
+    assert "stand-in not restored: ${unrestored.length}" in js
     assert 'isUnrestored ? " major" : ""' in js and "major: replace before use" in js
     assert '<div class="unrestored-list">' in js
     assert "leak.unrestored.length" not in js and "leak.n_unrestored" not in js

@@ -88,18 +88,22 @@ def test_a_restored_generalised_span_is_marked():
 def test_the_audience_hint_is_two_sentences_and_the_employer_rule_moved():
     html = PANEL_HTML.read_text()
     hint = html.split('id="audience-hint">')[1].split("</span>")[0]
-    assert hint == ("I10 and I14 apply only to an external audience. "
-                    "Auto reads the audience from your instruction.")
-    col2 = html.split("<h2>2. What left the premises</h2>")[1].split("</article>")[0]
-    assert ('A named employer leaves as an invented name for an internal audience and as '
-            '"an employer" for an external one.') in col2
+    # round 6: the field is "Recipient", one short hint (docs/terminology.md) that names no flag
+    # code; the codes and the care-team clause sit in the field's own "More"
+    assert hint == "Who the draft is for. Some flags depend on it."
+    more = html.split('id="audience-more">')[1].split("</details>")[0]
+    assert "I10" in more and "I14" in more
+    assert "For the client's care team, I10 is read within the recipient's role (a draft reading)." in more
+    col2 = html.split("<h2>What left the premises</h2>")[1].split("</article>")[0]
+    assert ('A named employer leaves as an invented name for a recipient inside the agency and '
+            'as "an employer" for one outside it.') in col2
 
 
 # ---------- WSDM-N1, N2, N7: README ----------
 
 def test_readme_states_the_measurement_tag_formats_and_compliant_drafts():
     flat = " ".join((ROOT / "README.md").read_text().split())
-    assert "measured at tag `results-v1.2`" in flat
+    assert "measured at tag `results-v1.3`" in flat
     assert "`results-v1.1` values are kept" in flat
     assert "canonical formats of the corpus generator" in flat
     assert "format-variant stress set" in flat

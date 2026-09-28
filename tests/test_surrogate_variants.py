@@ -112,3 +112,32 @@ def test_titled_form_followed_by_the_full_name_stays_two_spans():
         "Mr Jason Lim Wei Kiat"
     ]
     assert [h.text for h in find_title_names("concern: Mr Ong Ong Kian Hock, male")] == ["Mr Ong"]
+
+
+def test_father_name_spellings_share_one_surrogate_father_name(tmp_path: Path):
+    """Round 6: "bin", "binti", "binte" and "bte" before the same father-name are one household.
+    The siblings share a surrogate father-name; the spouse keeps his own."""
+
+    def shared_part(name: str, _origin: str) -> str | None:
+        m = re.search(r"\b(?:bin|binti|binte|bte)\s+(.+)$", name)
+        return m.group(1) if m else None
+
+    note = (
+        "Client Mdm Nurul Aini bte Rahmat, 34. Her brother Encik Hafiz bin Rahmat and her sisters"
+        " Cik Siti Aminah binte Rahmat and Mdm Rosnah binti Rahmat help at home. Her husband"
+        " Encik Salleh bin Kassim works nights."
+    )
+    out, vault = _sanitise(tmp_path, "domestic-violence", note, session="bte")
+    names = {h.text: new for h, new, kind in out.replacements if h.category == "NAME"}
+    sibs = [
+        "Mdm Nurul Aini bte Rahmat",
+        "Encik Hafiz bin Rahmat",
+        "Cik Siti Aminah binte Rahmat",
+        "Mdm Rosnah binti Rahmat",
+    ]
+    fathers = {shared_part(names[n], "malay") for n in sibs}
+    assert len(fathers) == 1 and None not in fathers, names
+    assert len({names[n] for n in sibs}) == 4, names
+    assert shared_part(names["Encik Salleh bin Kassim"], "malay") not in fathers, names
+    assert "Rahmat" not in out.text
+    assert restore(out.text, vault, "bte").text == note

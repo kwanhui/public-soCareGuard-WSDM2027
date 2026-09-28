@@ -127,6 +127,6 @@ def test_uc1_chip_text_names_the_possible_i11_annotation():
     )
     assert header["summary"] == json.loads(uc1()[0])["summary"]
     assert header["summary"].endswith(
-        "may also annotate the recorded reply on its consent wording (I11)."
+        "may also flag the recorded reply for its consent wording (I11)."
     )
     assert header["summary"] in (root / "demo/scenarios.md").read_text()

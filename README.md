@@ -90,10 +90,42 @@ live under `vault/` and are gitignored. By default the vault key is a file besid
 (`vault/socareguard.key`, mode 600). `SOCAREGUARD_VAULT_KEY` can point at a key file elsewhere,
 such as a Docker secret, and `docker-compose.yml` carries that option as a commented alternative.
 
-In the sandbox, the supervisor view is per session. A supervisor opens one session with its id and
-token and sees that session's rows. `GET /v1/ledger` without a session lists the rows of all
-sessions only when API keys are configured and the call carries one, since rows hold session ids
-and free-text reasons. A cross-session view for supervisors is reserved for the journal extension.
+`/supervisor` is the supervisor view. It opens with the chain check of the record, that is, the
+ledger (the rows in the record, the record fingerprint or head hash, any gap, and the fingerprint
+that the server last logged), then lists the
+withheld drafts that no supervisor has released yet (session id, policy pack, time, categories and
+practitioner), then one period of escalations, releases, passages kept with a reason, rewrites used
+and opened reviews, with filter chips for pack, category, actor, kind and dates, and the counts for
+the period. The rows carry no note or reply text. `GET /v1/supervisor/summary` returns the same content as JSON and takes `since`,
+`until`, `pack`, `category`, `actor`, `kind` and `limit`. A review link
+(`POST /v1/sessions/{id}/review-token`) opens one session read-only in the panel for 30 minutes and
+writes a `review_opened` row to the record. The link itself opens the GET routes of that session
+and never a release, a passage kept with a reason (`POST /v1/override`) or a purge. A supervisor
+who is signed in (the sandbox login or a supervisor key) sees the release form at the foot of the
+review page of a withheld draft, and releases it there with a reason and a confirmation step. The
+sign-in stands in for the practitioner's session token, the `withheld_released` row names the
+supervisor (`admin (sandbox login)`, typed in, in the sandbox), and the draft leaves the queue. A
+review link without a sign-in, or a practitioner's API key, releases nothing.
+
+With `SOCAREGUARD_SUPERVISOR_KEYS` set, the view and the summary require a supervisor key
+(`Authorization: Bearer <key>`, or the key typed into the sign-in form), and the record marks the
+actor as checked by a person. Without keys, the sandbox signs a supervisor in with the user name
+`admin` and the password `demo1234`, and the record keeps the actor as `admin (sandbox login)`,
+typed in. This is a
+simplistic authentication for demonstration purposes only, with a fixed shared credential and no
+rate limiting or lockout, and it must be replaced with proper authentication (per-user credentials
+or single sign-on, a supervisor role that the deployment checks, session expiry and audit) before
+any production deployment. The login is off whenever `SOCAREGUARD_SUPERVISOR_KEYS` or `SOCAREGUARD_API_KEYS` is
+set.
+
+Every sandbox visitor shares that login, so the view that it opens is limited. The queue and the
+period table list the action rows of every session, but a review link into a session that another
+browser created returns only the content with stand-ins, that is, what left the premises, what the
+model replied, the flags quoted with stand-ins, and the rows of the record. The restored draft and
+the identity map open only for a session that this browser created (the panel keeps each session token in
+`sessionStorage`) or under a supervisor key. A release from such a review therefore shows the
+released draft with stand-ins, and the practitioner's panel shows the restored draft. `GET /v1/ledger` without a session still lists the
+rows of all sessions only when API keys are configured and the call carries one.
 
 Each ledger row records the transfer-basis statement that the deployer sets through
 `SOCAREGUARD_TRANSFER_BASIS`. The sandbox uses the default statement, which says that the basis
@@ -158,13 +190,20 @@ unrestored surrogate.
 
 ## Demo surface
 
-`python3 -m socareguard.proxy` also serves the transparency panel at `/`. The panel shows four
-columns (what you typed, what left the premises, what came back, and what you see) with
-substitutions and generalisations highlighted. It also shows the conduct flags with clause,
-evidence, and rewrite, the generic classifier's verdict for contrast, an override form that
-records the reason, and the event stream. Each of the four scenarios loads with one click. The
-identity map that the panel fetches decodes the practitioner's own note and never the withheld
-reply.
+`python3 -m socareguard.proxy` also serves the transparency panel at `/`. A result opens with a
+banner that states the decision in one sentence (pass, flagged, regenerate or escalate), gives one
+next step, and offers one button for it: copy the draft, go to the first flag, regenerate, or copy
+the session id for a supervisor. The details (the policy pack, the counts, the privacy check, the
+harm classifier shown for contrast, the actor) sit under "More about this result". The panel then
+shows what you typed, what left the premises and what you see side by side, with stand-ins
+(surrogates) and generalised details highlighted. What the model replied, with stand-ins, opens
+with one click. Each flag is a card that leads with a plain-words headline, puts the clause, the
+screen's own confidence and the measured precision on one line under it, and offers the rewrite
+or keeping the passage with a reason that goes into the record. A release asks the supervisor to
+confirm before it is sent. The record, the pack rules that fired and the event stream are
+collapsed, each with a count. Each scenario loads with one click. The identity map that the panel
+fetches decodes the practitioner's own note and never the withheld reply. The words that the panel
+uses are listed in `docs/terminology.md`.
 `SOCAREGUARD_SANDBOX=1` shows the synthetic-data banner, and `SOCAREGUARD_MAX_REQUESTS_PER_HOUR`
 sets a per-address rate limit.
 
@@ -245,9 +284,12 @@ python3 -m socareguard.eval roundtrip         # consistency, injectivity, surrog
 python3 -m socareguard.eval utility --limit 10   # per-provider utility retention, judged by the other provider
 ```
 
-Results are committed under `docs/metrics/` and summarised in `docs/metrics.md`. The reported
-numbers were measured at tag `results-v1.2` on corpus v1.2 (the v1.1 notes and drafts plus 90
-compliant drafts written for an external reader), at the code this snapshot carries. The earlier
+The round-trip injectivity counts a note as injective when no two people share a full name or a
+short form. A surrogate surname that a household shares is by design and does not count against
+it. Results are committed under `docs/metrics/` and summarised in `docs/metrics.md`. The reported
+numbers were measured at tag `results-v1.3` on corpus v1.3 (the v1.1 notes and drafts, 90
+compliant drafts written for an external reader and 30 written for the client's own care team), at
+the code this snapshot carries. The earlier
 `results-v1.1` values are kept in the same files and in the metrics page for comparison. On the 90
 external drafts the screen flags 76. The reading of those flags is summarised in `docs/metrics.md`.
 
@@ -289,7 +331,7 @@ Environment variables read at start-up (all optional):
 | `SOCAREGUARD_JUDGE_MODEL` | `openai/gpt-4.1` | the conduct judge |
 | `SOCAREGUARD_DEFAULT_PACK` | `domestic-violence` | pack used when a request carries no `X-SoCareGuard-Pack` (the response says `pack_defaulted` and carries the header `X-SoCareGuard-Pack-Defaulted: true`) |
 | `SOCAREGUARD_API_KEYS` | unset | comma-separated bearer keys. When set, every `/v1` route requires one and ledger actors are marked attested |
-| `SOCAREGUARD_SUPERVISOR_KEYS` | unset | keys allowed to release a withheld draft (`GET /v1/sessions/{id}/withheld`) |
+| `SOCAREGUARD_SUPERVISOR_KEYS` | unset | keys allowed to release a withheld draft (`GET /v1/sessions/{id}/withheld`) and to open the supervisor view (`/supervisor`). When set, the sandbox login is off |
 | `SOCAREGUARD_TRANSFER_BASIS` | a statement that the basis is still to be asserted | the transfer-basis statement written to every request row |
 | `SOCAREGUARD_SANDBOX` | `0` | banner, self-asserted actors, 24-hour retention |
 | `SOCAREGUARD_MAX_REQUESTS_PER_HOUR` | `0` (unlimited, and the Space image sets 20) | per-address rate limit |
@@ -318,9 +360,12 @@ and the flag labels encrypted under the vault key, so a supervisor can still ope
 withheld draft after a deploy. Detection is not perfect:
 column 2 of the panel is what left, and a practitioner should read it before relying on the guard.
 
-Surrogates are per person. Two people who share a surname receive unrelated surrogate surnames,
-so a sentence such as "same surname as the client" does not survive substitution. Read column 2
-for stated family relationships before relying on the draft.
+Surrogates follow the household. People whose surname or father-name is the same in the note
+receive one shared surrogate surname or father-name, so that a sentence such as "same surname as
+the client" remains true, while a spouse with a different surname receives a different one. No two
+people share a full name or a short form. A shared titled surname is marked when it could be either
+of two people. For example, "Mdm Tan" written for one of two women in the same household is
+restored to the surname, and the panel adds a card that says it could be either of two people.
 
 Language that the practitioner wrote in the note may be echoed by the model without a flag. The
 screen judges the draft in the context of the note, so deficit framing or a label that the draft
@@ -330,9 +375,12 @@ itself.
 Endpoints: `POST /v1/chat/completions` (headers `X-SoCareGuard-Pack`, `X-SoCareGuard-Session`,
 `X-SoCareGuard-Actor`, `X-SoCareGuard-Audience`), `GET /v1/models`, `GET /v1/packs`,
 `GET /v1/packs/{id}`, `GET /v1/sessions/{id}` and `/panel` (require the session token returned
-with the completion, or an API key), `GET /v1/sessions/{id}/withheld` (supervisor key, or in a
-deployment without API keys the self-asserted supervisor role plus the session token),
-`DELETE /v1/sessions/{id}` (purge, ledgered), `GET /v1/ledger?session=`,
+with the completion, or an API key), `GET /v1/sessions/{id}/withheld` (a supervisor key or a signed-in
+supervisor, or in a deployment without keys the self-asserted supervisor role plus the session
+token),
+`DELETE /v1/sessions/{id}` (purge, ledgered), `GET /v1/ledger?session=`, `GET /supervisor`,
+`GET /v1/supervisor/summary` and `POST /v1/sessions/{id}/review-token` (supervisor key, or the
+sandbox login when no key is configured),
 `GET /v1/ledger/verify?expected_rows=`, `GET /healthz` (also the container healthcheck). Errors use
 the OpenAI `error` envelope, and a body that is not valid JSON or fails validation returns HTTP 400.
 

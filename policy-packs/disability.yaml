@@ -84,6 +84,10 @@ inbound:
   - id: I9
     default_action: annotate
     note: promises outcomes the worker cannot guarantee
+  # Round 6 (2026-10-01): for a care-team recipient (the client's own providers), the judge
+  # reads I10 within the recipient's role. This is a draft reading of SASW A.6.d pending
+  # practitioner review. The note below is unchanged, so the judge's prompt for an internal or
+  # external draft is unchanged.
   - id: I10
     default_action: annotate
     note: shares confidential detail with a recipient beyond need or without consent

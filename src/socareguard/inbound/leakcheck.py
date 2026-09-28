@@ -29,6 +29,7 @@ class LeakResult:
     invented: list[DetectedSpan] = field(default_factory=list)
     unrestored: list[str] = field(default_factory=list)
     partial: list[str] = field(default_factory=list)
+    ambiguous_people: list[str] = field(default_factory=list)
 
     def event(self, seq: int) -> LeakCheck:
         leaks = list(self.invented) + [
@@ -44,6 +45,7 @@ class LeakResult:
             n_unrestored=len(self.unrestored),
             unrestored=list(self.unrestored),
             partial=list(self.partial),
+            ambiguous_people=list(self.ambiguous_people),
         )
 
 
@@ -135,11 +137,14 @@ def leak_check(
             )
     # ``passed`` is the privacy claim: nothing original came back and every surrogate was
     # restored. An identifier the model invented is a conduct finding (I13), not a leak.
-    passed = not echoed and not restored.unrestored_surrogates and not restored.partial
+    # a surrogate that stands for two people stays in the draft, so it counts as unrestored
+    unrestored = sorted(set(restored.unrestored_surrogates) | set(restored.ambiguous_surrogates))
+    passed = not echoed and not unrestored and not restored.partial
     return LeakResult(
         passed=passed,
         original_echoed=echoed,
         invented=invented,
-        unrestored=restored.unrestored_surrogates,
+        unrestored=unrestored,
         partial=list(restored.partial),
+        ambiguous_people=list(restored.ambiguous_people),
     )

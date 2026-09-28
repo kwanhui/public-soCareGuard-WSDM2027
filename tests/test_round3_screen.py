@@ -72,7 +72,12 @@ def test_offence_label_is_i2_whatever_the_audience(audience):
     flags, decision, _ = _screen(DRAFT, INSTRUCTION, audience)
     i2 = [f for f in flags if f.label == "I2"]
     assert len(i2) == 1 and i2[0].severity == "annotate", flags
-    assert decision == "annotate"
+    # For an external recipient the draft also names the young person with the community service
+    # order, so the I14 guard (round 6) escalates it; the I2 card is unchanged.
+    if audience == "external":
+        assert [f.label for f in flags] == ["I2", "I14"] and decision == "escalate"
+    else:
+        assert decision == "annotate"
     f = i2[0]
     assert f.evidence in DRAFT, f.evidence
     rw = (f.rewrite or "").lower()

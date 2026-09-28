@@ -1,4 +1,4 @@
-"""python3 -m socareguard.eval {detect,roundtrip,utility,screen,report,auprc,rescore}"""
+"""python3 -m socareguard.eval {detect,roundtrip,utility,screen,report,auprc,rescore,rules}"""
 
 from __future__ import annotations
 
@@ -56,9 +56,29 @@ def main(argv=None) -> None:
     )
     sc.add_argument(
         "--corpus",
-        default="v1.1",
-        choices=["v1.1", "v1.2"],
-        help="v1.2 adds the compliant external drafts, so the gated and ungated FPR on them is reported",
+        default=None,
+        choices=["v1.1", "v1.2", "v1.3"],
+        help="v1.2 adds the compliant external drafts and v1.3 the compliant care-team drafts, "
+        "so the gated and ungated FPR on them is reported per tier (default v1.1, or the corpus "
+        "of the --reuse-from run)",
+    )
+    sc.add_argument(
+        "--care-team-only",
+        action="store_true",
+        help="judge only the drafts whose recipient_kind is care-team",
+    )
+    sc.add_argument(
+        "--tier-off",
+        action="store_true",
+        help="judge care-team drafts with the plain prompt of an external draft, without the "
+        "care-team paragraph (with --care-team-only: the tier-off comparison)",
+    )
+    sc.add_argument(
+        "--reuse-from",
+        default=None,
+        metavar="TAG",
+        help="copy the rows of screen-TAG-rows.jsonl whose judge prompt is unchanged, so that "
+        "only the drafts whose prompt changed (the care-team drafts) are judged",
     )
     sc.add_argument(
         "--estimate",
@@ -72,19 +92,46 @@ def main(argv=None) -> None:
     ap_.add_argument("--version", default="v1.1")
     rs = sub.add_parser(
         "rescore",
-        help="score a v1.2 screen run's rows on the 600 v1.1 drafts only (no model call)",
+        help="score a v1.2 or v1.3 screen run's rows on the 600 v1.1 drafts only (no model call)",
     )
     rs.add_argument("--tag", required=True)
+    ru = sub.add_parser(
+        "rules",
+        help="recompute the deterministic rules (over-caution, the I14 guard) on a screen run's rows "
+        "and score it again (no model call)",
+    )
+    ru.add_argument("--tag", required=True)
+    ru.add_argument(
+        "--guard-scope",
+        default="care-team",
+        choices=["care-team", "all"],
+        help="score the I14 guard on the care-team drafts only (results-v1.3) or on every row",
+    )
     a = ap.parse_args(argv)
     if a.cmd == "screen":
         from socareguard.eval.run_screen import estimate
         from socareguard.eval.run_screen import run as run_screen
         from socareguard.screen.judge import DEFAULT_JUDGE_MODEL
 
+        if a.corpus is None:
+            src = Path("docs/metrics") / f"screen-{a.reuse_from}.json"
+            src_corpus = (
+                json.loads(src.read_text()).get("corpus") if a.reuse_from and src.exists() else None
+            )
+            a.corpus = src_corpus if src_corpus in ("v1.1", "v1.2", "v1.3") else "v1.1"
         if a.estimate:
             print(
                 json.dumps(
-                    estimate(tuple(a.packs), a.limit, a.prompt_only, corpus=a.corpus), indent=1
+                    estimate(
+                        tuple(a.packs),
+                        a.limit,
+                        a.prompt_only,
+                        corpus=a.corpus,
+                        reuse_from=a.reuse_from,
+                        care_team_only=a.care_team_only,
+                        tier_off=a.tier_off,
+                    ),
+                    indent=1,
                 )
             )
             return
@@ -96,6 +143,9 @@ def main(argv=None) -> None:
             use_baseline=not a.no_baseline,
             prompt_only=a.prompt_only,
             corpus=a.corpus,
+            reuse_from=a.reuse_from,
+            care_team_only=a.care_team_only,
+            tier_off=a.tier_off,
         )
         print(
             json.dumps(
@@ -120,6 +170,14 @@ def main(argv=None) -> None:
             json.dumps(
                 {k: res.get(k) for k in ("drafts", "binary", "intended_label_recall")}, indent=1
             )
+        )
+        return
+    if a.cmd == "rules":
+        from socareguard.eval.run_screen import apply_rules
+
+        res = apply_rules(a.tag, a.guard_scope)
+        print(
+            json.dumps({k: res.get(k) for k in ("drafts", "binary", "rules_recomputed")}, indent=1)
         )
         return
     if a.cmd == "report":

@@ -1,0 +1,3 @@
+scope,label,name,precision,recall,f1,fpr,auprc,tp,fp,fn,tn
+all,ANY,any conduct flag vs NONE,0.0,0.0,0.0,0.8485,0.0,0,28,0,5
+baseline,ANY,not run,,,,,,,,,

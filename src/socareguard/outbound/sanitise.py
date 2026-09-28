@@ -15,9 +15,11 @@ from socareguard.detect.pipeline import Detection, detect
 from socareguard.detect.sg import Hit
 from socareguard.outbound import generalise as gen
 from socareguard.outbound.surrogates import (
+    Kin,
     SurrogateFactory,
     gender_from_context,
     gender_from_pronouns,
+    households,
 )
 from socareguard.outbound.vault import Mapping, Vault
 from socareguard.scenarios.events import Detect, DetectedSpan, Generalise, Substitute
@@ -76,6 +78,7 @@ class Sanitiser:
         audience: str | None = None,
     ):
         self._pronoun_gender: dict[str, str] = {}
+        self._kin: dict[str, Kin] = {}
         # "internal" or "external"; None behaves as external. A named employer leaves as a
         # reversible surrogate for an internal audience, so the practitioner's draft gets the name
         # back, and as "an employer" (never restored) for an external one.
@@ -173,7 +176,11 @@ class Sanitiser:
             hint = gender_from_context(
                 self._text[max(0, h.start - 40) : h.start]
             ) or self._pronoun_gender.get(h.text)
-            return factory.name(h.text, gender_hint=hint), "surrogate", None
+            return (
+                factory.name(h.text, gender_hint=hint, household=self._kin.get(h.text)),
+                "surrogate",
+                None,
+            )
         return getattr(factory, method)(h.text), "surrogate", None
 
     def _fit_span(self, text: str, a: Hit) -> Hit:
@@ -448,9 +455,12 @@ class Sanitiser:
         ]
         forbidden = {h.text for h in spans + absorbed}
         # the gender each name's pronouns indicate, for a name whose gender the lists do not know
-        self._pronoun_gender = gender_from_pronouns(
-            text, [(h.start, h.end, h.text) for h in spans + absorbed if h.category == "NAME"]
-        )
+        name_spans = [(h.start, h.end, h.text) for h in spans + absorbed if h.category == "NAME"]
+        self._pronoun_gender = gender_from_pronouns(text, name_spans)
+        # Households over the whole message, before any surrogate is assigned: who shares a
+        # surname or father-name, whose naming convention a relation word fixes, who is whose
+        # named father.
+        self._kin = households(text, name_spans)
         factory = SurrogateFactory(
             seed if seed is not None else int(hashlib.sha256(session.encode()).hexdigest()[:8], 16),
             forbidden,
@@ -469,8 +479,10 @@ class Sanitiser:
         # fullest names first, so that a short form seen earlier joins its person
         for prior in sorted(prior_names, key=lambda m: -len(m.original.split())):
             _remember_person(factory, prior.original, prior.surrogate)
+        # a named father before his children, so that his surrogate given name is theirs to share
         for h in sorted(
-            (h for h in spans + absorbed if h.category == "NAME"), key=lambda h: -len(h.text)
+            (h for h in spans + absorbed if h.category == "NAME"),
+            key=lambda h: (self._kin.get(h.text, Kin()).father_of is None, -len(h.text)),
         ):
             key = (h.category, h.text)
             if key not in memo:
@@ -806,7 +818,13 @@ def _remember_person(factory: SurrogateFactory, original: str, surrogate: str) -
     """Register a person mapped in an earlier turn of the session, so that a later variant of the
     name (given name, titled form) takes a form of the same surrogate."""
     from socareguard.corpus import names as nm
-    from socareguard.outbound.surrogates import _TITLES, guess_gender, guess_origin, title_token
+    from socareguard.outbound.surrogates import (
+        _LINK_TOKENS,
+        _TITLES,
+        guess_gender,
+        guess_origin,
+        title_token,
+    )
 
     def bare(name: str) -> str:
         low = name.strip()
@@ -815,6 +833,10 @@ def _remember_person(factory: SurrogateFactory, original: str, surrogate: str) -
 
     o, s = bare(original).lower(), bare(surrogate)
     toks = [t for t in re.split(r"[\s,()/]+", s) if t]
+    _remember_household(factory, bare(original), s)
+    # the person's surrogate full name and words are taken in this session: a new person in a
+    # later turn may share only the household's surname with it
+    factory.used.update({s.lower()} | {t.lower() for t in toks if len(t) >= 3} - _LINK_TOKENS)
     if not toks or o in factory.persons:
         return
     full_known = [k for k in factory.persons if o in k.split() or set(o.split()) < set(k.split())]
@@ -825,6 +847,39 @@ def _remember_person(factory: SurrogateFactory, original: str, surrogate: str) -
     factory.persons[o] = nm.PersonName(
         guess_origin(s), guess_gender(surrogate), s, given, f"Mdm {title_part}"
     )
+
+
+def _remember_household(factory: SurrogateFactory, original: str, surrogate: str) -> None:
+    """Refill the factory's households from a person mapped in an earlier turn: the surrogate
+    surname or father-name that the person's original surname or father-name took, and, for a
+    Malay or Indian man, the surrogate given name a child of his would take as father-name."""
+    from socareguard.outbound.surrogates import (
+        _LINK_RE,
+        _fits,
+        _given_of,
+        gender_evidence,
+        guess_origin,
+        household_key,
+        shared_part,
+    )
+
+    origin = guess_origin(surrogate)
+    key = household_key(original)
+    if key and _fits(key, origin) and key not in factory.households:
+        part = shared_part(surrogate, origin)
+        if part:
+            factory._own(key, origin, part)
+            factory.used.update(t for t in part.lower().split() if len(t) >= 3)
+    if (
+        origin in ("malay", "indian")
+        and _LINK_RE.search(original)
+        and gender_evidence(original) != "female"
+    ):
+        given_o, given_s = _given_of(original), re.split(r"(?i)\s+(?:bin|s/o|a/l)\s+", surrogate)
+        if given_o and given_s[0] != surrogate:
+            fkey = ("father", given_o[0])
+            if fkey not in factory.households:
+                factory._own(fkey, origin, given_s[0])
 
 
 def _prefer_changing(attrs: list[Hit], changes) -> list[Hit]:

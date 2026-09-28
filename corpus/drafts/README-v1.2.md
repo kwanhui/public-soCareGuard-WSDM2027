@@ -30,6 +30,20 @@ Before the run, the estimate was USD 0.05 at list prices (45,413 input tokens co
 
 The new drafts were scanned for the real institution names that v1.1 replaced, for email addresses, and for titled names that do not occur in the source note. None was found. `tests/test_corpus_v12.py` repeats these checks on every test run, together with the counts, labels and audiences above.
 
+## Recipient kind (added 2026-10-01)
+
+Each external draft also carries `recipient_kind`, which is `care-team` or `external`. A care-team recipient is one of the client's own providers, such as a school counsellor, the young person's form teacher, a day activity centre or the client's GP, and the screen reads I10 within that recipient's role (a draft reading of SASW A.6.d pending practitioner review).
+
+Because the task instructions name only a class of recipient ("another agency", "the school that the client or the client's child attends", "the client's employer"), the field is read from the recipient that the letter's own address block names, that is, the lines before its "Re:" line, or the first line when there is none. `scripts/label_recipient_kind.py` applies `resolve_audience` from `src/socareguard/screen/rules.py`, the same function that the proxy uses, so that the field is deterministic and can be regenerated. It added the field to the existing rows and changed no other field, the compliant label included.
+
+| Pack | Care-team | Other external |
+|---|---|---|
+| disability | 0 | 30 |
+| domestic-violence | 0 | 30 |
+| youth-offending | 3 | 27 |
+
+The three care-team drafts are youth-offending school letters addressed to the school counselling team (`028`), to the school counsellor (`056`) and to the form teacher or year head (`066`). No referral note names its recipient, and no disability or domestic-violence letter is addressed to one of the client's own providers, so the tier covers 3 of the 90 drafts. `tests/test_round6_audience.py` pins these counts.
+
 ## Use in the screen evaluation
 
 `python3 -m socareguard.eval screen --corpus v1.2 --tag v1.2` scores the 600 v1.1 drafts and the 90 external drafts together. For the compliant drafts, it reports the false-positive rate with and without the audience gate, separately for internal and external drafts. This run belongs to the v1.2 re-measurement and has not been run yet.

@@ -11,6 +11,10 @@ times. What is encrypted under the vault key (AES-256-GCM, as the mappings are):
 result, which holds the re-identified draft, the replacement table with the originals, the event
 stream and the token itself, so that a later request in the same session returns the same token.
 The table is only added: the vault's own table is not changed.
+
+A second table, ``review_tokens``, holds the read-only review links that a supervisor opens from
+the supervisor view: the SHA-256 of each token, its session, who opened it and when it expires
+(30 minutes after issue). The token itself is returned once and never stored.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import secrets
 import time
 from collections import OrderedDict
 from typing import Any
@@ -31,6 +36,17 @@ _SCHEMA = (
     "pack TEXT, withheld INTEGER, flags TEXT, created REAL, updated REAL, nonce BLOB, "
     "result_enc BLOB)"
 )
+
+_REVIEW_SCHEMA = (
+    "CREATE TABLE IF NOT EXISTS review_tokens (token_sha256 TEXT PRIMARY KEY, session TEXT, "
+    "actor TEXT, attested INTEGER, issued REAL, expires REAL)"
+)
+REVIEW_TTL_S = 30 * 60
+
+
+def _now() -> float:
+    """The clock the review tokens use (a test moves it forward to expire a token)."""
+    return time.time()
 
 
 def _sha(token: str) -> str:
@@ -95,6 +111,7 @@ class SessionStore:
         self.cache: OrderedDict[str, tuple[GuardedResult, str]] = OrderedDict()
         with vault.lock:
             vault.db.execute(_SCHEMA)
+            vault.db.execute(_REVIEW_SCHEMA)
             vault.db.commit()
 
     # ---------- reads ----------
@@ -137,6 +154,68 @@ class SessionStore:
                     "SELECT 1 FROM session_index WHERE session=?", (session,)
                 ).fetchone()
             )
+
+    def pack(self, session: str) -> str | None:
+        """The session's pack, from the clear column."""
+        with self.vault.lock:
+            row = self.vault.db.execute(
+                "SELECT pack FROM session_index WHERE session=?", (session,)
+            ).fetchone()
+        return row[0] if row else None
+
+    def withheld_sessions(self) -> list[dict[str, Any]]:
+        """Sessions whose latest result withheld the draft, newest first, read from the clear
+        columns only (nothing is decrypted), with the number of review links still open."""
+        now = _now()
+        with self.vault.lock:
+            rows = self.vault.db.execute(
+                "SELECT session, pack, flags, created, updated FROM session_index "
+                "WHERE withheld=1 ORDER BY updated DESC"
+            ).fetchall()
+            open_reviews = dict(
+                self.vault.db.execute(
+                    "SELECT session, COUNT(*) FROM review_tokens WHERE expires > ? "
+                    "GROUP BY session",
+                    (now,),
+                ).fetchall()
+            )
+        return [
+            {
+                "session": r[0],
+                "pack": r[1],
+                "flags": json.loads(r[2] or "[]"),
+                "created": r[3],
+                "updated": r[4],
+                "reviews_open": open_reviews.get(r[0], 0),
+            }
+            for r in rows
+        ]
+
+    def issue_review_token(
+        self, session: str, actor: str, attested: bool, ttl: float = REVIEW_TTL_S
+    ) -> tuple[str, float]:
+        """A read-only review token for one session. Only its hash is stored. Returns the token
+        and its expiry time. Expired tokens are removed here."""
+        token = secrets.token_urlsafe(24)
+        now = _now()
+        with self.vault.lock:
+            self.vault.db.execute("DELETE FROM review_tokens WHERE expires <= ?", (now,))
+            self.vault.db.execute(
+                "INSERT INTO review_tokens VALUES (?,?,?,?,?,?)",
+                (_sha(token), session, actor, int(bool(attested)), now, now + ttl),
+            )
+            self.vault.db.commit()
+        return token, now + ttl
+
+    def review_token_ok(self, session: str, token: str) -> bool:
+        """True when ``token`` is an unexpired review token for ``session``."""
+        if not token:
+            return False
+        with self.vault.lock:
+            row = self.vault.db.execute(
+                "SELECT session, expires FROM review_tokens WHERE token_sha256=?", (_sha(token),)
+            ).fetchone()
+        return bool(row) and hmac.compare_digest(row[0], session) and row[1] > _now()
 
     def older_than(self, cutoff: float) -> list[str]:
         with self.vault.lock:
@@ -192,6 +271,9 @@ class SessionStore:
                 self.vault.db.executemany(
                     "DELETE FROM session_index WHERE session=?", [(s,) for s in evicted]
                 )
+                self.vault.db.executemany(
+                    "DELETE FROM review_tokens WHERE session=?", [(s,) for s in evicted]
+                )
             self.vault.db.commit()
         self._cache(session, (res, token))
         for s in evicted:
@@ -202,4 +284,5 @@ class SessionStore:
         self.cache.pop(session, None)
         with self.vault.lock:
             self.vault.db.execute("DELETE FROM session_index WHERE session=?", (session,))
+            self.vault.db.execute("DELETE FROM review_tokens WHERE session=?", (session,))
             self.vault.db.commit()

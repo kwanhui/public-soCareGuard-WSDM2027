@@ -286,13 +286,24 @@ def _title(gender: str, age: int, married_hint: bool) -> str:
 
 
 def make_name(
-    rng: random.Random, origin: str, gender: str, age: int = 30, married_hint: bool = False
+    rng: random.Random,
+    origin: str,
+    gender: str,
+    age: int = 30,
+    married_hint: bool = False,
+    fixed_surname: str | None = None,
+    fixed_father: str | None = None,
 ) -> PersonName:
+    """A synthetic name. ``fixed_surname`` (Chinese, Eurasian, Western) or ``fixed_father`` (Malay,
+    Indian) replaces the drawn surname or father-name, so that members of one household can share
+    it. The random draws are the same with or without them, so a name that fixes nothing is the
+    name the same generator state gave before."""
     if origin not in ORIGINS:
         raise ValueError(origin)
     t = _title(gender, age, married_hint)
     if origin == "chinese":
         surname = rng.choice(_CHINESE_SURNAMES)
+        surname = fixed_surname or surname
         given = rng.choice(_CHINESE_GIVEN[gender])
         if rng.random() < 0.35:
             eng = rng.choice(_CHINESE_ENGLISH[gender])
@@ -302,18 +313,22 @@ def make_name(
         given = rng.choice(_MALAY_GIVEN[gender])
         link = "binti" if gender == "female" else "bin"
         father = rng.choice(_MALAY_FATHERS)
+        father = fixed_father or father
         short = given.split()[-1] if given.startswith(("Muhammad ", "Nur ")) else given.split()[0]
         return PersonName(origin, gender, f"{given} {link} {father}", short, f"{t} {short}")
     if origin == "indian":
         given = rng.choice(_INDIAN_GIVEN[gender])
         link = "d/o" if gender == "female" else "s/o"
         father = rng.choice(_INDIAN_FATHERS)
+        father = fixed_father or father
         return PersonName(origin, gender, f"{given} {link} {father}", given, f"{t} {given}")
     if origin == "eurasian":
         surname = rng.choice(_EURASIAN_SURNAMES)
+        surname = fixed_surname or surname
         given = rng.choice(_EURASIAN_GIVEN[gender])
         return PersonName(origin, gender, f"{given} {surname}", given, f"{t} {surname}")
     surname = rng.choice(_WESTERN_SURNAMES)
+    surname = fixed_surname or surname
     given = rng.choice(_WESTERN_GIVEN[gender])
     return PersonName(origin, gender, f"{given} {surname}", given, f"{t} {surname}")
 

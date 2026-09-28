@@ -32,6 +32,18 @@ def test_statutory_recipient_is_internal_whatever_the_preposition(instruction, e
     assert audience_is_external(instruction, "youth-offending") is external, instruction
 
 
+@pytest.mark.parametrize("instruction,external", PHRASINGS)
+def test_round6_tiers_keep_the_round4_reading(instruction, external):
+    # Round 6 splits "external" into care-team and other external; neither changes whether the
+    # disclosure categories apply, and a statutory recipient stays internal.
+    from socareguard.screen.rules import resolve_audience
+
+    tier = resolve_audience(instruction, "youth-offending")
+    assert (tier != "internal") is external, (instruction, tier)
+    if "school counsellor" in instruction:
+        assert tier == "care-team"
+
+
 def test_copying_a_statutory_recipient_is_not_external():
     assert not audience_is_external("Write the breach report for the Youth Court; cc the police.")
     assert audience_is_external("Write the breach report for the Youth Court; cc the school.")

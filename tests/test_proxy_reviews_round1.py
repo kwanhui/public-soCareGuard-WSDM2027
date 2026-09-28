@@ -158,17 +158,18 @@ def test_panel_page_carries_the_review_round_wording(tmp_path, monkeypatch):
     monkeypatch.setattr(appmod, "SANDBOX", True)
     client, _ = _client(tmp_path, monkeypatch)
     page = client.get("/").text
-    assert "I10 and I14 apply only to an external audience" in page
-    assert "Supervisor identity is self-asserted in the sandbox" in page
-    assert "Anchoring the head hash outside the host is the deployer's step" in page
+    # round 6 (first-time user): the Recipient hint names no flag code; the codes sit in its "More"
+    assert "Who the draft is for. Some flags depend on it." in page
+    assert "In the sandbox the supervisor id is typed in and not checked." in page
+    assert "outside the host is the deployer's step" in page
     assert '"I1": {"precision": 0.45' in page
     js = client.get("/static/panel.js").text
     for s in (
         "Draft taxonomy, not yet practitioner-reviewed",
         "measured precision on synthetic drafts",
-        "Give this session id to your supervisor",
+        "Give the session id to your supervisor.",
         "Released earlier by",
-        "(self-asserted)",
-        "(attested)",
+        "(typed in)",
+        "(checked by a person)",
     ):
         assert s in js, s

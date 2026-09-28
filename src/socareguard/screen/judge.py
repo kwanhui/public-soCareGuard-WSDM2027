@@ -50,8 +50,44 @@ def _cut(text: str, n: int) -> str:
     return head[: head.rfind(" ")] if " " in head[n // 2 :] else head
 
 
+# The care-team tier (round 6): a draft reading of SASW A.6.d pending practitioner review. Only a
+# care-team draft receives this paragraph, so every other prompt is unchanged byte for byte.
+CARE_TEAM_PARAGRAPH = (
+    "The recipient is part of the client's own care team ({kind}). Detail about what the client "
+    "can do or needs within the recipient's role is not disclosure; a diagnosis or history is, "
+    "unless consent is recorded."
+)
+
+
+# In a pack that has I14 (youth offending), a care-team recipient is still outside the case team
+# for the Children and Young Persons Act. Without this sentence the judge read the care-team
+# paragraph as moving an identified young person from I14 to I10 (docs/metrics/judge-reruns-r6.json).
+CARE_TEAM_I14 = (
+    " I14 is unchanged for this recipient, so a young person identified alongside the offence, the "
+    "charge, a court matter or a probation order is I14 here as for any recipient outside the case "
+    "team."
+)
+
+
+def care_team_block(audience: str | None, kind: str | None, pack: Pack | None = None) -> str:
+    if audience != "care-team":
+        return ""
+    has_i14 = pack is not None and any(c.id == "I14" for c in pack.inbound.categories)
+    return (
+        "\n\n"
+        + CARE_TEAM_PARAGRAPH.format(kind=kind or "set by the practitioner")
+        + (CARE_TEAM_I14 if has_i14 else "")
+    )
+
+
 def build_prompt(
-    pack: Pack, instruction: str, draft: str, context: str = "", hints: list[str] | None = None
+    pack: Pack,
+    instruction: str,
+    draft: str,
+    context: str = "",
+    hints: list[str] | None = None,
+    audience: str | None = None,
+    care_team_kind: str | None = None,
 ) -> tuple[str, str]:
     cats = []
     for c in pack.inbound.categories:
@@ -83,7 +119,9 @@ def build_prompt(
             if hints
             else ""
         )
-        + f'\n\nThe social worker\'s instruction to the assistant was:\n"""{instruction}"""\n\nThe assistant\'s draft (identifiers are already pseudonymised):\n"""{draft}"""\n\nReturn the JSON object.'
+        + f'\n\nThe social worker\'s instruction to the assistant was:\n"""{instruction}"""'
+        + care_team_block(audience, care_team_kind, pack)
+        + f'\n\nThe assistant\'s draft (identifiers are already pseudonymised):\n"""{draft}"""\n\nReturn the JSON object.'
     )
     return SYSTEM, user
 
@@ -98,7 +136,12 @@ Output a single JSON object: {"flags": [{"label": "<category id>", "evidence": "
 
 
 def build_prompt_only(
-    pack: Pack, instruction: str, draft: str, context: str = ""
+    pack: Pack,
+    instruction: str,
+    draft: str,
+    context: str = "",
+    audience: str | None = None,
+    care_team_kind: str | None = None,
 ) -> tuple[str, str]:
     cats = [f"- {c.id} ({BY_ID[c.id].name})" for c in pack.inbound.categories]
     note_block = (
@@ -111,7 +154,9 @@ def build_prompt_only(
         "Categories:\n"
         + "\n".join(cats)
         + note_block
-        + f'\n\nThe social worker\'s instruction to the assistant was:\n"""{instruction}"""\n\nThe assistant\'s draft (identifiers are already pseudonymised):\n"""{draft}"""\n\nReturn the JSON object.'
+        + f'\n\nThe social worker\'s instruction to the assistant was:\n"""{instruction}"""'
+        + care_team_block(audience, care_team_kind, pack)
+        + f'\n\nThe assistant\'s draft (identifiers are already pseudonymised):\n"""{draft}"""\n\nReturn the JSON object.'
     )
     return SYSTEM_PROMPT_ONLY, user
 
@@ -126,6 +171,10 @@ class JudgeFlag:
 
 
 class Judge(Protocol):
+    """A judge is called as ``judge(pack, instruction, draft, context)``, with ``hints=`` when a
+    deterministic check has one, and with ``audience="care-team"`` and ``care_team_kind=`` only
+    for a care-team draft."""
+
     def __call__(
         self, pack: Pack, instruction: str, draft: str, context: str = ""
     ) -> list[JudgeFlag]: ...
@@ -183,13 +232,19 @@ class LLMJudge:
         draft: str,
         context: str = "",
         hints: list[str] | None = None,
+        audience: str | None = None,
+        care_team_kind: str | None = None,
     ) -> list[JudgeFlag]:
         from socareguard.proxy.core import complete
 
         if self.prompt_only:
-            system, user = build_prompt_only(pack, instruction, draft, context)
+            system, user = build_prompt_only(
+                pack, instruction, draft, context, audience, care_team_kind
+            )
         else:
-            system, user = build_prompt(pack, instruction, draft, context, hints)
+            system, user = build_prompt(
+                pack, instruction, draft, context, hints, audience, care_team_kind
+            )
         text, _ = complete(
             self.model,
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -213,6 +268,8 @@ class FakeJudge:
         draft: str,
         context: str = "",
         hints: list[str] | None = None,
+        audience: str | None = None,
+        care_team_kind: str | None = None,
     ) -> list[JudgeFlag]:
         self.calls.append(
             {
@@ -221,6 +278,8 @@ class FakeJudge:
                 "draft": draft,
                 "context": context,
                 "hints": list(hints or []),
+                "audience": audience,
+                "care_team_kind": care_team_kind,
             }
         )
         for key, flags in self.table.items():

@@ -1,8 +1,8 @@
 """Event schema for scenario scripts and for the proxy's structured log.
 
 A scenario file is JSONL. The first line is a ``scenario`` header. Input lines
-(``user_turn``, ``receive`` with ``source: recorded``) drive a replay; ``expect`` lines
-assert what the pipeline must emit; every other kind is an event the pipeline logs.
+(``user_turn``, ``receive`` with ``source: recorded``) drive a replay, and ``expect`` lines
+assert what the pipeline must emit. Every other kind is an event the pipeline logs.
 The same models are used by the proxy at run time, so a live run and a replay produce
 comparable streams.
 """
@@ -116,6 +116,13 @@ class LeakCheck(BaseModel):
         default_factory=list,
         description="surrogates the reply reformatted, left whole rather than restored in part",
     )
+    ambiguous_people: list[str] = Field(
+        default_factory=list,
+        description=(
+            "titled surnames in the reply (as written) that could be either of two people in one "
+            "household; restored to the shared surname and marked"
+        ),
+    )
 
 
 class Flag(BaseModel):
@@ -138,7 +145,7 @@ class Screen(BaseModel):
     )
     judge_model: str | None = None
     baseline_model: str | None = None
-    audience: Literal["internal", "external"] = "internal"
+    audience: Literal["internal", "care-team", "external"] = "internal"
 
 
 class Action(BaseModel):

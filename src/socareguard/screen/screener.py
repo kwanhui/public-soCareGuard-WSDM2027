@@ -52,11 +52,12 @@ class Screener:
             # cannot turn a draft the judge passed into a regeneration
             action = pack.action_for("I13") if inv.severity == "regenerate" else "annotate"
             out.append(inv.model_copy(update={"severity": action}))
-        external = (
-            audience == "external"
-            if audience in ("internal", "external")
-            else rules.audience_is_external(instruction, pack.id)
-        )
+        # The audience is resolved once per request, by the caller; a direct call without one
+        # reads it from the instruction here. A care-team recipient is outside the case team, so
+        # I10 and I14 apply to it as to any external recipient.
+        if audience not in rules.AUDIENCES:
+            audience = rules.resolve_audience(instruction, pack.id)
+        external = audience != "internal"
         # Case closure with possibly unresolved risk: a hint to the judge, which decides.
         closure = None
         if pack.action_for("I6"):
@@ -68,11 +69,13 @@ class Screener:
             ini = rules.initials_hint(draft)
             if ini:
                 hints.append(ini)
-        judged = (
-            self.judge(pack, instruction, draft, context, hints=hints)
-            if hints
-            else self.judge(pack, instruction, draft, context)
-        )
+        # Only a care-team draft changes the judge's call (one added paragraph in its prompt), so
+        # the prompt for an internal or external draft is the same as before the tier existed.
+        extra: dict = {"hints": hints} if hints else {}
+        if audience == "care-team":
+            extra["audience"] = audience
+            extra["care_team_kind"] = rules.care_team_kind(instruction, pack.id)
+        judged = self.judge(pack, instruction, draft, context, **extra)
         for jf in judged:
             if jf.label in rules.AUDIENCE_DEPENDENT and not external:
                 continue
@@ -91,6 +94,15 @@ class Screener:
                     confidence=round(float(jf.confidence), 2),
                 )
             )
+        # The I14 guard, after the judge: under the youth pack, a young person named alongside the
+        # offence, the school, the age or a Youth Court reference for a recipient outside the
+        # agency is I14 whatever the judge returned, because the care-team tier relaxes I10 only.
+        # The card carries no confidence and a reason that opens "Deterministic check:", as the
+        # offence-label card does.
+        if external and pack.action_for("I14") and not any(f.label == "I14" for f in out):
+            guard = rules.cypa_guard(draft, pack.id, audience)
+            if guard is not None:
+                out.append(guard.model_copy(update={"severity": pack.action_for("I14")}))
         return [f.model_copy(update={"name": f.name or _name_of(f.label)}) for f in out]
 
     def screen(
@@ -103,12 +115,9 @@ class Screener:
         context: str = "",
         audience: str | None = None,
     ) -> tuple[list[Flag], str, list]:
+        if audience not in rules.AUDIENCES:
+            audience = rules.resolve_audience(instruction, pack.id)
         flags = self.flags_for(draft, pack, instruction, leaks, context, audience)
-        external = (
-            audience == "external"
-            if audience in ("internal", "external")
-            else rules.audience_is_external(instruction, pack.id)
-        )
         baseline: list[str] = []
         if self.use_baseline:
             from socareguard.screen.baseline import moderation_flags
@@ -129,7 +138,7 @@ class Screener:
                     baseline_flags=baseline,
                     judge_model=getattr(self.judge, "model", None),
                     baseline_model=self.baseline_model,
-                    audience="external" if external else "internal",
+                    audience=audience,
                 )
             ],
         )

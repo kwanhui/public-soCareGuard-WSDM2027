@@ -6,6 +6,13 @@ and ``X-SoCareGuard-Actor`` (the staff identity the ledger records). When ``SOCA
 is set, every ``/v1`` route requires ``Authorization: Bearer <key>``. The response is the
 standard chat completion object plus a ``socareguard`` field carrying the event stream, flags,
 recipients and the ledger row, which the transparency panel renders.
+
+``GET /supervisor`` is the supervisor view: the ledger chain check, the withheld drafts that wait
+for a release, and one period of escalations, releases, overrides, accepted rewrites and opened
+reviews. With ``SOCAREGUARD_SUPERVISOR_KEYS`` set it needs a supervisor key. Without keys it
+offers the sandbox login of ``socareguard.proxy.demo_login``, which is for demonstration only.
+Under that shared login, a review link into a session that another browser created opens the
+pseudonymised columns only (what left, what came back, the flags and the ledger rows).
 """
 
 from __future__ import annotations
@@ -13,24 +20,34 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, quote
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from socareguard.detect import sg as sg_recognisers
 from socareguard.policy.loader import PACK_DIR, available_packs, load_pack
+from socareguard.proxy import demo_login
 from socareguard.proxy.core import Guard
-from socareguard.proxy.sessions import SessionStore
+from socareguard.proxy.sessions import REVIEW_TTL_S, SessionStore
+from socareguard.proxy.supervisor import (
+    KIND_PLURAL,
+    KIND_SINGULAR,
+    build_summary,
+    chip_groups,
+    parse_when,
+)
 from socareguard.taxonomy import BY_ID
 
 DEFAULT_MODEL = os.environ.get("SOCAREGUARD_DEFAULT_MODEL", "openai/gpt-4.1-mini")
@@ -53,11 +70,12 @@ MAX_PER_HOUR = int(os.environ.get("SOCAREGUARD_MAX_REQUESTS_PER_HOUR", "0"))  # 
 MAX_SESSIONS = int(os.environ.get("SOCAREGUARD_MAX_SESSIONS", "500"))
 BAD_JSON = "the request body is not valid JSON"
 _HERE = Path(__file__).resolve().parent
-# Per-category precision of the conduct screen on the labelled synthetic drafts (results-v1.2),
+# Per-category precision of the conduct screen on the labelled synthetic drafts (results-v1.3),
 # shown on each flag card beside the judge's own confidence. Derived from
-# docs/metrics/screen-v1.2-v1.1-drafts.json (per-label precision at the reported 0.5 threshold).
-# The v1.1 table (screen_precision_v1_1.json) is kept in place for the record.
-_PRECISION_FILE = _HERE / "screen_precision_v1_2.json"
+# docs/metrics/screen-v1.3-v1.1-drafts.json (per-label precision at the reported 0.5 threshold).
+# The v1.1 and v1.2 tables (screen_precision_v1_1.json, screen_precision_v1_2.json) are kept in
+# place for the record. The v1.2 and v1.3 values are equal.
+_PRECISION_FILE = _HERE / "screen_precision_v1_3.json"
 SCREEN_PRECISION = json.loads(_PRECISION_FILE.read_text()) if _PRECISION_FILE.exists() else {}
 
 # Every ledger append logs "ledger head <sha> rows <n>" here. Shipping the server log off the
@@ -109,7 +127,7 @@ def load_scenarios() -> list[dict[str, Any]]:
                     ),
                 }
             )
-    # The audience gate: one note, two audiences. Built on the disability scenario so the
+    # The recipient check (the audience gate): one note, two recipients. Built on the disability scenario so the
     # reviewer sees the same text screened for the case file and for an employer.
     uc1 = next((s for s in out if s["id"] == "uc1-youth-offending"), None)
     if uc1 is not None:
@@ -123,8 +141,9 @@ def load_scenarios() -> list[dict[str, Any]]:
                 "summary": (
                     "The probation intake note is drafted as an email to the school principal. "
                     "Naming a young person under the Children and Young Persons Act alongside the "
-                    "offence to an external audience escalates (I14): the draft is withheld from "
-                    "this screen and only a supervisor can release it, with a reason, in the ledger."
+                    "offence to a recipient outside the agency escalates (I14): the draft is withheld "
+                    "from this screen and only a supervisor can release it, with a reason that goes "
+                    "into the record."
                 ),
                 "instruction": (
                     "Write an email to the school principal explaining Amirul's court case and "
@@ -142,12 +161,12 @@ def load_scenarios() -> list[dict[str, Any]]:
                 "id": "audience-gate",
                 "pack": uc3["pack"],
                 "use_case": 5,
-                "title": "Audience gate: the same note for the case file and for an employer",
-                "short": "Audience gate",
+                "title": "Recipient check: the same note for the case file and for an employer",
+                "short": "Recipient check",
                 "summary": (
                     "The same care-plan note is drafted twice: once as a summary for the "
                     "practitioner's own case record, once as an introduction to a cafe supervisor. "
-                    "Disclosure categories apply only to the external audience."
+                    "Disclosure flags apply only to the recipient outside the agency."
                 ),
                 "instruction": uc3["instruction"],
                 "note": uc3["note"],
@@ -331,6 +350,45 @@ def _attested(request: Request) -> bool:
     return bool(API_KEYS) and _bearer(request) in API_KEYS
 
 
+def _keys_configured() -> bool:
+    """Any key configured turns the sandbox login off."""
+    return bool(API_KEYS or SUPERVISOR_KEYS)
+
+
+# The event kinds a review token opens on another browser's session. The detection event carries
+# the typed text and is left out. The generalisation event keeps its rule ids only, and the leak
+# check keeps its counts and the stand-ins the model reformatted, without the echoed originals.
+_REVIEW_EVENTS = {
+    "generalise",
+    "substitute",
+    "send",
+    "receive",
+    "screen",
+    "reidentify",
+    "leakcheck",
+    "action",
+    "ledger",
+}
+
+
+def _pseudonymise(text: str | None, pairs: list[tuple[str, str]]) -> str | None:
+    """Put the stand-ins back in place of the originals, in one pass (longest original first),
+    so a stand-in already put in is never replaced again. An original made of digits only (an
+    age) matches only where no letter or digit borders it, so it is not replaced inside a
+    stand-in NRIC. Any other original matches wherever it occurs, so none is left in the text."""
+    if not text or not pairs:
+        return text
+    lookup = dict(pairs)
+
+    def alt(original: str) -> str:
+        if original.isdigit():
+            return rf"(?<![A-Za-z0-9]){re.escape(original)}(?![A-Za-z0-9])"
+        return re.escape(original)
+
+    pattern = re.compile("|".join(alt(o) for o in sorted(lookup, key=len, reverse=True)))
+    return pattern.sub(lambda m: lookup[m.group(0)], text)
+
+
 def create_app(guard: Guard | None = None) -> FastAPI:
     app = FastAPI(title="SoCareGuard", version="0.2.0")
     app.state.guard = guard or Guard()
@@ -338,6 +396,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     # SQLite file, so a restart keeps every open session readable and releasable.
     app.state.sessions = SessionStore(app.state.guard.vault, MAX_SESSIONS)
     app.state.limiter = RateLimiter(MAX_PER_HOUR)
+    app.state.logins = demo_login.Logins()
     app.state.last_sweep = 0.0
     if RETENTION_HOURS <= 0:
         _error_log.warning(
@@ -385,6 +444,98 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             raise HTTPException(403, "this session belongs to another client")
         return res
 
+    def supervisor_identity(request: Request) -> tuple[str, bool] | None:
+        """(actor, attested) for a supervisor key in the Authorization header or a signed-in
+        supervisor cookie; None otherwise. A sandbox login stops counting once keys are set."""
+        bearer = _bearer(request)
+        if SUPERVISOR_KEYS and bearer in SUPERVISOR_KEYS:
+            return request.headers.get("x-socareguard-actor") or "supervisor key", True
+        login = app.state.logins.get(request.cookies.get(demo_login.COOKIE))
+        if login and (login[1] or not _keys_configured()):
+            return login
+        return None
+
+    def _supervisor(request: Request) -> tuple[str, bool]:
+        """The supervisor gate. With keys configured, a supervisor key or a key sign-in, else 403.
+        Without keys, the sandbox login, else 403."""
+        who = supervisor_identity(request)
+        if who is None:
+            if _keys_configured():
+                raise HTTPException(
+                    403, "the supervisor view requires a key listed in SOCAREGUARD_SUPERVISOR_KEYS"
+                )
+            raise HTTPException(403, "sign in at /supervisor first")
+        return who
+
+    def review_ok(session: str, request: Request) -> bool:
+        token = request.headers.get("x-socareguard-review-token") or request.query_params.get(
+            "review"
+        )
+        return bool(token) and app.state.sessions.review_token_ok(session, token)
+
+    def full_view(session: str, request: Request) -> bool:
+        """A review token opens the re-identified view only with the session's own token (the
+        browser that created it), an API key, or a supervisor key."""
+        if API_KEYS and _bearer(request) in API_KEYS:
+            return True
+        token = request.headers.get("x-socareguard-session-token") or request.query_params.get(
+            "token"
+        )
+        if token and app.state.sessions.token_ok(session, token):
+            return True
+        who = supervisor_identity(request)
+        return bool(who and who[1])
+
+    def reviewed(session: str, request: Request) -> tuple[Any, bool]:
+        """(result, full) for a GET route. A valid review token opens the session read-only;
+        otherwise the API key and session token rules of ``authorised`` apply."""
+        if review_ok(session, request):
+            res = app.state.sessions.get(session)
+            if not res:
+                raise HTTPException(404, "unknown session")
+            return res, full_view(session, request)
+        _require_key(request)
+        return authorised(session, request), True
+
+    def stand_in_pairs(session: str, res: Any) -> list[tuple[str, str]]:
+        pairs = {
+            (r["original"], r["outbound"])
+            for r in res.replacements
+            if r.get("original") and r.get("outbound") and r["original"] != r["outbound"]
+        }
+        pairs |= {
+            (m.original, m.surrogate)
+            for m in app.state.guard.vault.mappings(session)
+            if m.original and m.surrogate and m.original != m.surrogate
+        }
+        return sorted((p for p in pairs if len(p[0]) > 1), key=lambda p: -len(p[0]))
+
+    def pseudonymised_flags(session: str, res: Any, flags: Any = None) -> list[dict[str, Any]]:
+        pairs = stand_in_pairs(session, res)
+        out = []
+        for f in res.flags if flags is None else flags:
+            d = _flag_out(f)
+            for k in ("evidence", "rewrite", "reason"):
+                d[k] = _pseudonymise(d.get(k), pairs)
+            out.append(d)
+        return out
+
+    def pseudonymised_events(res: Any) -> list[dict[str, Any]]:
+        out = []
+        for e in res.events:
+            d = e.model_dump()
+            if d.get("kind") not in _REVIEW_EVENTS:
+                continue
+            if d["kind"] == "leakcheck":
+                d["leaks"] = []
+            if d["kind"] == "generalise":
+                # the count and the rule ids only; the spans quote the typed text
+                d["rules"] = [
+                    {"rule": r.get("rule"), "category": r.get("category")} for r in d["rules"]
+                ]
+            out.append(d)
+        return out
+
     sweep()
     app.mount("/static", StaticFiles(directory=_HERE / "static"), name="static")
     templates = Jinja2Templates(directory=_HERE / "templates")
@@ -414,6 +565,10 @@ def create_app(guard: Guard | None = None) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     def panel(request: Request):
+        # A signed-in supervisor (the sandbox login, a key sign-in or a supervisor key) sees the
+        # release form on the read-only review of a withheld session. The cookie is HTTP-only, so
+        # the page learns the identity from here.
+        who = supervisor_identity(request)
         return templates.TemplateResponse(
             request,
             "panel.html",
@@ -426,10 +581,18 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "base_url": _base_url(request),
                 "default_pack": DEFAULT_PACK,
                 "auth_required": bool(API_KEYS),
+                "supervisor_json": json.dumps(
+                    {"actor": who[0], "attested": who[1]} if who else None
+                ).replace("<", "\\u003c"),
                 "precision_json": json.dumps(SCREEN_PRECISION),
                 "taxonomy_json": json.dumps(
                     {
-                        k: {"name": c.name, "clause": c.clause, "clause_text": c.clause_text}
+                        k: {
+                            "name": c.name,
+                            "plain": c.plain,
+                            "clause": c.clause,
+                            "clause_text": c.clause_text,
+                        }
                         for k, c in BY_ID.items()
                     }
                 ),
@@ -487,8 +650,10 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     ):
         _require_key(request)
         audience = (x_socareguard_audience or "").lower() or None
-        if audience not in (None, "internal", "external", "auto"):
-            raise HTTPException(400, "X-SoCareGuard-Audience must be internal, external or auto")
+        if audience not in (None, "internal", "care-team", "external", "auto"):
+            raise HTTPException(
+                400, "X-SoCareGuard-Audience must be internal, care-team, external or auto"
+            )
         if not app.state.limiter.allow(_client_ip(request)):
             raise HTTPException(
                 429,
@@ -527,7 +692,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             )
             raise HTTPException(
                 503,
-                f"the drafting model, the conduct judge or the detectors failed ({type(e).__name__}, "
+                f"the drafting model, the screen's model or the detectors failed ({type(e).__name__}, "
                 f"error {error_id} in the server log). Nothing was sent to the practitioner and no "
                 "draft was produced",
             ) from e
@@ -634,22 +799,43 @@ def create_app(guard: Guard | None = None) -> FastAPI:
 
     @app.get("/v1/sessions/{session}")
     def session(session: str, request: Request):
-        _require_key(request)
-        res = authorised(session, request)
-        return {
+        """The session's latest result. A review token (``X-SoCareGuard-Review-Token`` or
+        ``?review=``) opens it read-only. With the review token alone the response is
+        pseudonymised: no re-identified reply, flags quoted with stand-ins, and no detection or
+        generalisation text. The session's own token, an API key or a supervisor key opens the
+        full view."""
+        res, full = reviewed(session, request)
+        out = {
             "session": session,
+            "view": "full" if full else "pseudonymised",
+            "pack": app.state.sessions.pack(session),
             "decision": res.decision,
             "withheld": res.withheld,
-            "flags": [_flag_out(f) for f in res.flags],
-            "events": [e.model_dump() for e in res.events],
-            "reply": res.reply,
+            "ledger_row": res.ledger_row,
         }
+        if full:
+            out.update(
+                flags=[_flag_out(f) for f in res.flags],
+                events=[e.model_dump() for e in res.events],
+                reply=res.reply,
+            )
+        else:
+            out.update(flags=pseudonymised_flags(session, res), events=pseudonymised_events(res))
+        return out
 
     @app.get("/v1/sessions/{session}/panel")
     def session_panel(session: str, request: Request):
-        """Replacement table for the practitioner's own panel (originals stay on this server)."""
-        _require_key(request)
-        res = authorised(session, request)
+        """Replacement table for the practitioner's own panel (originals stay on this server).
+        With a review token alone it returns only the stand-ins that left (``marks``), never the
+        originals."""
+        res, full = reviewed(session, request)
+        if not full:
+            marks = [
+                {k: r.get(k) for k in ("outbound", "category", "type", "kind", "rule")}
+                for r in res.replacements
+                if r.get("outbound")
+            ]
+            return {"session": session, "view": "pseudonymised", "marks": marks}
         derived = [
             {
                 "original": m.original,
@@ -671,30 +857,43 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         x_socareguard_role: str | None = Header(default=None),
         reason: str = Query(default=""),
     ):
-        """The re-identified draft that an escalation withheld, released to a supervisor only.
-        With API keys configured it needs a supervisor key, and a supervisor need not hold the
-        practitioner's session token. Without API keys (the sandbox) the supervisor role is
-        self-asserted, so the route also requires the session token, as the other session routes
-        do, and the ledger row marks the role as self-asserted. A reason is required, as for an
-        override."""
-        _require_key(request)
-        if API_KEYS:
+        """The draft that an escalation withheld, released to a supervisor only.
+
+        A signed-in supervisor releases it without the practitioner's session token: a supervisor
+        key in the Authorization header, the cookie of a key sign-in, or (in a deployment without
+        keys) the cookie of the sandbox login, which stands in for the role header and the token
+        and is recorded as "admin (sandbox login)", typed in. Without a supervisor identity, a
+        deployment with keys refuses the release, and the sandbox requires the self-asserted
+        supervisor role and the session token, as the other session routes do, and the ledger row
+        marks the role as self-asserted. A reason is required, as for an override.
+
+        The reply is re-identified when the caller may open the full view of the session (its own
+        token, an API key or a supervisor key); otherwise it carries the stand-ins, and ``view``
+        says ``pseudonymised``."""
+        who = supervisor_identity(request)
+        if who is not None:
             res = app.state.sessions.get(session)
             if not res:
                 raise HTTPException(404, "unknown session")
         else:
+            _require_key(request)
+            if _keys_configured():
+                raise HTTPException(
+                    403, "release requires a key listed in SOCAREGUARD_SUPERVISOR_KEYS"
+                )
             res = authorised(session, request)
+            if (x_socareguard_role or "").lower() != "supervisor":
+                raise HTTPException(403, "a withheld draft is released to a supervisor only")
         if not res.withheld:
             raise HTTPException(400, "nothing was withheld in this session")
-        if (x_socareguard_role or "").lower() != "supervisor":
-            raise HTTPException(403, "a withheld draft is released to a supervisor only")
-        if API_KEYS and _bearer(request) not in SUPERVISOR_KEYS:
-            raise HTTPException(403, "release requires a key listed in SOCAREGUARD_SUPERVISOR_KEYS")
         if not reason.strip():
             raise HTTPException(400, "a reason for the release is required")
         if _reason_has_identifier(reason):
             raise HTTPException(400, REASON_IDENTIFIER)
-        attested = bool(API_KEYS) and _bearer(request) in SUPERVISOR_KEYS
+        if who is not None:
+            actor, attested = who
+        else:
+            actor, attested = _actor(request) + " (self-asserted supervisor)", False
         prior = [
             {"row_sha256": r["row_sha256"], "actor": r.get("actor"), "ts": r.get("ts")}
             for r in app.state.guard.ledger.rows()
@@ -703,7 +902,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         row = app.state.guard.ledger.append(
             {
                 "session": session,
-                "actor": _actor(request) + ("" if attested else " (self-asserted supervisor)"),
+                "actor": actor,
                 "actor_attested": attested,
                 "decision": "withheld_released",
                 "override_reason": reason,
@@ -712,10 +911,19 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "prior_release_row_sha256": [p["row_sha256"] for p in prior] or None,
             }
         )
+        if full_view(session, request):
+            reply = res.reply_withheld
+            flags = [_flag_out(f) for f in res.flags_withheld]
+            view = "full"
+        else:
+            reply = _pseudonymise(res.reply_withheld, stand_in_pairs(session, res))
+            flags = pseudonymised_flags(session, res, res.flags_withheld)
+            view = "pseudonymised"
         return {
             "session": session,
-            "reply": res.reply_withheld,
-            "flags": [_flag_out(f) for f in res.flags_withheld],
+            "view": view,
+            "reply": reply,
+            "flags": flags,
             "ledger_row": row,
             "prior_releases": prior,
         }
@@ -744,6 +952,9 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         session: str | None = Query(default=None),
         limit: int = Query(default=50, ge=1, le=500),
     ):
+        if session and review_ok(session, request):
+            rows = [r for r in app.state.guard.ledger.rows() if r.get("session") == session]
+            return {"rows": rows[-limit:], "total": len(rows)}
         _require_key(request)
         rows = app.state.guard.ledger.rows()
         if session:
@@ -788,6 +999,176 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "tamper-evident against edits and reordering; anchoring the head hash outside "
                 "the host is the deployer's step (ship the server log)"
             ),
+        }
+
+    # ---------- supervisor view ----------
+    def summary_for(request: Request) -> tuple[dict[str, Any], dict[str, str]]:
+        q = request.query_params
+        raw = {k: q.get(k, "") for k in ("pack", "category", "actor", "kind", "since", "until")}
+        try:
+            limit = int(q.get("limit") or 200)
+            since = parse_when(raw["since"])
+            until = parse_when(raw["until"], end=True)
+            summary = build_summary(
+                app.state.guard.ledger,
+                app.state.sessions,
+                since=since,
+                until=until,
+                pack=raw["pack"] or None,
+                category=raw["category"] or None,
+                actor=raw["actor"] or None,
+                kind=raw["kind"] or None,
+                limit=max(1, min(limit, 1000)),
+            )
+        except ValueError as e:
+            raise HTTPException(400, f"filter not understood: {e}") from e
+        return summary, raw
+
+    def login_page(request: Request, status: int = 200, error: str = "") -> HTMLResponse:
+        return templates.TemplateResponse(
+            request,
+            "supervisor.html",
+            {
+                "signed_in": False,
+                "keyed": _keys_configured(),
+                "sandbox": SANDBOX,
+                "error": error,
+                "review_minutes": int(REVIEW_TTL_S // 60),
+            },
+            status_code=status,
+        )
+
+    @app.get("/supervisor", response_class=HTMLResponse)
+    def supervisor_page(request: Request):
+        """The supervisor view: the chain check, the drafts waiting for release, filter chips and
+        one period of supervisor actions. Without a supervisor identity it shows the sign-in form
+        (a supervisor key when keys are configured, the sandbox login otherwise)."""
+        who = supervisor_identity(request)
+        if who is None:
+            return login_page(request, 403 if _bearer(request) else 200)
+        try:
+            summary, raw = summary_for(request)
+            error = ""
+        except HTTPException as e:
+            summary, raw = build_summary(app.state.guard.ledger, app.state.sessions), {}
+            error = str(e.detail)
+        return templates.TemplateResponse(
+            request,
+            "supervisor.html",
+            {
+                "signed_in": True,
+                "keyed": _keys_configured(),
+                "sandbox": SANDBOX,
+                "actor": who[0],
+                "attested": who[1],
+                "s": summary,
+                "raw": raw,
+                "groups": chip_groups(raw, summary["filters"]["options"], time.time()),
+                "error": error,
+                "review_minutes": int(REVIEW_TTL_S // 60),
+                "kind_plural": KIND_PLURAL,
+                "kind_singular": KIND_SINGULAR,
+            },
+        )
+
+    @app.post("/supervisor/login")
+    async def supervisor_login(request: Request):
+        """Sign a supervisor in and set the supervisor cookie.
+
+        With keys configured, the form takes a supervisor key (and an optional staff id), and the
+        sandbox credential is refused. Without keys, the form takes the sandbox credential of
+        ``socareguard.proxy.demo_login`` and the actor is recorded as "admin (sandbox login)".
+        This is a simplistic authentication for demonstration purposes only, with a fixed
+        shared credential and no rate limiting or lockout, and it must be replaced with
+        proper authentication (per-user credentials or single sign-on, a supervisor role that
+        the deployment checks, session expiry and audit) before any production deployment."""
+        raw = await request.body()
+        is_json = "json" in request.headers.get("content-type", "")
+        try:
+            if is_json:
+                form = json.loads(raw or b"{}")
+            else:
+                form = {k: v[0] for k, v in parse_qs(raw.decode()).items()}
+        except (ValueError, UnicodeDecodeError):
+            form = {}
+        if not isinstance(form, dict):
+            form = {}
+
+        def refuse(status: int, message: str):
+            if is_json:
+                return _openai_error(status, message)
+            return login_page(request, status, message)
+
+        if _keys_configured():
+            key = str(form.get("key") or "")
+            if not (SUPERVISOR_KEYS and key in SUPERVISOR_KEYS):
+                return refuse(
+                    403,
+                    "The demonstration login is off in this deployment. Sign in with a key "
+                    "listed in SOCAREGUARD_SUPERVISOR_KEYS.",
+                )
+            actor, attested = str(form.get("staff_id") or "").strip() or "supervisor key", True
+        else:
+            if not demo_login.credential_ok(
+                str(form.get("username") or ""), str(form.get("password") or "")
+            ):
+                return refuse(401, "The name or the password is wrong.")
+            actor, attested = demo_login.DEMO_ACTOR, False
+        cookie = app.state.logins.start(actor, attested)
+        resp: Response = (
+            JSONResponse({"ok": True, "actor": actor, "attested": attested})
+            if is_json
+            else RedirectResponse("/supervisor", status_code=303)
+        )
+        resp.set_cookie(demo_login.COOKIE, cookie, httponly=True, samesite="strict", path="/")
+        return resp
+
+    @app.post("/supervisor/logout")
+    def supervisor_logout(request: Request):
+        app.state.logins.end(request.cookies.get(demo_login.COOKIE))
+        resp = RedirectResponse("/supervisor", status_code=303)
+        resp.delete_cookie(demo_login.COOKIE, path="/")
+        return resp
+
+    @app.get("/v1/supervisor/summary")
+    def supervisor_summary(request: Request):
+        """The supervisor view as JSON: ``chain``, ``queue``, ``actions`` (newest first, up to
+        ``limit``), ``counts`` by kind and ``filters``. Filters: ``since`` and ``until`` (a date,
+        an ISO time, seconds or ``all``; the default is the last 7 days), ``pack``, ``category``,
+        ``actor`` and ``kind``. Same gate as the page."""
+        actor, attested = _supervisor(request)
+        summary, _raw = summary_for(request)
+        return {"actor": actor, "actor_attested": attested, **summary}
+
+    @app.post("/v1/sessions/{session}/review-token")
+    def review_token(session: str, request: Request):
+        """A read-only review token for one session, valid for 30 minutes, behind the supervisor
+        gate. Only its hash is kept, and a ``review_opened`` ledger row records who opened it.
+        The token opens the GET routes of the session (the result, the panel and the ledger rows)
+        and nothing else. Without the session's own token or a supervisor key it opens the
+        pseudonymised view only."""
+        actor, attested = _supervisor(request)
+        res = app.state.sessions.get(session)
+        if not res:
+            raise HTTPException(404, "unknown session")
+        token, expires = app.state.sessions.issue_review_token(session, actor, attested)
+        row = app.state.guard.ledger.append(
+            {
+                "session": session,
+                "pack": app.state.sessions.pack(session),
+                "actor": actor,
+                "actor_attested": attested,
+                "decision": "review_opened",
+                "review_expires": expires,
+                "request_row_sha256": res.ledger_row["row_sha256"] if res.ledger_row else None,
+            }
+        )
+        return {
+            "session": session,
+            "review_token": token,
+            "expires": expires,
+            "url": f"/?session={quote(session)}&review={token}",
+            "ledger_row": row,
         }
 
     return app

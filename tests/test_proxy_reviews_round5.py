@@ -181,10 +181,11 @@ def test_readme_pdpc_wording():
     assert "processes the pseudonymised payload as a data intermediary" not in readme
 
 
-def test_readme_states_the_supervisor_view_is_per_session():
+def test_readme_states_the_supervisor_view_scope():
+    # Round 6 replaced the per-session statement with the supervisor view and its sandbox rule.
     readme = _text("README.md")
-    assert "In the sandbox, the supervisor view is per session." in readme
-    assert "`GET /v1/ledger` without a session lists the rows of all sessions" in readme
+    assert "a review link into a session that another browser created returns only the" in readme
+    assert "`GET /v1/ledger` without a session still lists the rows of all sessions" in readme
 
 
 def test_readme_first_paragraph_names_title_and_artefact():
@@ -203,6 +204,7 @@ def test_corpus_readmes_say_the_v12_drafts_are_unguarded():
 
 
 def test_pack_readme_and_scope_name_the_care_team_tier():
-    assert "including the client's own service providers" in _text("policy-packs/README.md")
-    # The reserved list itself is private; the public pack README states the future-work note.
-    assert "future work" in _text("policy-packs/README.md")
+    # Round 6 built the tier (a draft reading of A.6.d); the pack README says so.
+    readme = _text("policy-packs/README.md")
+    assert "A care-team recipient is one of the client's own providers" in readme
+    assert "draft reading of SASW A.6.d pending practitioner review" in readme

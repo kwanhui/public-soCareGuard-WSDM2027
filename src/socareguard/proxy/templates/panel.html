@@ -8,10 +8,11 @@
 </head>
 <body>
 <header>
-  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">an on-premise guardrail proxy between a social worker's tools and a commercial model</span></div>
-  {% if sandbox %}<div class="banner"><p>Synthetic-data sandbox. Do not enter real client information. The model provider receives column 2 only, and the identity map stays on this server.</p><p>The conduct taxonomy is a draft adapted from published work and anchored on the SASW Code, and it has not yet been reviewed by social-work practitioners.</p></div>{% endif %}
+  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">an on-premise guardrail proxy between a practitioner's tools and a commercial model</span></div>
+  {% if sandbox %}<div class="banner"><p>Synthetic-data sandbox. Do not enter real client information. The model provider receives only what left the premises, and the identity map stays on this server.</p><p>The conduct taxonomy is a draft adapted from published work and anchored on the Singapore Association of Social Workers Code of Professional Ethics (the SASW Code), and it has not yet been reviewed by social-work practitioners.</p></div>{% endif %}
 </header>
 <main>
+  <div class="review-note" id="review-note" role="status" hidden></div>
   <section class="compose">
     <form id="compose">
       <div class="chiprow" role="group" aria-label="Load a scenario">
@@ -20,7 +21,7 @@
         <span class="chiplabel muted">or type your own note below</span>
       </div>
       <p id="scenario-summary" class="summary" hidden></p>
-      <p id="replay-row" class="summary" hidden><label class="inline"><input type="checkbox" id="replay"> Replay this scenario's recorded model reply instead of calling the provider (the guard, the judge and the ledger still run live, and the outcome then matches the paper's account).</label></p>
+      <p id="replay-row" class="summary" hidden><label class="inline"><input type="checkbox" id="replay"> Replay this scenario's recorded model reply instead of calling the model provider (the guard, the screen and the record still run live, and the result then matches the paper's account).</label></p>
       <div class="row">
         <label>Policy pack
           <select name="pack" id="pack" aria-describedby="pack-hint">{% for p in packs %}<option value="{{ p }}"{% if p == default_pack %} selected{% endif %}>{{ p }}</option>{% endfor %}</select>
@@ -29,13 +30,21 @@
         <label>Drafting model
           <select name="model" id="model">{% for m in models %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select>
         </label>
-        <label>Your staff id (written to the ledger)
+        <label>Your staff id (written to the record)
           <input name="actor" id="actor" value="{{ 'sandbox-visitor' if sandbox else '' }}" placeholder="e.g. sw-042">
         </label>
-        <label>Audience of the draft
-          <select id="audience" aria-describedby="audience-hint"><option value="auto">auto (from the instruction)</option><option value="internal">internal: my case file or supervisor</option><option value="external">external: school, employer, court, admin</option></select>
-          <span class="fieldhint" id="audience-hint">I10 and I14 apply only to an external audience. Auto reads the audience from your instruction.</span>
+        <div class="field" id="audience-field">
+        <label>Recipient
+          <select id="audience" aria-describedby="audience-hint">
+            <option value="internal">internal: my case file or my supervisor</option>
+            <option value="care-team">care team: the client's own day centre, clinic or school counsellor</option>
+            <option value="external">external: school, employer, court or admin</option>
+            <option value="auto" selected>auto: read it from the instruction</option>
+          </select>
+          <span class="fieldhint" id="audience-hint">Who the draft is for. Some flags depend on it.</span>
         </label>
+        <details class="more fieldmore" id="audience-more"><summary>More</summary><p class="hint">Two flags apply only to a recipient outside the agency: I10 (tells the recipient something the client did not agree to share) and I14 (names a protected child or young person to someone outside the agency). For the client's care team, I10 is read within the recipient's role (a draft reading).</p></details>
+        </div>
         {% if auth_required %}<label>API key (this deployment requires one)
           <input id="apikey" type="password" placeholder="Bearer key">
         </label>{% endif %}
@@ -47,7 +56,7 @@
         <textarea name="note" id="note" rows="9" placeholder="Paste or type the note here" required></textarea>
       </label>
       <div class="row actions">
-        <button type="submit" id="send">Send through the guardrail</button>
+        <button type="submit" id="send" class="btn-primary">Send through the guardrail</button>
         <span id="status" class="status" role="status" aria-live="polite"></span>
       </div>
       <div id="error" class="error" role="alert" hidden></div>
@@ -62,57 +71,75 @@ reply = client.chat.completions.create(
     messages=[{"role": "user", "content": "Summarise this note...\n\n&lt;case note&gt;"}],
     extra_headers={"X-SoCareGuard-Pack": "<span id="snippet-pack">{{ default_pack }}</span>", "X-SoCareGuard-Actor": "<span id="snippet-actor">sw-042</span>"},
 )</pre>
-      <p>The reply carries a <code>socareguard</code> object with the decision, flags (evidence and rewrite already re-identified), event stream, every recipient of the pseudonymised text, the session token that opens the session's identity map, and the ledger row. <code>X-SoCareGuard-Audience: internal|external</code> overrides the audience read from the instruction. A request without <code>X-SoCareGuard-Pack</code> runs the deployment's default pack, and its response carries the header <code>X-SoCareGuard-Pack-Defaulted: true</code>. <code>GET /v1/ledger?session=…</code> lists the rows. <code>GET /v1/ledger/verify</code> recomputes the chain. <code>DELETE /v1/sessions/…</code> purges a session's identity map and records that it did.</p>
+      <p>The reply carries a <code>socareguard</code> object with the decision, the flags (evidence and rewrite already restored), the event stream, every recipient of what left the premises, the session token that opens the session's identity map, and the row of the record. <code>X-SoCareGuard-Audience: internal|external</code> sets the recipient instead of reading it from the instruction. A request without <code>X-SoCareGuard-Pack</code> runs the deployment's default pack, and its response carries the header <code>X-SoCareGuard-Pack-Defaulted: true</code>. <code>GET /v1/ledger?session=…</code> lists the rows of the record. <code>GET /v1/ledger/verify</code> recomputes its chain. <code>DELETE /v1/sessions/…</code> purges a session's identity map and records that it did.</p>
     </details>
   </section>
 
   <section id="result" hidden>
     <div id="compare" class="compare" hidden></div>
-    <div class="decision" id="decision" role="status" aria-live="polite"></div>
-    <p class="ledgersum" id="ledgersum"></p>
-    <p class="glossary" id="glossary"></p>
+    <div class="decision" id="decision" role="status" aria-live="polite">
+      <h2 id="decision-title"></h2>
+      <p id="decision-next"></p>
+      <p id="decision-warn" class="decision-warn" hidden></p>
+      <div class="decision-actions">
+        <button type="button" class="btn-primary" id="decision-action"></button>
+        <span id="decision-action-status" class="status" role="status"></span>
+      </div>
+      <details id="decision-more">
+        <summary>More about this result</summary>
+        <p class="glossary" id="glossary"></p>
+        <div class="segs" id="decision-facts"></div>
+        <p class="ledgersum" id="ledgersum"></p>
+      </details>
+    </div>
     <div class="legend" id="legend"></div>
     <div class="columns">
-      <article><h2>1. What you typed</h2><pre id="col-typed" tabindex="0"></pre><p class="hint">Highlights show what the guard changed before anything left. Hover a highlight for the rule.</p></article>
-      <article><h2>2. What left the premises</h2><pre id="col-out" tabindex="0"></pre><p class="hint">Direct identifiers are replaced by surrogates, and quasi-identifiers and sensitive attributes are generalised. Surrogates are per person and stay the same within a session, so two people who share a surname receive unrelated surrogate surnames. The instruction line (first paragraph) is pseudonymised but not generalised. Detection misses some attribute spans (recall by category in docs/metrics.md), so read this column before relying on the guard. A named employer leaves as an invented name for an internal audience and as "an employer" for an external one. The identity map never leaves this server.</p></article>
-      <article><h2>3. What came back</h2><pre id="col-back" tabindex="0"></pre><p class="hint">The model's reply as received. It is screened in this form, before anything is re-identified.</p></article>
-      <article><h2>4. What you see</h2><pre id="col-seen" tabindex="0"></pre><p class="hint">Re-identified on this server. Flagged text is underlined in red. A generalised phrase that cannot come back keeps its colour (hover for what the record says). A withheld or generalised phrase that the model repeated exactly is restored from the record and underlined in dots. An orange mark is a surrogate fragment that the model reformatted.</p></article>
+      <article><h2>What you typed</h2><pre id="col-typed" tabindex="0"></pre><p class="hint">Highlights show what the guard changed before anything left.</p><details class="more"><summary>More</summary><p class="hint">Hover a highlight for the rule that changed it. The colours are explained in the key above the columns.</p></details></article>
+      <article><h2>What left the premises</h2><pre id="col-out" tabindex="0"></pre><p class="hint" id="out-hint">This text went to the model provider. Its names and numbers are stand-ins that look real by design, so that the model writes naturally, and every one is invented.</p><details class="more"><summary>More</summary><p class="hint">Names and numbers are replaced by stand-ins (surrogates), and details that identify someone when combined, and sensitive details, are generalised. Stand-ins are per person and stay the same within a session. Relatives who share a surname or a father's name in the note share the stand-in one, and a titled surname that could be either of two relatives is restored and marked. The instruction line (first paragraph) receives stand-ins but is not generalised. Detection misses some sensitive details (recall by category in docs/metrics.md), so read this column before relying on the guard. A named employer leaves as an invented name for a recipient inside the agency and as "an employer" for one outside it. The identity map never leaves this server.</p></details></article>
+      <article><details id="col-back-details"><summary><h2>What the model replied (with stand-ins)</h2></summary><pre id="col-back" tabindex="0"></pre><p class="hint">The reply as received. The screen reads it in this form, before any stand-in is restored.</p></details></article>
+      <article><h2>What you see</h2><pre id="col-seen" tabindex="0"></pre><p class="hint">The reply with stand-ins restored on this server. Flagged text is underlined in red.</p><p class="hint" id="seen-legend">A generalised phrase that cannot come back keeps its colour (hover for what the record says). A withheld or generalised phrase that the model repeated exactly is restored from the record and underlined in dots. An orange mark is part of a stand-in that the model reformatted, so it was not restored.</p></article>
     </div>
-    <p class="closing" id="closing" hidden>No conduct flag. The draft in column 4 is ready to use. Wording that the note itself uses may be echoed without a flag. The ledger row below records what left and to whom.</p>
+    <p class="closing" id="closing" hidden>No flag. Wording that the note itself uses may be echoed without a flag. The record below shows what left and to whom.</p>
     <div class="flags" id="flags"></div>
-    <div class="escalate-note" id="escalate-note" hidden></div>
+    <div class="escalate-note" id="escalate-note" role="alert" hidden></div>
     <div class="release" id="release" hidden>
       <form id="release-form">
         <p class="cap">Supervisor release</p>
-        <p class="summary">Practitioner: give your supervisor the session id in the notice above, or redraft the note for an internal audience.</p>
-        <p class="summary">Supervisor identity is self-asserted in the sandbox. With SOCAREGUARD_SUPERVISOR_KEYS set, a supervisor key is required.{% if auth_required %} This deployment checks the supervisor key.{% endif %}</p>
-        <p class="summary">The reason is kept in the ledger as typed. Do not put client details in it. A reason with an NRIC, phone number or case reference is refused.</p>
+        <p class="summary" id="release-practitioner-hint">Practitioner: give your supervisor the session id above, or redraft the note for a recipient inside the agency.</p>
+        <p class="summary" id="release-signed-in" hidden></p>
+        <p class="summary" id="release-id-hint">In the sandbox the supervisor id is typed in and not checked. With SOCAREGUARD_SUPERVISOR_KEYS set, a supervisor key is required.{% if auth_required %} This deployment checks the supervisor key.{% endif %}</p>
+        <p class="summary">The reason goes into the record as typed, so do not put client details in it. A reason with an NRIC, phone number or case reference is refused.</p>
         <label>Supervisor id<input id="release-actor" placeholder="e.g. sup-007" required></label>
         <label>Reason for the release<textarea id="release-reason" rows="2" required placeholder="Why the draft is being released"></textarea></label>
-        <button type="submit" class="secondary">Release to me as supervisor</button>
-        <span id="release-status" class="status"></span>
+        <button type="submit" class="secondary">Release the draft</button>
+        <div class="confirm" id="release-confirm" role="group" aria-labelledby="release-confirm-q" hidden>
+          <p id="release-confirm-q">Release this draft to <strong id="release-confirm-who"></strong>? The release and its reason go into the record, and the draft is shown on this screen.</p>
+          <button type="button" class="secondary" id="release-confirm-yes">Yes, release it</button>
+          <button type="button" class="secondary quiet" id="release-confirm-no">Cancel</button>
+        </div>
+        <span id="release-status" class="status" role="status"></span>
         <p id="release-prior" class="prior" hidden></p>
       </form>
-      <div id="released" hidden><p class="cap">Released draft (supervisor view)</p><pre id="released-text" tabindex="0"></pre></div>
+      <div id="released" hidden><p class="cap">Released draft (supervisor view)</p><pre id="released-text" tabindex="0"></pre><p class="hint" id="released-note" hidden>This browser did not create the session, so the released draft is shown with stand-ins. The practitioner's panel shows the restored draft.</p></div>
     </div>
     <div class="regen" id="regen"><button type="button" class="secondary" id="regenerate" hidden>Regenerate the draft with the flags as instructions</button></div>
     <details class="ledger" id="ledger-details">
-      <summary>Ledger rows for this request</summary>
+      <summary>The record for this request <span class="tag-status" id="ledger-tag"></span></summary>
       <div id="ledger"></div>
-      <p class="hint">The chain is tamper-evident against edits and reordering. Anchoring the head hash outside the host is the deployer's step (ship the server log).</p>
+      <p class="hint">The record shows any edit or reordering of its rows. Keeping a copy of the record fingerprint (head hash) outside the host is the deployer's step (ship the server log).</p>
     </details>
     <details class="rules">
-      <summary>Policy pack rules that fired</summary>
+      <summary>Policy pack rules that fired <span class="tag-status" id="rules-tag"></span></summary>
       <div id="rules"></div>
     </details>
-    <details class="events"><summary>Event stream (the full pipeline record)</summary><pre id="events" tabindex="0"></pre></details>
+    <details class="events"><summary>Event stream (the full pipeline record) <span class="tag-status" id="events-tag"></span></summary><pre id="events" tabindex="0"></pre></details>
   </section>
 </main>
 <footer>
-  <span>Built on LiteLLM, Presidio, GLiNER2-PII and a clause-grounded judge. The policy layer, the generalisation rules, the audience gate and the ledger are the contribution.</span>
-  <span><a href="/v1/ledger/verify">verify ledger chain</a> · <a href="/v1/packs/{{ default_pack }}">view a policy pack</a></span>
+  <span><a href="/v1/ledger/verify">check the record's chain</a> · <a href="/v1/packs/{{ default_pack }}">view a policy pack</a> · <a href="/supervisor" id="supervisor-link">supervisor view</a></span>
+  <details class="about" id="about-tool"><summary>About this tool</summary><p>Built on LiteLLM, Presidio, GLiNER2-PII and a screen grounded in the clauses of the SASW Code. The policy layer, the generalisation rules, the recipient check and the record are the contribution.</p></details>
 </footer>
-<script>window.SCENARIOS = {{ scenarios_json | safe }}; window.TAXONOMY = {{ taxonomy_json | safe }}; window.PRECISION = {{ precision_json | safe }}; window.SOCAREGUARD_AUTH = {{ 'true' if auth_required else 'false' }};</script>
+<script>window.SCENARIOS = {{ scenarios_json | safe }}; window.TAXONOMY = {{ taxonomy_json | safe }}; window.PRECISION = {{ precision_json | safe }}; window.SOCAREGUARD_AUTH = {{ 'true' if auth_required else 'false' }}; window.SOCAREGUARD_SUPERVISOR = {{ supervisor_json | safe }};</script>
 <script src="/static/rewrite.js"></script>
 <script src="/static/panel.js"></script>
 </body>

@@ -146,11 +146,13 @@ def test_panel_script_carries_the_round_two_wording():
     js = (ROOT / "src/socareguard/proxy/static/panel.js").read_text()
     # round 3 (WSDM legend) widened the first sentence of the legend; the rest is unchanged
     assert (
-        "Precision is measured on synthetic drafts (v1.2). Confidence is the judge's own estimate."
+        "Precision is measured on synthetic drafts (v1.3). Confidence is the screen's own estimate."
     ) in js
-    assert "judge's own confidence ${f.confidence.toFixed(2)}" in js
-    assert "judge confidence ${" not in js
-    assert ">Use this rewrite (your decision, recorded)</button>" in js
+    # round 6: the screen's model, not "the judge" (docs/terminology.md)
+    assert "the screen's own confidence ${f.confidence.toFixed(2)}" in js
+    assert "judge confidence ${" not in js and "judge's own confidence" not in js
+    assert ">Use this rewrite</button>" in js
+    assert "your choice goes into the record" in js
     assert 'ledgerWrite("rewrite_accepted"' in js
     assert "the flag card below quotes the full text" in js
 
@@ -277,10 +279,12 @@ def test_snapshot_allowlist_carries_the_drafts_and_the_image_does_not():
 
 def test_per_person_surrogates_are_stated(tmp_path, monkeypatch):
     readme = " ".join((ROOT / "README.md").read_text().split())
+    # Round 6: surrogates follow the household, and the README says so
     assert (
-        "Surrogates are per person. Two people who share a surname receive unrelated surrogate "
-        'surnames, so a sentence such as "same surname as the client" does not survive '
-        "substitution."
+        "Surrogates follow the household. People whose surname or father-name is the same in the "
+        "note receive one shared surrogate surname or father-name, so that a sentence such as "
+        '"same surname as the client" remains true'
     ) in readme
+    assert "A shared titled surname is marked when it could be either of two people." in readme
     page = _client(tmp_path, monkeypatch, sandbox=True).get("/").text
-    assert "Surrogates are per person" in page
+    assert "Stand-ins are per person" in page
