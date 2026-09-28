@@ -227,9 +227,13 @@ flags, a minimal rewrite. By default the judge is `openai/gpt-4.1` at temperatur
 evaluation.
 
 The second is a set of deterministic rules (`screen/rules.py`), which cover crisis boilerplate in
-a routine task (over-caution), invented identifiers from the leak check (I13), and an audience
-gate. Under the audience gate, the disclosure categories (I10, I14) can fire only when the
-instruction names a recipient outside the case team.
+a routine task (over-caution), invented identifiers from the leak check (I13), and the recipient
+check. The recipient is resolved once per request as internal, care team or external (a header
+value wins, then the instruction). The disclosure categories (I10, I14) fire only for a recipient
+outside the case team. For the client's own care team (a day activity centre, a clinic, a school
+counsellor) the screen's model reads I10 within the recipient's role, a draft reading of the SASW
+Code's disclosure clause pending practitioner review, while a deterministic guard keeps I14 for any
+youth document that names a protected young person to a recipient outside the agency.
 
 The third is a generic baseline (`screen/baseline.py`), namely OpenAI moderation, which is
 recorded as `baseline_flags` for contrast and is not used for the decision. ExpGuard (ICLR 2026)
@@ -245,8 +249,8 @@ reason, which the ledger records. The policy packs are at v1. Every pack lists
 the cross-cutting categories, the youth pack adds I14, and the disability and youth packs add I11.
 The categories and packs are drafts that have not yet been reviewed by social-work practitioners
 (see `policy-packs/README.md`). Each flag card shows the category's measured precision on the
-labelled synthetic drafts at `results-v1.2` beside the judge's confidence, read from
-`src/socareguard/proxy/screen_precision_v1_2.json` (derived from `docs/metrics/screen-v1.2-v1.1-drafts.json`).
+labelled synthetic drafts at `results-v1.3` beside the screen model's own confidence, read from
+`src/socareguard/proxy/screen_precision_v1_3.json` (derived from `docs/metrics/screen-v1.3-v1.1-drafts.json`).
 
 ```bash
 python3 -m socareguard.eval screen                 # F1 / AUPRC / FPR on the 600 labelled drafts, plus the moderation baseline
@@ -308,7 +312,7 @@ section of `docs/metrics.md` gives the breakdown.
 |---|---|---|
 | 1 | Corpus with three-layer gold annotation; four scenario scripts; policy packs v0 | done, tag `corpus-v1` |
 | 2 | Proxy core: detectors, generalisation, vault, ledger, metrics | done, tag `proxy-v1` |
-| 3 | Conduct screen: clause-grounded judge, rules, baseline; policy packs v1 | done, tag `screen-v1` (reported results at `results-v1.2`) |
+| 3 | Conduct screen: clause-grounded judge, rules, baseline; policy packs v1 | done, tag `screen-v1` (reported results at `results-v1.3`) |
 | 4 | Transparency panel, `docker compose`, hosted synthetic-only sandbox, video | done, tag `demo-v1` |
 | 5 | Paper | submission due 2026-10-15, under review after that date |
 

@@ -1,4 +1,4 @@
-"""Round 6 (2026-10-01): household-consistent surrogates.
+"""Round 6 (2026-09-28): household-consistent surrogates.
 
 Two people share a surrogate surname (Chinese, Eurasian, Western) or father-name (Malay, Indian)
 when their original surname or father-name matches. A relation word before a name fixes the
@@ -122,7 +122,8 @@ def test_dv_mother_as_safe_contact_shares_the_father_name_and_restores_in_full(
     msgs = [{"role": "user", "content": note["text"]}]
     out = g.outbound(msgs, note["pack"], "dv4", seed=7)
     payload = out[4]
-    client = re.search(r"Client (Mdm [\w ]+?), 28", payload).group(1)
+    # round 6 acceptance F2: the bare age after the name is banded
+    client = re.search(r"Client (Mdm [\w ]+?), 2\d to 29", payload).group(1)
     mother = re.search(r"her mother, (Mdm [\w ]+?), who", payload).group(1)
     husband = re.search(r"husband ([\w ]+?)\. ", payload).group(1)
     ref = re.search(r"case ref (\S+?)\.", payload).group(1)

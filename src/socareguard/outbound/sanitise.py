@@ -183,6 +183,42 @@ class Sanitiser:
             )
         return getattr(factory, method)(h.text), "surrogate", None
 
+    def _instruction_replacement(
+        self,
+        h: Hit,
+        factory: SurrogateFactory,
+        memo: dict[tuple, tuple[str, str, str | None]],
+    ) -> tuple[str, str, str | None]:
+        """A detail that identifies someone when combined, in the instruction line. No rule for
+        such details runs there, so the model addresses the recipient that was typed: an age, an
+        estate, a shared place, a public body and a recipient named by its kind ("the client's
+        day activity centre", "the DAC coordinator", "her employer") are kept as typed. A school,
+        a centre or an organisation named by its own name ("Willowbrook Day Activity Centre",
+        "Ace Hardware Tampines") is a direct identifier there: it takes the stand-in that the
+        note gives it, or a stand-in of its own, and the draft restores it."""
+        from socareguard.screen.rules import _care_team_hits
+
+        cat = h.category
+        if cat not in ("SCHOOL", "FACILITY", "EMPLOYER"):
+            return h.text, "kept", None
+        if gen.shared_place(h.text) or gen.is_public_body(h.text, _TOWNS):
+            return h.text, "kept", None
+        if cat == "EMPLOYER" and _generic_org(h.text, self._text[: h.start]):
+            return h.text, "kept", None
+        # the words that name the recipient's kind ("DAC", "Day Activity Centre", "GP") are not
+        # a name: only what is left of the span decides whether it names an organisation
+        own = h.text
+        for _, m in _care_team_hits(h.text, self.pack.id):
+            own = own.replace(m.group(0), " ")
+        own = _RECIPIENT_KIND.sub(" ", own)
+        if not _proper_noun(own):
+            return h.text, "kept", None
+        prior = memo.get((cat, h.text))
+        if prior is not None and prior[1] == "surrogate":
+            return prior
+        method = DIRECT_SURROGATES.get(cat, "generic")
+        return getattr(factory, method)(h.text), "surrogate", None
+
     def _fit_span(self, text: str, a: Hit) -> Hit:
         """A short diagnosis span must fit the sentence it lands in. When the words before it do
         not take a noun phrase, a predicate or a copula, the span grows left over modifiers
@@ -304,6 +340,7 @@ class Sanitiser:
             attributes=attributes,
             attribute_keys={r.key for r in self.pack.outbound.attributes},
         )
+        det.entities += _bare_ages(text, det.entities)
         # An attribute clause may absorb name spans (the generalised phrase names the role, not the
         # person) but never another entity: a clause holding an NRIC, case reference or school is
         # left to entity substitution and its attribute wording stays as written.
@@ -492,6 +529,15 @@ class Sanitiser:
         n_entities = len(memo)
         for h in sorted(spans, key=lambda h: h.start):
             key = (h.category, h.text)
+            if h.start < attribute_floor and h.category in QUASI_GENERALISERS:
+                # The instruction line names the recipient ("the client's day activity centre",
+                # "her GP", "her employer, Sheng Siong"): no quasi-identifier rule runs on it, for
+                # any recipient, so the model addresses the recipient that was typed. A named
+                # school or centre is a direct identifier there and takes a stand-in.
+                key = ("instruction", h.category, h.text)
+                if key not in memo:
+                    memo[key] = self._instruction_replacement(h, factory, memo)
+                    n_entities += 1
             if key not in memo:
                 whole = pieces.get((h.start, h.end))
                 # A quasi-identifier piece is generalised from the whole entity, so that the kind
@@ -801,6 +847,36 @@ def _generic_org(text: str, before: str) -> bool:
         "boss",
     }
     return bare_role or bool(possessive) or words[0].lower().endswith(("'s", "\u2019s"))
+
+
+# Words that name a recipient's kind or role, never an organisation of its own.
+_RECIPIENT_KIND = re.compile(
+    r"\b(?:GP|DAC|MSW|SW|OT|SLT|FSC|SSO|EIPIC|SPED|AIC|CPS|(?i:day activity centre|secondary school"
+    r"|primary school|school|centre|clinic|hospital|polyclinic|counsellor|coordinator|teacher"
+    r"|principal|doctor|therapist|case manager))\b"
+)
+_BARE_AGE = re.compile(r"(?<=[A-Za-z]),\s*(\d{1,2})\s*,(?=\s)")
+_NOT_A_NAME = re.compile(
+    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June"
+    r"|July|August|September|October|November|December|Blk|Block|Level|Lvl|Unit|Room|Rm|Ward|Bed"
+    r"|Bus|Sec|Secondary|Primary|Pri|P|S|No|Page|Para|Item|Line|Street|St|Avenue|Ave|Road|Rd)$"
+)
+
+
+def _bare_ages(text: str, entities: list[Hit]) -> list[Hit]:
+    """The age set off by commas after a name ("Client Amirul bin Rashid, 15, Secondary 3"),
+    which the detectors read only with an age cue or in parentheses. The word before the comma
+    must be capitalised and must not be a month, a block or a level."""
+    out = []
+    for m in _BARE_AGE.finditer(text):
+        s, e = m.span(1)
+        if not 0 < int(m.group(1)) < 110 or any(h.start < e and s < h.end for h in entities):
+            continue
+        word = re.search(r"[\w'-]+$", text[: m.start()])
+        if not word or not word.group(0)[:1].isupper() or _NOT_A_NAME.match(word.group(0)):
+            continue
+        out.append(Hit(s, e, m.group(1), "AGE", "sg.age.bare", 0.8))
+    return out
 
 
 def _proper_noun(text: str) -> bool:

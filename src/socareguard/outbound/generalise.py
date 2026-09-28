@@ -428,6 +428,21 @@ _DATE_PHRASE = re.compile(
 _VENUE_PHRASE = re.compile(rf"\s+(?:at|in|before)\s+{_VENUE}\b", re.IGNORECASE)
 # A hearing or mention with a date, a court or a venue: the only clause without an order word that
 # the protection-order rule may rewrite.
+# The second clause of a protection-order sentence: "... and wants to keep the sessions
+# fortnightly", "... but she says things are calmer". Its subject may be elided.
+_PPO_TAIL = re.compile(
+    r"(?P<sep>,?\s+(?:and|but)\s+)(?P<rest>(?P<who>(?:she|he|they|the client)\s+)?"
+    r"(?:wants?|would|will|says|said|prefers?|asks?|asked|hopes?|plans?|agreed|agrees|feels"
+    r"|reports?|reported|continues|remains|is|was|has|had)\b[^.;\n]*)$",
+    re.IGNORECASE,
+)
+_PPO_SUBJECT = re.compile(
+    r"^\s*((?:[A-Z][\w'-]*|she|he|they|the client)(?:\s+(?:bin|binti|d/o|s/o|[A-Z][\w'-]*)){0,4})"
+    r"\s+(?:has|have|had|did|does|is|was|never|hasn't|didn't|doesn't|isn't|wasn't|yet)\b"
+)
+_APPLICATION_WORD = re.compile(
+    r"\b(?:appl\w*|fil(?:e|ed|ing)|lodg\w*|court|hearing)\b", re.IGNORECASE
+)
 _HEARING_CUE = re.compile(
     rf"\b(?:hearing|mention)\b[^.;\n]{{0,60}}?(?:{_DATE}|{_VENUE}\b|\bcourts?\b|\bdate\b)",
     re.IGNORECASE,
@@ -911,6 +926,25 @@ def generalise_attribute(
         return f"is the subject of a current matter: {what}" + (f" on {dates[0]}" if dates else "")
     if rule == "status_only":
         if key == "ppo":
+            tail = _PPO_TAIL.search(t)
+            if (
+                tail
+                and _ORDER_WORD.search(t[: tail.start()])
+                and not _ORDER_WORD.search(tail.group("rest"))
+                and not _HEARING_CUE.search(tail.group("rest"))
+                and not _APPLICATION_WORD.search(tail.group("rest"))
+            ):
+                # "Farhana has not applied for a protection order and wants to keep the sessions
+                # fortnightly": the rule states the order's status and stops at the clause
+                # boundary, so the client's wish in the second clause still leaves. A second
+                # clause without a subject takes the first clause's subject.
+                head = t[: tail.start()]
+                status = generalise_attribute("ppo", head, "status_only", pack_id)
+                subject = ""
+                if not tail.group("who"):
+                    m_subj = _PPO_SUBJECT.match(head)
+                    subject = (m_subj.group(1) + " ") if m_subj else "the client "
+                return f"{status}{tail.group('sep')}{subject}{tail.group('rest')}"
             tl = t.lower()
             if not _ORDER_WORD.search(t):
                 if not _HEARING_CUE.search(t):

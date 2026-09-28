@@ -271,7 +271,10 @@ def test_a_street_name_is_never_a_person_and_a_school_keeps_its_level(monkeypatc
     assert not any(n.startswith("Jalan") for n in names), names
     assert "a service provider" not in res.text, res.text
     assert "Sec 3 at a secondary school" in res.text, res.text
-    assert "principal of a secondary school" in res.text, res.text
+    # round 6 acceptance F1: the instruction line is never generalised; the named school there
+    # takes a stand-in, which the draft restores
+    assert "Bukit Merah" not in res.text, res.text
+    assert re.search(r"principal of [A-Z][a-z]+(?: [A-Z][a-z]+)* Secondary School", res.text), res.text
 
 
 # FSC-F4: no bracketed placeholder number reaches the draft.

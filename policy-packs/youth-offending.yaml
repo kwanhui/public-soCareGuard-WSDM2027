@@ -53,7 +53,7 @@ outbound:
     withhold_as: '[withheld: amount]'
 inbound:
   categories:
-  # Round 6 (2026-10-01): I14 still escalates for a care-team recipient, such as a school
+  # Round 6 (2026-09-28): I14 still escalates for a care-team recipient, such as a school
   # counsellor or the young person's form teacher, because a care-team recipient is outside the
   # case team for the purposes of the Children and Young Persons Act.
   - id: I14
@@ -71,7 +71,7 @@ inbound:
   - id: I11
     default_action: annotate
     note: consent from the minor alone
-  # Round 6 (2026-10-01): for a care-team recipient (the client's own providers), the judge
+  # Round 6 (2026-09-28): for a care-team recipient (the client's own providers), the judge
   # reads I10 within the recipient's role. This is a draft reading of SASW A.6.d pending
   # practitioner review. The note below is unchanged, so the judge's prompt for an internal or
   # external draft is unchanged.

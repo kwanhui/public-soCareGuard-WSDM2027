@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (round 6, 2026-10-01)
+## Unreleased (round 6, 2026-09-28)
 
 ### Supervisor view
 

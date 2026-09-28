@@ -386,7 +386,12 @@ def test_the_legend_release_line_and_moderation_caption():
         "similar codes are pack rules."
     ) in js
     assert "); identity" not in js
-    assert '(${x.ts ? utc(x.ts) : "time not recorded"}, ${a.slice(i + 2, -1)}).' in js
+    # round 6 acceptance: one pair of parentheses around the actor ("admin (sandbox login, typed
+    # in)"), then the time
+    assert (
+        'Released earlier by ${actorLabel(x.actor, x.actor_attested)}, ${x.ts ? utc(x.ts) : "time not recorded"}.'
+        in js
+    )
     assert 'BASELINE_CAPTION = "generic harm classifier, shown for contrast"' in js
     assert '<span class="segcap">(${BASELINE_CAPTION})</span>' in js
 

@@ -54,8 +54,17 @@ def test_ppo_status_only_drops_hearing_date_and_venue(tmp_path: Path):
 def test_ppo_not_filed_is_never_pending():
     """Round 1, dv-9 outbound: "Latifah has not filed a PPO" left as "A protection order
     application is pending"."""
-    for text in (
+    got = generalise_attribute(
+        "ppo",
         "Latifah has not filed a PPO and says things have been quiet",
+        "status_only",
+        "domestic-violence",
+    )
+    # round 6 acceptance F3: the rule stops at the clause boundary and keeps the second clause
+    assert got == (
+        "no protection order application is on record and Latifah says things have been quiet"
+    ), got
+    for text in (
         "She has not applied for a PPO",
         "She never filed a PPO",
         "She is yet to apply for a PPO",

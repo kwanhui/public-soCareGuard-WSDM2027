@@ -100,7 +100,8 @@ def test_short_note_keeps_the_clients_name(monkeypatch, tmp_path):
     out = res.text
     sub = _surrogates(res)
     assert "Aisha Lim" in sub and "Aisha" not in out, res.replacements
-    assert f"Client {sub['Aisha Lim']}, 14, " in out, out
+    # round 6 acceptance F2: the bare age after the name is banded
+    assert f"Client {sub['Aisha Lim']}, 12 to 14, " in out, out
     # the matter is stated with its date, as the rest of the sentence about the client
     assert "is the subject of a current matter: a property offence on 26 Sep 2026." in out, out
     assert "shoplifting" not in out and "Jurong Point" not in out, out
