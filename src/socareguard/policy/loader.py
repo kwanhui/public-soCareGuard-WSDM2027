@@ -28,12 +28,27 @@ class NeverLeak(BaseModel):
     label: str
     pattern: str | None = None  # regex; when present the span is withheld outbound
     withhold_as: str | None = None  # the placeholder text; defaults to "[withheld: <label>]"
+    # Entity categories (or ATTR:<key> rules) whose substitution or generalisation removes what
+    # the label names, for a label that needs no pattern of its own. A label with neither a
+    # pattern nor an enforcing category names no control and fails the pack tests.
+    enforced_by: list[str] = Field(default_factory=list)
+    # "substitute": for an internal audience the span is not withheld; the names in it take
+    # restorable surrogates, so the practitioner's own file gets them back (a deputy's name). An
+    # external audience still gets the placeholder.
+    internal_audience: str | None = None
+    # The name a span withholds is remembered for the session, and every later exact mention of it
+    # is withheld too, in this message and in later turns (a gang named once with "a group
+    # called", then by name alone).
+    remember: bool = False
 
 
 class Outbound(BaseModel):
     attributes: list[AttributeRule]
     quasi_identifiers: list[QuasiRule]
     never_leak: list[NeverLeak] = Field(default_factory=list)
+    # A web link leaves as a surrogate link of the same shape ("surrogate"), or as "[link
+    # withheld]" ("withhold").
+    links: str = "surrogate"
 
     @field_validator("never_leak", mode="before")
     @classmethod

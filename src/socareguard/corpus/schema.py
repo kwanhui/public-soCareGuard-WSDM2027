@@ -182,3 +182,6 @@ class Draft(BaseModel):
     intended_failure: str | None = None
     text: str
     generation: GenerationMeta
+    # "internal" or "external" from corpus v1.2; None on v1 and v1.1 drafts, whose audience is
+    # what their task's instruction implies
+    audience: str | None = None

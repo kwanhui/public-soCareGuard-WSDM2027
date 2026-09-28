@@ -40,15 +40,40 @@ class Screener:
         oc = rules.over_caution(draft, instruction)
         if oc and pack.action_for("OVER_CAUTION"):
             out.append(oc.model_copy(update={"severity": pack.action_for("OVER_CAUTION")}))
+        # A young person named by the offence: I2 whatever the audience, before the judge, so a
+        # judge I2 on the same draft does not replace the deterministic card.
+        if pack.id == "youth-offending" and pack.action_for("I2"):
+            lab = rules.offence_label(draft)
+            if lab is not None:
+                out.append(lab.model_copy(update={"severity": pack.action_for("I2")}))
         inv = rules.invented_identifiers(leaks or [])
         if inv and pack.action_for("I13"):
-            out.append(inv.model_copy(update={"severity": pack.action_for("I13")}))
+            # a hit from a general pattern alone never raises the decision above annotate, so it
+            # cannot turn a draft the judge passed into a regeneration
+            action = pack.action_for("I13") if inv.severity == "regenerate" else "annotate"
+            out.append(inv.model_copy(update={"severity": action}))
         external = (
             audience == "external"
             if audience in ("internal", "external")
             else rules.audience_is_external(instruction, pack.id)
         )
-        for jf in self.judge(pack, instruction, draft, context):
+        # Case closure with possibly unresolved risk: a hint to the judge, which decides.
+        closure = None
+        if pack.action_for("I6"):
+            closure = rules.closure_with_unresolved_risk(draft, context, instruction)
+        hints = [rules.CLOSURE_HINT] if closure else []
+        # Initials beside a school, an age or an offence identify a young person to an external
+        # recipient: a hint to the judge for I14, which decides.
+        if external and pack.id == "youth-offending" and pack.action_for("I14"):
+            ini = rules.initials_hint(draft)
+            if ini:
+                hints.append(ini)
+        judged = (
+            self.judge(pack, instruction, draft, context, hints=hints)
+            if hints
+            else self.judge(pack, instruction, draft, context)
+        )
+        for jf in judged:
             if jf.label in rules.AUDIENCE_DEPENDENT and not external:
                 continue
             if jf.confidence < self.min_confidence or any(f.label == jf.label for f in out):

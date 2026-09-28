@@ -11,23 +11,26 @@ recipients and the ledger row, which the transparency panel renders.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 import time
 import uuid
-from collections import OrderedDict, defaultdict, deque
+from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from socareguard.detect import sg as sg_recognisers
 from socareguard.policy.loader import PACK_DIR, available_packs, load_pack
 from socareguard.proxy.core import Guard
+from socareguard.proxy.sessions import SessionStore
 from socareguard.taxonomy import BY_ID
 
 DEFAULT_MODEL = os.environ.get("SOCAREGUARD_DEFAULT_MODEL", "openai/gpt-4.1-mini")
@@ -41,13 +44,37 @@ SUPERVISOR_KEYS = {
 }
 
 SANDBOX = os.environ.get("SOCAREGUARD_SANDBOX", "0") == "1"
-TRUST_PROXY = os.environ.get("SOCAREGUARD_TRUST_PROXY", "0") == "1"  # honour X-Forwarded-For
+# honour X-Forwarded-For, X-Forwarded-Proto and X-Forwarded-Host (only behind a proxy you control)
+TRUST_PROXY = os.environ.get("SOCAREGUARD_TRUST_PROXY", "0") == "1"
 RETENTION_HOURS = float(
     os.environ.get("SOCAREGUARD_RETENTION_HOURS", "24" if SANDBOX else "0")
 )  # 0 = keep until purged by DELETE /v1/sessions/{id}
 MAX_PER_HOUR = int(os.environ.get("SOCAREGUARD_MAX_REQUESTS_PER_HOUR", "0"))  # 0 = unlimited
 MAX_SESSIONS = int(os.environ.get("SOCAREGUARD_MAX_SESSIONS", "500"))
+BAD_JSON = "the request body is not valid JSON"
 _HERE = Path(__file__).resolve().parent
+# Per-category precision of the conduct screen on the labelled synthetic drafts (results-v1.2),
+# shown on each flag card beside the judge's own confidence. Derived from
+# docs/metrics/screen-v1.2-v1.1-drafts.json (per-label precision at the reported 0.5 threshold).
+# The v1.1 table (screen_precision_v1_1.json) is kept in place for the record.
+_PRECISION_FILE = _HERE / "screen_precision_v1_2.json"
+SCREEN_PRECISION = json.loads(_PRECISION_FILE.read_text()) if _PRECISION_FILE.exists() else {}
+
+# Every ledger append logs "ledger head <sha> rows <n>" here. Shipping the server log off the
+# host anchors the chain outside it (see socareguard.ledger).
+_anchor_log = logging.getLogger("socareguard.ledger")
+_anchor_log.setLevel(logging.INFO)
+if not _anchor_log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s %(name)s %(message)s"))
+    _anchor_log.addHandler(_h)
+# A request that fails inside the pipeline is logged here at ERROR with its traceback and a
+# short error id; the 503 body carries the same id, so an operator can find the cause.
+_error_log = logging.getLogger("socareguard.proxy")
+if not _error_log.handlers:
+    _eh = logging.StreamHandler()
+    _eh.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s"))
+    _error_log.addHandler(_eh)
 _SCENARIO_DIR = Path(os.environ.get("SOCAREGUARD_SCENARIOS", "demo/sample-inputs/scenarios"))
 
 
@@ -191,6 +218,54 @@ class OverrideRequest(BaseModel):
     draft_sha256: str | None = None  # hash of the text the practitioner kept or applied
 
 
+DRAFT_HASH_REQUIRED = (
+    "draft_sha256 is required: send the SHA-256 (64 hex characters) of the text that was kept "
+    "or applied, so the ledger row can be matched against it later"
+)
+
+
+def _is_sha256(value: str | None) -> bool:
+    return bool(value) and len(value) == 64 and all(c in "0123456789abcdef" for c in value.lower())
+
+
+def _reason_has_identifier(reason: str) -> bool:
+    """A reason is kept in the ledger as typed and never purged, so it must not carry a direct
+    identifier. Uses the same Singapore recognisers as the outbound path: NRIC/FIN with its
+    checksum, Singapore phone numbers, and case references."""
+    return bool(
+        any(h.score >= 1.0 for h in sg_recognisers.find_nric(reason))
+        or sg_recognisers.find_phone(reason)
+        or sg_recognisers.find_case_ref(reason)
+    )
+
+
+REASON_IDENTIFIER = (
+    "Reason must not contain an identifier (NRIC/FIN, phone number or case reference)"
+)
+
+
+REASON_CAP = 300  # the judge's reason is capped at this length before it reaches the proxy
+
+
+def display_reason(reason: str, cap: int = REASON_CAP) -> str:
+    """The judge's reason as the flag card shows it. A reason that reaches the cap was cut, and
+    a plain slice can end mid-word ("...risk, contra"), so it is cut back to the last whole word
+    and ends with an ellipsis. A reason under the cap, or one ending on a full stop, is unchanged."""
+    text = (reason or "").rstrip()
+    if len(text) < cap - 20 or text.endswith((".", "!", "?", ".)", '."', ".\u201d")):
+        return text
+    if len(text) >= cap and " " in text[cap // 2 :]:
+        text = text[: text.rfind(" ")]
+    return text.rstrip(" ,;:-\u2013") + "\u2026"
+
+
+def _flag_out(f: Any) -> dict[str, Any]:
+    d = f.model_dump()
+    if d.get("reason"):
+        d["reason"] = display_reason(d["reason"])
+    return d
+
+
 def _openai_error(status: int, message: str, code: str | None = None) -> JSONResponse:
     return JSONResponse(
         status_code=status,
@@ -211,6 +286,21 @@ def _client_ip(request: Request) -> str:
     if TRUST_PROXY and request.headers.get("x-forwarded-for"):
         return request.headers["x-forwarded-for"].split(",")[0].strip()
     return direct
+
+
+def _base_url(request: Request) -> str:
+    """The URL a client should use to reach this proxy. Behind a TLS-terminating reverse proxy
+    the app sees plain http, so with SOCAREGUARD_TRUST_PROXY=1 the scheme and host forwarded by
+    that proxy are used instead."""
+    url = request.base_url
+    if TRUST_PROXY:
+        proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+        host = request.headers.get("x-forwarded-host", "").split(",")[0].strip()
+        if proto in ("http", "https"):
+            url = url.replace(scheme=proto)
+        if host:
+            url = url.replace(netloc=host)
+    return str(url).rstrip("/")
 
 
 def _require_key(request: Request) -> None:
@@ -244,10 +334,16 @@ def _attested(request: Request) -> bool:
 def create_app(guard: Guard | None = None) -> FastAPI:
     app = FastAPI(title="SoCareGuard", version="0.2.0")
     app.state.guard = guard or Guard()
-    app.state.sessions: OrderedDict[str, Any] = OrderedDict()
-    app.state.tokens: dict[str, str] = {}  # session -> token held by the client that made it
+    # The session index (result, token hash, pack, withheld state, flags) lives in the vault's
+    # SQLite file, so a restart keeps every open session readable and releasable.
+    app.state.sessions = SessionStore(app.state.guard.vault, MAX_SESSIONS)
     app.state.limiter = RateLimiter(MAX_PER_HOUR)
     app.state.last_sweep = 0.0
+    if RETENTION_HOURS <= 0:
+        _error_log.warning(
+            "retention is disabled (SOCAREGUARD_RETENTION_HOURS=0): the identity map and "
+            "sessions are kept until purged by DELETE /v1/sessions/{id}"
+        )
 
     def sweep() -> None:
         if RETENTION_HOURS <= 0 or time.time() - app.state.last_sweep < 600:
@@ -255,14 +351,9 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         app.state.last_sweep = time.time()
         n = app.state.guard.vault.purge_older_than(RETENTION_HOURS * 3600)
         cutoff = time.time() - RETENTION_HOURS * 3600
-        old = [
-            s
-            for s, res in app.state.sessions.items()
-            if (res.ledger_row or {}).get("ts", time.time()) < cutoff
-        ]
+        old = app.state.sessions.older_than(cutoff)
         for s in old:
-            app.state.sessions.pop(s, None)
-            app.state.tokens.pop(s, None)
+            app.state.sessions.pop(s)
         if n or old:
             app.state.guard.ledger.append(
                 {
@@ -288,7 +379,9 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         token = request.headers.get("x-socareguard-session-token") or request.query_params.get(
             "token"
         )
-        if not token or token != app.state.tokens.get(session):
+        if not token:
+            raise HTTPException(403, "Session token required")
+        if not app.state.sessions.token_ok(session, token):
             raise HTTPException(403, "this session belongs to another client")
         return res
 
@@ -303,16 +396,21 @@ def create_app(guard: Guard | None = None) -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(_request: Request, exc: RequestValidationError):
-        first = exc.errors()[0] if exc.errors() else {}
+        # OpenAI answers a body it cannot parse or validate with 400, and so does the proxy.
+        errors = exc.errors()
+        if any(e.get("type") == "json_invalid" for e in errors):
+            return _openai_error(400, BAD_JSON, "invalid_json")
+        first = errors[0] if errors else {}
         loc = ".".join(str(x) for x in first.get("loc", []) if x != "body")
-        return _openai_error(422, f"{loc}: {first.get('msg', 'invalid request')}", "invalid_body")
+        return _openai_error(400, f"{loc}: {first.get('msg', 'invalid request')}", "invalid_body")
 
-    def remember(session: str, res: Any) -> None:
-        app.state.sessions[session] = res
-        app.state.sessions.move_to_end(session)
-        while len(app.state.sessions) > MAX_SESSIONS:
-            old, _ = app.state.sessions.popitem(last=False)
+    def remember(session: str, res: Any, pack_id: str) -> str:
+        """Index the session's latest result and return its token (the same token for every
+        request in the session, across restarts)."""
+        token = app.state.sessions.token(session) or uuid.uuid4().hex
+        for old in app.state.sessions.put(session, res, token, pack_id):
             app.state.guard.vault.forget(old)
+        return token
 
     @app.get("/", response_class=HTMLResponse)
     def panel(request: Request):
@@ -325,9 +423,10 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "sandbox": SANDBOX,
                 "scenarios": scenarios,
                 "scenarios_json": json.dumps(scenarios, ensure_ascii=False),
-                "base_url": str(request.base_url).rstrip("/"),
+                "base_url": _base_url(request),
                 "default_pack": DEFAULT_PACK,
                 "auth_required": bool(API_KEYS),
+                "precision_json": json.dumps(SCREEN_PRECISION),
                 "taxonomy_json": json.dumps(
                     {
                         k: {"name": c.name, "clause": c.clause, "clause_text": c.clause_text}
@@ -381,6 +480,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     def chat(
         req: ChatRequest,
         request: Request,
+        response: Response,
         x_socareguard_pack: str | None = Header(default=None),
         x_socareguard_session: str | None = Header(default=None),
         x_socareguard_audience: str | None = Header(default=None),
@@ -417,13 +517,24 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         except HTTPException:
             raise
         except Exception as e:
+            error_id = uuid.uuid4().hex[:8]
+            _error_log.exception(
+                "error %s: guarded request failed (pack %s, model %s, session %s)",
+                error_id,
+                pack_id,
+                model,
+                x_socareguard_session or "new",
+            )
             raise HTTPException(
                 503,
-                f"the drafting model, the conduct judge or the detectors failed ({type(e).__name__}); "
-                "nothing was sent to the practitioner and no draft was produced",
+                f"the drafting model, the conduct judge or the detectors failed ({type(e).__name__}, "
+                f"error {error_id} in the server log). Nothing was sent to the practitioner and no "
+                "draft was produced",
             ) from e
-        remember(res.session, res)
-        token = app.state.tokens.setdefault(res.session, uuid.uuid4().hex)
+        token = remember(res.session, res, pack_id)
+        if pack_defaulted:
+            # A direct API caller that reads only the message content still sees the default.
+            response.headers["X-SoCareGuard-Pack-Defaulted"] = "true"
         return _completion(
             res, model, pack_id, pack_defaulted, model_defaulted, actor, fixture, t0, token
         )
@@ -467,7 +578,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "actor": actor,
                 "decision": res.decision,
                 "withheld": res.withheld,
-                "flags": [f.model_dump() for f in res.flags],
+                "flags": [_flag_out(f) for f in res.flags],
                 "events": [e.model_dump() for e in res.events],
                 "recipients": res.recipients,
                 "replayed": bool(fixture),
@@ -482,7 +593,29 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         _require_key(request)
         if req.kind not in ("override", "rewrite_accepted"):
             raise HTTPException(400, "kind must be override or rewrite_accepted")
-        authorised(req.session, request)
+        res = authorised(req.session, request)
+        if _reason_has_identifier(req.reason):
+            raise HTTPException(400, REASON_IDENTIFIER)
+        raised = {f.label for f in res.flags} | {f.label for f in res.flags_withheld}
+        unknown = [f for f in req.flag_labels if f not in raised]
+        if not req.flag_labels or unknown:
+            raise HTTPException(
+                400,
+                "flag_labels must name flags raised on this session"
+                + (f"; not raised: {', '.join(unknown)}" if unknown else ""),
+            )
+        # A later case review matches the row against the text that was kept, so a session with
+        # a reply needs the hash of that text on every override, whoever the caller is.
+        if res.reply and not _is_sha256(req.draft_sha256):
+            raise HTTPException(400, DRAFT_HASH_REQUIRED)
+        # The override points at a request row. It must be a row of this session in the ledger;
+        # without one it points at the session's latest request row.
+        request_row = req.request_row_sha256 or (res.ledger_row or {}).get("row_sha256")
+        if request_row and not any(
+            r.get("row_sha256") == request_row and r.get("session") == req.session
+            for r in app.state.guard.ledger.rows()
+        ):
+            raise HTTPException(400, "request_row_sha256 must name a ledger row of this session")
         try:
             row = app.state.guard.override(
                 req.session,
@@ -490,7 +623,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 req.flag_labels,
                 req.reason,
                 req.pack,
-                request_row_sha256=req.request_row_sha256,
+                request_row_sha256=request_row,
                 kind=req.kind,
                 attested=_attested(request),
                 draft_sha256=req.draft_sha256,
@@ -507,7 +640,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             "session": session,
             "decision": res.decision,
             "withheld": res.withheld,
-            "flags": [f.model_dump() for f in res.flags],
+            "flags": [_flag_out(f) for f in res.flags],
             "events": [e.model_dump() for e in res.events],
             "reply": res.reply,
         }
@@ -539,13 +672,18 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         reason: str = Query(default=""),
     ):
         """The re-identified draft that an escalation withheld, released to a supervisor only.
-        A supervisor is not the practitioner, so this route does not take the session token: with
-        API keys configured it needs a supervisor key; in a sandbox the role is self-asserted and
-        the ledger row says so. A reason is required, as for an override."""
+        With API keys configured it needs a supervisor key, and a supervisor need not hold the
+        practitioner's session token. Without API keys (the sandbox) the supervisor role is
+        self-asserted, so the route also requires the session token, as the other session routes
+        do, and the ledger row marks the role as self-asserted. A reason is required, as for an
+        override."""
         _require_key(request)
-        res = app.state.sessions.get(session)
-        if not res:
-            raise HTTPException(404, "unknown session")
+        if API_KEYS:
+            res = app.state.sessions.get(session)
+            if not res:
+                raise HTTPException(404, "unknown session")
+        else:
+            res = authorised(session, request)
         if not res.withheld:
             raise HTTPException(400, "nothing was withheld in this session")
         if (x_socareguard_role or "").lower() != "supervisor":
@@ -554,7 +692,14 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             raise HTTPException(403, "release requires a key listed in SOCAREGUARD_SUPERVISOR_KEYS")
         if not reason.strip():
             raise HTTPException(400, "a reason for the release is required")
+        if _reason_has_identifier(reason):
+            raise HTTPException(400, REASON_IDENTIFIER)
         attested = bool(API_KEYS) and _bearer(request) in SUPERVISOR_KEYS
+        prior = [
+            {"row_sha256": r["row_sha256"], "actor": r.get("actor"), "ts": r.get("ts")}
+            for r in app.state.guard.ledger.rows()
+            if r.get("session") == session and r.get("decision") == "withheld_released"
+        ]
         row = app.state.guard.ledger.append(
             {
                 "session": session,
@@ -564,13 +709,15 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "override_reason": reason,
                 "flags": [f.label for f in res.flags],
                 "request_row_sha256": res.ledger_row["row_sha256"] if res.ledger_row else None,
+                "prior_release_row_sha256": [p["row_sha256"] for p in prior] or None,
             }
         )
         return {
             "session": session,
             "reply": res.reply_withheld,
-            "flags": [f.model_dump() for f in res.flags_withheld],
+            "flags": [_flag_out(f) for f in res.flags_withheld],
             "ledger_row": row,
+            "prior_releases": prior,
         }
 
     @app.delete("/v1/sessions/{session}")
@@ -579,8 +726,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         _require_key(request)
         authorised(session, request)
         n = app.state.guard.vault.forget(session)
-        app.state.sessions.pop(session, None)
-        app.state.tokens.pop(session, None)
+        app.state.sessions.pop(session)
         row = app.state.guard.ledger.append(
             {
                 "session": session,
@@ -616,16 +762,31 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         return {"rows": rows[-limit:], "total": len(rows)}
 
     @app.get("/v1/ledger/verify")
-    def verify(request: Request):
+    def verify(
+        request: Request,
+        expected_rows: int | None = Query(default=None, ge=0),
+    ):
+        """Recompute the hash chain and the sequence numbers. Pass ``expected_rows`` (the row
+        count from the last shipped "ledger head" log line) to detect a cut tail. A rewrite of
+        every row from some point onwards still verifies here; compare ``head_sha256`` with the
+        shipped log to detect it."""
         _require_key(request)
-        ok, n = app.state.guard.ledger.verify()
-        total = len(app.state.guard.ledger.rows())
+        r = app.state.guard.ledger.report(expected_rows)
+        n = r["rows"]
+        if r["ok"]:
+            msg = f"chain intact over {n} rows"
+        elif r["first_bad_row"] is not None:
+            msg = f"chain broken at row {r['first_bad_row']} of {n}"
+        elif r["first_seq_gap"] is not None:
+            msg = f"sequence gap at row {r['first_seq_gap']} of {n}"
+        else:
+            msg = f"{expected_rows} rows expected, {n} found"
         return {
-            "ok": ok,
-            "rows": total,
-            "first_bad_row": None if ok else n,
-            "message": (
-                f"chain intact over {total} rows" if ok else f"chain broken at row {n} of {total}"
+            **r,
+            "message": msg,
+            "scope": (
+                "tamper-evident against edits and reordering; anchoring the head hash outside "
+                "the host is the deployer's step (ship the server log)"
             ),
         }
 

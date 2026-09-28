@@ -1,11 +1,11 @@
 """Validate and replay scenario scripts.
 
 ``validate`` checks a script's schema and internal consistency without any model or
-detector. ``run`` drives a pipeline object that implements ``Pipeline`` and then
-evaluates the ``expect`` lines against the events it emitted. Until the proxy exists
-(step 2 of the build), ``run`` uses ``StoryboardPipeline`` which only echoes recorded
-events, so ``expect`` checks that reference detection or screening are reported as
-pending rather than failed.
+detector; a script without ``expect`` lines (the escalation chip's recording) is valid and
+reported with a warning. ``run`` drives a pipeline object that implements ``Pipeline`` and
+then evaluates the ``expect`` lines against the events it emitted. ``run --proxy`` drives the
+real guard; without it, ``StoryboardPipeline`` only echoes the recorded events, so ``expect``
+checks that reference detection or screening are reported as pending rather than failed.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ from socareguard.scenarios.events import (
 )
 
 SCENARIO_DIR = Path("demo/sample-inputs/scenarios")
+WARNING = "warning: "
 
 
 def load(path: Path) -> list[Any]:
@@ -62,7 +63,8 @@ def validate(path: Path) -> list[str]:
             problems.append(f"seq {r.seq}: recorded receive must carry model and recorded_at")
     expects = [e for e in events if isinstance(e, Expect)]
     if not expects:
-        problems.append("no expect lines")
+        # a recording kept for the panel's replay, with nothing to assert
+        problems.append(WARNING + "no expect lines")
     kinds = {
         "detect",
         "generalise",
@@ -171,6 +173,9 @@ def check(expect: Expect, emitted: list[Any]) -> tuple[str, str]:
         elif key == "decision":
             if ev.decision != want:
                 return "fail", f"decision {ev.decision} != {want}"
+        elif key == "decision_in":
+            if ev.decision not in want:
+                return "fail", f"decision {ev.decision} not in {want}"
         elif key == "reason_nonempty":
             if want and not ev.reason.strip():
                 return "fail", "override reason empty"
@@ -217,7 +222,11 @@ def run(
         if isinstance(e, Expect):
             status, detail = check(e, emitted)
             if status == "fail" and not screened and e.event == "action":
-                status, detail = "pending", "no conduct screen yet (build step 3): " + detail
+                status, detail = (
+                    "pending",
+                    "the conduct screen did not run (SOCAREGUARD_SCREEN=off or no judge key): "
+                    + detail,
+                )
             results.append(
                 {"seq": e.seq, "event": e.event, "status": status, "detail": detail, "why": e.why}
             )
@@ -344,7 +353,7 @@ def main(argv: list[str] | None = None) -> None:
         if a.cmd == "validate":
             probs = validate(p)
             print(f"{p.name}: {'ok' if not probs else '; '.join(probs)}")
-            rc |= bool(probs)
+            rc |= any(not x.startswith(WARNING) for x in probs)
         elif a.cmd == "run":
             res = run(p, mode="proxy" if a.proxy else "storyboard", live=a.live)
             print(json.dumps(res, indent=2, ensure_ascii=False))

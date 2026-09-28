@@ -1,0 +1,24 @@
+{
+  "tag": "v1.1",
+  "notes": 300,
+  "consistent": 296,
+  "injective": 293,
+  "fidelity_exact": 89,
+  "surrogate_fidelity": 264,
+  "direct_gold_total": 2970,
+  "direct_gold_leaked": 2,
+  "attr_gold_total": 701,
+  "attr_gold_leaked_verbatim": 81,
+  "generalised_spans": 2344,
+  "surrogate_spans": 3006,
+  "consistency_rate": 0.9867,
+  "injectivity_rate": 0.9767,
+  "fidelity_exact_rate": 0.2967,
+  "surrogate_fidelity_rate": 0.88,
+  "direct_leakage_rate": 0.0007,
+  "attribute_verbatim_rate": 0.1155,
+  "latency_s": {
+    "p50": 0.945,
+    "p95": 1.117
+  }
+}

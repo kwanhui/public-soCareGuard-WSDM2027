@@ -1,12 +1,12 @@
 id: domestic-violence
 label: Domestic and family violence
 version: 1
-status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not co-PI reviewed)'
+status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not yet reviewed by practitioners)'
 legal_anchors:
 - SASW Code of Professional Ethics 3rd Rev. (2017) A.6.d, A.7.c, A.2.a-c
 - Women's Charter s.64 (family violence definition), s.65 (PPO) (operative text to verify)
 - PDPC Advisory Guidelines for the Social Service Sector §3.40 (household members' data)
-- Shelter confidentiality justified by practice, not Singapore statute (flagged for PAVE / co-PI review)
+- Shelter confidentiality justified by practice, not Singapore statute (flagged for practitioner review)
 outbound:
   attributes:
   - key: dv_disclosure
@@ -30,17 +30,33 @@ outbound:
     generalise_to: sector
   never_leak:
   - label: current address or shelter name and location
+    enforced_by: [ADDRESS, FACILITY]
   - label: workplace
+    pattern: '\b(?:works?|working|worked|employed|job)\b(?:\s+(?:part[- ]time|full[- ]time|shifts?|nights?))?(?:\s+as\s+an?\s+[a-z][\w-]*(?:\s+[a-z][\w-]*){0,2})?\s+(?:at|in|with|for)\s+(?P<span>(?!(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec|last|this|next)\b)(?:the\s+|a\s+|an\s+)?(?:(?-i:[A-Z])|[a-z][\w-]*\s+(?:shop|stall|outlet|bakery|restaurant|cafe|factory|centre|store|company|firm|office|hotel|hospital|clinic|school|mall)\b|(?:shop|stall|outlet|bakery|restaurant|cafe|factory|store|company|firm|office|hotel|mall)\b)(?:(?!\s+(?:and|but|or|who|which|that|where|while|when|if|because|so|since|until|not|never|don''t|do\s+not|does\s+not|did\s+not|asked|said|says)\b)[^.;,\n]){0,60})'
+    withhold_as: '[workplace withheld]'
+  - label: medication name or dose
+    pattern: '(?P<span>(?:\b(?!(?:about|around|approximately|approx|total|only|and|with|takes?|taking|daily|of|at|than|over|under|up|to|dose|doses|dosage|increased|reduced|from)\b)[A-Za-z][A-Za-z-]{3,}(?:\s+(?:XR|XL|SR|CR|ER|CD|LA))?\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b|\b(?:risperidone|paliperidone|olanzapine|quetiapine|aripiprazole|clozapine|haloperidol|lithium|(?:sodium\s+)?valproate|lamotrigine|carbamazepine|levetiracetam|phenytoin|sertraline|fluoxetine|escitalopram|citalopram|paroxetine|fluvoxamine|venlafaxine|duloxetine|mirtazapine|bupropion|methylphenidate|ritalin|concerta|atomoxetine|diazepam|lorazepam|clonazepam|alprazolam|zolpidem|methadone|buprenorphine|suboxone|naltrexone|donepezil|memantine|insulin|metformin)\b(?:\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b)?|(?<=\bprescribed )(?-i:[A-Z][a-z]{3,})(?:\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b)?)(?:\s+(?:(?:once|twice|three times)\s+(?:a\s+)?(?:day|daily)|daily|nightly|at night|at bedtime|every (?:morning|night|evening)|in the (?:morning|evening)|nocte|mane|as needed|(?-i:OD|ON|BD|TDS|PRN)\\b))?)'
+    withhold_as: '[medication withheld]'
+  - label: name of a prescriber or treating clinician
+    enforced_by: [NAME]
   - label: children's school
+    enforced_by: [SCHOOL]
   - label: new phone number
+    enforced_by: [PHONE]
   - label: routine or timing details that locate the survivor
+    pattern: '\b(?:every|each)\s+(?:other\s+)?(?:mon|tues|wednes|thurs|fri|satur|sun)day\b(?:\s+(?:morning|afternoon|evening|night))?(?:\s+(?:at|from|around|by|before|after)\s+\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?)?|\b(?:(?:mon|tues|wednes|thurs|fri|satur|sun)days?|weekdays|weekends)\s+(?:at|from|around|by|before|after)\s+\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)\b|\b(?:every|each)\s+(?:morning|afternoon|evening|night|weekday|weekend)\b|\b(?:the\s+)?(?:same\s+)?(?:bus\s+(?:service\s+|no\.?\s*|number\s+)?\d{1,3}[a-z]?|service\s+\d{1,3}[a-z]?|\d{1,3}[a-z]?\s+bus)\b|\b(?:the\s+)?(?:MRT|LRT|train)\s+(?:from|to|at)\s+(?-i:[A-Z])[\w''-]*(?:\s+(?-i:[A-Z])[\w''-]*){0,2}(?:\s+(?:to|from)\s+(?-i:[A-Z])[\w''-]*(?:\s+(?-i:[A-Z])[\w''-]*){0,2})?|\b(?-i:[A-Z])[\w''-]*(?:\s+(?-i:[A-Z])[\w''-]*){0,2}\s+(?:MRT|LRT)(?:\s+station)?\b'
+    withhold_as: '[routine detail withheld]'
   - label: the alleged perpetrator's name in any document the perpetrator may lawfully access
-  - label: financial-assistance or maintenance amounts
-    pattern: '(?:(?:ComCare|assistance|allowance|subsidy|grant|bursary|maintenance|SMTA|LTA|MediFund|payout|benefit|income)\b[^.;\n]{0,40}?\$\s?\d[\d,]*(?:\.\d{2})?(?:\s*(?:per|/|a)\s*(?:month|mth|week|wk|day|year))?|\$\s?\d[\d,]*(?:\.\d{2})?\s*(?:per|/|a)\s*(?:month|mth|week|wk)\b[^.;\n]{0,40}?\b(?:ComCare|assistance|allowance|subsidy|grant|maintenance|SMTA|LTA))'
+    enforced_by: [NAME]
+  - label: 'financial amounts: assistance, maintenance, income, arrears, CPF and Medisave balances'
+    pattern: '(?:(?P<kw>\b(?:ComCare|SMTA|LTA|MediFund|Medisave|MediSave|MediShield(?:\s+Life)?|CPF(?:\s+(?:Ordinary|Special|MediSave|Medisave|Retirement))?|Silver\s+Support|ElderShield|CareShield(?:\s+Life)?|assistance|allowance|subsid(?:y|ies)|grants?|bursar(?:y|ies)|maintenance|payouts?|benefits?|income|salary|wages?|earn(?:s|ed|ing|ings)?|arrears|rent(?:al)?|debts?|loans?|owe[sd]?|owing|bills?|fees?|savings|balance)\b)(?:(?!\b(?:and|but|while|whereas)\b)[^.;,\n]){0,50}?(?:,\s*)?)?(?P<span>(?:S\$|SGD\s?|\$)\s?\d[\d,]*(?:\.\d{1,2})?(?:\s*(?:per|/|a|an|each|every)\s*(?:month|mth|week|wk|day|year|yr|quarter))?)(?(kw)|(?=(?:(?!\b(?:and|but|while|whereas)\b)[^.;,\n]){0,40}?\b(?:ComCare|SMTA|LTA|MediFund|Medisave|MediSave|MediShield(?:\s+Life)?|CPF(?:\s+(?:Ordinary|Special|MediSave|Medisave|Retirement))?|Silver\s+Support|ElderShield|CareShield(?:\s+Life)?|assistance|allowance|subsid(?:y|ies)|grants?|bursar(?:y|ies)|maintenance|payouts?|benefits?|income|salary|wages?|earn(?:s|ed|ing|ings)?|arrears|rent(?:al)?|debts?|loans?|owe[sd]?|owing|bills?|fees?|savings|balance)\b))'
     withhold_as: '[withheld: amount]'
   - label: shelter address or unit
-    pattern: '\b(?:shelter|refuge)\b[^.;\n]{0,30}\b(?:address|unit|block|blk)\b[^.;\n]{0,60}'
+    pattern: '(?:(?-i:[A-Z])[\w''-]*(?:\s+(?:of|for|the|and)\b)?\s+){0,5}\b(?:shelter|refuge)\b[^.;\n]{0,30}\b(?:address|unit|block|blk)\b[^.;\n]{0,60}'
     withhold_as: '[withheld: shelter location]'
+  # A link in a family-violence note can locate the client or name a shelter, so it leaves as
+  # "[link withheld]" rather than as a surrogate link.
+  links: withhold
 inbound:
   categories:
   - id: I1
@@ -84,7 +100,7 @@ inbound:
   - id: DV-2
     name: couples, joint-session or mediation framing where a PPO exists or safety is unestablished
     grounded: false
-    note: practice-grounded; for co-PI review
+    note: practice-grounded; flagged for practitioner review
   - id: DV-3
     name: minimisation of coercive control because no physical assault is described
     grounded: false

@@ -20,7 +20,9 @@ CUES: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
     "ppo": re.compile(
-        r"\b(PPO|personal protection order|protection order|expedited order|domestic exclusion order|DEO)\b",
+        r"\b(PPO|personal protection order|protection order|expedited order|domestic exclusion order|DEO)\b"
+        # a court hearing with its date or venue, in a clause of its own ("hearing set for 6 Oct")
+        r"|\b(?:court\s+)?(hearing|mention)\b(?=[^.;\n]{0,60}(?:\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|\b\d{1,2}/\d{1,2}\b|family justice|\bFJC\b|\bcourts?\b))",
         re.IGNORECASE,
     ),
     "safety_plan": re.compile(

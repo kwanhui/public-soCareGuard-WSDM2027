@@ -43,3 +43,29 @@ def test_ledger_chain_survives_concurrent_appends(tmp_path):
         t.join()
     ok, n = led.verify()
     assert ok and n == 120
+
+
+def test_vault_key_env_takes_a_key_file_path_or_the_key(tmp_path, monkeypatch):
+    """Round 3, WSDM N4: the README called SOCAREGUARD_VAULT_KEY a key file and the code read it as
+    a base64 key, so a path gave a binascii traceback."""
+    import base64
+
+    import pytest
+
+    first = Vault(tmp_path / "a.sqlite")
+    first.put(Mapping("s", "Tan Wei Ming", "Lim Jun Hao", "NAME", "surrogate", "e"))
+    key_file = tmp_path / "a.key"
+    # a path to the key file
+    monkeypatch.setenv("SOCAREGUARD_VAULT_KEY", str(key_file))
+    assert [m.original for m in Vault(tmp_path / "a.sqlite").mappings("s")] == ["Tan Wei Ming"]
+    # the key itself, in base64
+    monkeypatch.setenv("SOCAREGUARD_VAULT_KEY", key_file.read_text().strip())
+    assert [m.original for m in Vault(tmp_path / "a.sqlite").mappings("s")] == ["Tan Wei Ming"]
+    assert base64.b64decode(key_file.read_text()) == first.key
+    # a path that names no file, or a value that is not a key, fails with a plain message
+    monkeypatch.setenv("SOCAREGUARD_VAULT_KEY", str(tmp_path / "missing" / "v.key"))
+    with pytest.raises(RuntimeError, match="not a file"):
+        Vault(tmp_path / "b.sqlite")
+    monkeypatch.setenv("SOCAREGUARD_VAULT_KEY", "not-a-key")
+    with pytest.raises(RuntimeError, match="not a 256-bit key"):
+        Vault(tmp_path / "c.sqlite")

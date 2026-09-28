@@ -9,7 +9,7 @@ from socareguard.outbound.vault import Vault
 from socareguard.proxy.app import create_app
 from socareguard.proxy.core import Guard
 
-NOTE = "Client Tan Wei Ming, NRIC S1234567D, age 15, of Woodgrove Secondary School, case YC/2026/0412. Mother Mdm Lim Siew Lan (9123 4567)."
+NOTE = "Client Tan Wei Ming, NRIC S1234567D, age 15, of Oakcrest Secondary School, case YC/2026/0412. Mother Mdm Lim Siew Lan (9123 4567)."
 
 
 def make_guard(tmp_path: Path) -> Guard:
@@ -37,7 +37,7 @@ def test_guard_run_with_fixture(tmp_path):
         and "ledger" in kinds
     )
     send = next(e for e in res.events if e.kind == "send")
-    for secret in ("S1234567D", "YC/2026/0412", "Woodgrove", "9123 4567"):
+    for secret in ("S1234567D", "YC/2026/0412", "Oakcrest", "9123 4567"):
         assert secret not in send.outbound_text
     assert "a secondary school" in send.outbound_text
     row = res.ledger_row
@@ -63,7 +63,7 @@ def test_guard_restores_surrogates_in_reply(tmp_path):
     assert (
         "S1234567D" in res.reply
         and "YC/2026/0412" in res.reply
-        and "Woodgrove Secondary School" in res.reply
+        and "Oakcrest Secondary School" in res.reply
     )
     assert res.decision == "pass"
 
@@ -109,11 +109,12 @@ def test_app_endpoints(tmp_path, monkeypatch):
             "reason": "client asked",
         },
     )
+    # nothing was flagged on this session, so there is nothing to override
+    assert ov.status_code == 400 and "raised on this session" in ov.json()["error"]["message"]
     v = client.get("/v1/ledger/verify").json()
-    assert ov.status_code == 200 and v["ok"] and v["rows"] == 2 and v["first_bad_row"] is None
-    assert ov.json()["ledger_row"]["actor"] == "worker"
+    assert v["ok"] and v["rows"] == 1 and v["first_bad_row"] is None
     assert client.get("/v1/models").json()["data"][0]["object"] == "model"
-    assert client.get(f"/v1/ledger?session={sg['session']}", headers=tok).json()["total"] == 2
+    assert client.get(f"/v1/ledger?session={sg['session']}", headers=tok).json()["total"] == 1
     assert "error" in client.post("/v1/override", json={}).json()
     assert client.get(f"/v1/sessions/{sg['session']}").status_code == 403
     assert client.get(f"/v1/sessions/{sg['session']}", headers=tok).status_code == 200
@@ -247,3 +248,65 @@ def test_escalation_withholds_the_draft(tmp_path: Path):
     )
     assert res.withheld and "withheld" in res.reply and "S1234567D" not in res.reply
     assert "S1234567D" in res.reply_withheld and res.ledger_row["withheld"] is True
+
+
+def test_integration_snippet_uses_forwarded_scheme(tmp_path, monkeypatch):
+    from socareguard.proxy import app as appmod
+
+    client = TestClient(appmod.create_app(make_guard(tmp_path)))
+    fwd = {"X-Forwarded-Proto": "https", "X-Forwarded-Host": "demo.example.org"}
+    monkeypatch.setattr(appmod, "TRUST_PROXY", False)
+    assert 'base_url="http://testserver/v1"' in client.get("/", headers=fwd).text
+    monkeypatch.setattr(appmod, "TRUST_PROXY", True)
+    assert 'base_url="https://demo.example.org/v1"' in client.get("/", headers=fwd).text
+    page = client.get("/", headers={"X-Forwarded-Proto": "https"}).text
+    assert 'base_url="https://testserver/v1"' in page
+
+
+def test_sandbox_banner_states_the_taxonomy_is_a_draft(tmp_path, monkeypatch):
+    from socareguard.proxy import app as appmod
+
+    monkeypatch.setattr(appmod, "SANDBOX", True)
+    page = TestClient(appmod.create_app(make_guard(tmp_path))).get("/").text
+    assert "not yet been reviewed by social-work practitioners" in page
+
+
+def test_sandbox_release_of_a_withheld_draft_needs_the_session_token(tmp_path, monkeypatch):
+    from socareguard.proxy import app as appmod
+    from socareguard.scenarios.events import Flag, Screen
+
+    class Esc:
+        def screen(self, draft, pack, seq, instruction="", leaks=None, context="", **kw):
+            f = Flag(label="I14", clause="B.3.a", severity="escalate", evidence=draft[:20])
+            return [f], "escalate", [Screen(seq=seq, flags=[f])]
+
+    g = Guard(
+        vault=Vault(tmp_path / "v.sqlite"),
+        ledger=Ledger(tmp_path / "l.jsonl"),
+        use_presidio=False,
+        use_gliner=False,
+        screener=Esc(),
+    )
+    monkeypatch.setattr(
+        "socareguard.proxy.core.complete",
+        lambda model, messages, **kw: ("Dear principal, the client was charged.", {}),
+    )
+    monkeypatch.setattr(appmod, "API_KEYS", set())
+    client = TestClient(appmod.create_app(g))
+    sg = client.post(
+        "/v1/chat/completions",
+        json={"messages": [{"role": "user", "content": "Email the school.\n\n" + NOTE}]},
+        headers={"X-SoCareGuard-Pack": "youth-offending"},
+    ).json()["socareguard"]
+    assert sg["withheld"]
+    url = f"/v1/sessions/{sg['session']}/withheld?reason=safeguarding%20review"
+    role = {"X-SoCareGuard-Role": "supervisor"}
+    assert client.get(url, headers=role).status_code == 403
+    wrong = {**role, "X-SoCareGuard-Session-Token": "not-the-token"}
+    assert client.get(url, headers=wrong).status_code == 403
+    tok = {**role, "X-SoCareGuard-Session-Token": sg["session_token"]}
+    r = client.get(url, headers=tok)
+    assert r.status_code == 200 and r.json()["ledger_row"]["decision"] == "withheld_released"
+    assert "self-asserted" in r.json()["ledger_row"]["actor"]
+    no_role = {"X-SoCareGuard-Session-Token": sg["session_token"]}
+    assert client.get(url, headers=no_role).status_code == 403

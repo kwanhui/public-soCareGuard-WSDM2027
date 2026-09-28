@@ -2,13 +2,14 @@
 
 Reports surrogate consistency (one outbound form per original within a note), injectivity
 (no two originals share an outbound form), round-trip fidelity (restored text equals the
-original for surrogate spans; generalised spans are one-way by design and are reported
+original for surrogate spans, while generalised spans are one-way by design and are reported
 separately), gold DIRECT leakage of the outbound text, and latency.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,11 @@ from socareguard.outbound.vault import Vault
 from socareguard.policy.loader import load_pack
 
 OUT = Path("docs/metrics")
+
+
+def _base(text: str) -> str:
+    """A form without its possessive, so that "Wei Ming's" and "Wei Ming" count as one original."""
+    return re.sub(r"['\u2019]s$", "", text)
 
 
 def _same_entity(originals: set[str]) -> bool:
@@ -53,7 +59,7 @@ def run(notes: list[Note], tag: str, vault_path: Path | None = None) -> dict[str
         by_orig: dict[tuple[str, str], set[str]] = {}
         by_out: dict[str, set[str]] = {}
         for h, new, kind in s.replacements:
-            by_orig.setdefault((h.category, h.text), set()).add(new)
+            by_orig.setdefault((h.category, _base(h.text)), set()).add(_base(new))
             if kind == "surrogate":
                 by_out.setdefault(new, set()).add(h.text)
                 stats["surrogate_spans"] += 1

@@ -112,6 +112,10 @@ class LeakCheck(BaseModel):
     )
     n_unrestored: int = 0
     unrestored: list[str] = Field(default_factory=list)
+    partial: list[str] = Field(
+        default_factory=list,
+        description="surrogates the reply reformatted, left whole rather than restored in part",
+    )
 
 
 class Flag(BaseModel):

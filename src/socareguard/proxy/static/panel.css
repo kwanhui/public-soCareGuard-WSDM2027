@@ -65,6 +65,7 @@ mark.evidence { background:transparent; text-decoration: underline; text-decorat
 mark.rewrite { background:#eef9f1; outline:1px solid #bfe3c9; }
 mark.KEPT { background:transparent; outline:1px dashed #8a94a6; }
 mark.unrestored { background:#ffe2c2; outline:1px solid #c2610a; }
+mark.restored { text-decoration: underline dotted; text-decoration-color:#4a5568; text-decoration-thickness:2px; text-underline-offset:2px; }
 .glossary { margin:-2px 0 8px; color:var(--muted); font-size:13px; }
 .closing { margin:12px 0 0; padding:10px 14px; background:#eef9f1; border:1px solid #bfe3c9; border-radius:8px; color:var(--ok); font-weight:600; }
 .flag .why { margin:0 0 8px; font-size:14px; }
@@ -86,6 +87,7 @@ pre.expanded { max-height:none; }
 button.more { margin-top:6px; }
 .withheld { color:var(--bad); font-style:italic; }
 .flags { margin-top:14px; display:grid; gap:10px; }
+.flags .flaglegend { margin:0; font-size:13px; color:var(--muted); }
 .flag { background:#fff; border:1px solid var(--line); border-left:5px solid var(--warn); border-radius:8px; padding:12px 14px; }
 .flag.escalate, .flag.regenerate { border-left-color:var(--bad); }
 .flaghead { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:baseline; margin-bottom:8px; }
@@ -114,3 +116,18 @@ details.rules ul { margin:4px 0 8px; padding-left:18px; }
 details.events pre { max-height:400px; font-size:12px; background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px; margin-top:8px; }
 footer { color:var(--muted); font-size:12px; padding:14px 20px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:1px solid var(--line); }
 footer a { color:var(--accent); }
+.banner p { margin:0; }
+.banner p + p { margin-top:4px; font-weight:400; }
+.fieldhint { display:block; font-size:12px; font-weight:400; color:var(--muted); margin-top:3px; }
+.ledgersum { margin:0 0 8px; font-size:13px; color:var(--muted); }
+.flaghead .draftnote { font-size:12px; color:var(--muted); font-style:italic; }
+.sessionid { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin-top:6px; font-weight:400; }
+.sessionid code { font-size:14px; padding:2px 6px; border:1px solid var(--line); border-radius:4px; background:#fff; }
+.prior { width:100%; margin:4px 0 0; font-size:13px; color:var(--warn); }
+.flag.major { border-left-color:var(--bad); background:#fffafa; }
+.pill.major { background:#fdecee; color:var(--bad); border-color:#f2b8bc; }
+.unrestored-list { background:#fff4ea; border:1px solid #f0c9a4; border-radius:6px; padding:8px 10px; margin:4px 0; font-size:13.5px; }
+.unrestored-list ul { margin:2px 0 6px; padding-left:18px; }
+.manual-rewrite { margin-top:6px; }
+.manual-rewrite pre { background:#fff; border:1px dashed #8a94a6; border-radius:6px; padding:8px 10px; max-height:none; }
+.seg .segcap { font-weight:400; font-size:12px; }

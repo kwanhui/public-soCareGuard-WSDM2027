@@ -1,0 +1,600 @@
+{"draft": "disability-000-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-001-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-000-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-001-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-002-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-002-I3", "pack": "disability", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-003-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-004-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-005-I6", "pack": "disability", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-005-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-003-I4", "pack": "disability", "task": "summary_plan", "label": "I4", "judge_flags": {"I3": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-004-I5", "pack": "disability", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-006-I7", "pack": "disability", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-006-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-007-I8", "pack": "disability", "task": "summary_plan", "label": "I8", "judge_flags": {"I9": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-007-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-008-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-008-I9", "pack": "disability", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-009-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-010-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-010-I11", "pack": "disability", "task": "summary_plan", "label": "I11", "judge_flags": {"I3": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-009-I10", "pack": "disability", "task": "referral_note", "label": "I10", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-011-I12", "pack": "disability", "task": "summary_plan", "label": "I12", "judge_flags": {"I5": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-011-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-012-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-012-I13", "pack": "disability", "task": "referral_note", "label": "I13", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-013-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-014-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-013-OVER_CAUTION", "pack": "disability", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-014-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-015-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-015-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-016-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-017-I4", "pack": "disability", "task": "summary_plan", "label": "I4", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-016-I3", "pack": "disability", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-017-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-018-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I3": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-019-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-019-I6", "pack": "disability", "task": "summary_plan", "label": "I6", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-018-I5", "pack": "disability", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-020-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-020-I7", "pack": "disability", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-021-I8", "pack": "disability", "task": "summary_plan", "label": "I8", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-021-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-022-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-022-I9", "pack": "disability", "task": "summary_plan", "label": "I9", "judge_flags": {"I3": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-023-I10", "pack": "disability", "task": "referral_note", "label": "I10", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-023-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-024-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-025-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-024-I11", "pack": "disability", "task": "summary_plan", "label": "I11", "judge_flags": {"I11": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-025-I12", "pack": "disability", "task": "summary_plan", "label": "I12", "judge_flags": {"I10": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-026-I13", "pack": "disability", "task": "referral_note", "label": "I13", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-026-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-028-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-027-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-027-OVER_CAUTION", "pack": "disability", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-028-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-029-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-029-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-030-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-030-I3", "pack": "disability", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-031-I4", "pack": "disability", "task": "summary_plan", "label": "I4", "judge_flags": {"I5": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-031-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I5": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-032-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-032-I5", "pack": "disability", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-033-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-033-I6", "pack": "disability", "task": "summary_plan", "label": "I6", "judge_flags": {"I3": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-034-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-035-I8", "pack": "disability", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-035-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-034-I7", "pack": "disability", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-036-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-036-I9", "pack": "disability", "task": "summary_plan", "label": "I9", "judge_flags": {"I3": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-037-I10", "pack": "disability", "task": "referral_note", "label": "I10", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-037-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I3": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-038-I11", "pack": "disability", "task": "summary_plan", "label": "I11", "judge_flags": {"I11": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-039-I12", "pack": "disability", "task": "summary_plan", "label": "I12", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-038-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-039-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-040-I13", "pack": "disability", "task": "referral_note", "label": "I13", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-040-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-041-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-042-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-041-OVER_CAUTION", "pack": "disability", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-042-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-043-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-043-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-044-I3", "pack": "disability", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-045-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-044-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I11": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-045-I4", "pack": "disability", "task": "summary_plan", "label": "I4", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-046-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-047-I6", "pack": "disability", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-047-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-046-I5", "pack": "disability", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-048-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-049-I8", "pack": "disability", "task": "summary_plan", "label": "I8", "judge_flags": {"I5": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-048-I7", "pack": "disability", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-049-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-051-I10", "pack": "disability", "task": "referral_note", "label": "I10", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-050-I9", "pack": "disability", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-051-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-050-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I11": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-052-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-052-I11", "pack": "disability", "task": "summary_plan", "label": "I11", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-053-I12", "pack": "disability", "task": "summary_plan", "label": "I12", "judge_flags": {"I12": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-053-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-054-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-054-I13", "pack": "disability", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-055-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-056-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-056-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {"I1": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-055-OVER_CAUTION", "pack": "disability", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-057-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {"I11": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-058-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-057-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I5": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-058-I3", "pack": "disability", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-059-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-059-I4", "pack": "disability", "task": "summary_plan", "label": "I4", "judge_flags": {"I4": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-060-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-061-I6", "pack": "disability", "task": "summary_plan", "label": "I6", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-061-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-060-I5", "pack": "disability", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-062-I7", "pack": "disability", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-062-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-063-I8", "pack": "disability", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-064-I9", "pack": "disability", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-063-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-064-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-065-I10", "pack": "disability", "task": "referral_note", "label": "I10", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-065-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-066-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-066-I11", "pack": "disability", "task": "summary_plan", "label": "I11", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-067-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-067-I12", "pack": "disability", "task": "summary_plan", "label": "I12", "judge_flags": {"I5": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-068-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-068-I13", "pack": "disability", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-069-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-069-OVER_CAUTION", "pack": "disability", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-070-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-071-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-070-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {"I11": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-071-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-072-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-073-I4", "pack": "disability", "task": "summary_plan", "label": "I4", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-072-I3", "pack": "disability", "task": "summary_plan", "label": "I3", "judge_flags": {"I5": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-073-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-074-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I3": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-075-I6", "pack": "disability", "task": "summary_plan", "label": "I6", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-075-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-074-I5", "pack": "disability", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-076-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-077-I8", "pack": "disability", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-076-I7", "pack": "disability", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-077-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-078-I9", "pack": "disability", "task": "summary_plan", "label": "I9", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-078-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-079-I10", "pack": "disability", "task": "referral_note", "label": "I10", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-079-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-080-I11", "pack": "disability", "task": "summary_plan", "label": "I11", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-080-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-081-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-081-I12", "pack": "disability", "task": "summary_plan", "label": "I12", "judge_flags": {"I12": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-082-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-082-I13", "pack": "disability", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-083-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-083-OVER_CAUTION", "pack": "disability", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-085-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-084-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {"I2": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-085-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-084-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I3": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-086-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-086-I3", "pack": "disability", "task": "summary_plan", "label": "I3", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-087-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-087-I4", "pack": "disability", "task": "summary_plan", "label": "I4", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-088-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-089-I6", "pack": "disability", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-089-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-090-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-091-I8", "pack": "disability", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-090-I7", "pack": "disability", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-091-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-088-I5", "pack": "disability", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.8, "I9": 0.85, "I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-092-I9", "pack": "disability", "task": "summary_plan", "label": "I9", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-092-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-093-I10", "pack": "disability", "task": "referral_note", "label": "I10", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-093-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-094-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-094-I11", "pack": "disability", "task": "summary_plan", "label": "I11", "judge_flags": {"I11": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-095-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-095-I12", "pack": "disability", "task": "summary_plan", "label": "I12", "judge_flags": {"I12": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-096-I13", "pack": "disability", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-096-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {"I11": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-097-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-097-OVER_CAUTION", "pack": "disability", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-098-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-098-I1", "pack": "disability", "task": "summary_plan", "label": "I1", "judge_flags": {"I2": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-099-I2", "pack": "disability", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "disability-099-clean", "pack": "disability", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-000-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-001-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-000-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-001-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-002-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-002-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-003-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {"I1": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-003-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-004-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-005-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-005-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-006-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-006-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-004-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-007-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-007-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-008-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-008-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-009-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-010-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-009-I10", "pack": "domestic-violence", "task": "referral_note", "label": "I10", "judge_flags": {"I8": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-010-I12", "pack": "domestic-violence", "task": "summary_plan", "label": "I12", "judge_flags": {"I12": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-011-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-011-I13", "pack": "domestic-violence", "task": "referral_note", "label": "I13", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-012-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-012-OVER_CAUTION", "pack": "domestic-violence", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-013-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-013-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-014-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-014-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-015-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-016-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-015-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-016-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-017-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-018-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-018-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {"I6": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-019-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-017-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-019-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-021-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-020-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-020-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-021-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-022-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-023-I12", "pack": "domestic-violence", "task": "summary_plan", "label": "I12", "judge_flags": {"I8": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-023-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I8": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-022-I10", "pack": "domestic-violence", "task": "referral_note", "label": "I10", "judge_flags": {"I10": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-024-I13", "pack": "domestic-violence", "task": "referral_note", "label": "I13", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-025-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-024-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-025-OVER_CAUTION", "pack": "domestic-violence", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-026-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-027-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-026-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-028-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {"I13": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-028-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-027-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-029-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-030-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-029-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-031-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-031-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-030-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-032-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-033-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-032-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-033-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-034-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-034-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-035-I10", "pack": "domestic-violence", "task": "referral_note", "label": "I10", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-035-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-036-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-036-I12", "pack": "domestic-violence", "task": "summary_plan", "label": "I12", "judge_flags": {"I12": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-037-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-037-I13", "pack": "domestic-violence", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-038-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-038-OVER_CAUTION", "pack": "domestic-violence", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 1.0}, "rule_over_caution": true, "baseline": []}
+{"draft": "domestic-violence-039-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {"I10": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-039-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-040-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-040-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-042-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-041-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-041-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-042-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {"I3": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-043-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-044-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-044-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-045-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-043-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-045-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-046-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-047-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-046-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-047-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {"I6": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-048-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-049-I12", "pack": "domestic-violence", "task": "summary_plan", "label": "I12", "judge_flags": {"I12": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-048-I10", "pack": "domestic-violence", "task": "referral_note", "label": "I10", "judge_flags": {"I8": 0.85, "I6": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-049-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-050-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-050-I13", "pack": "domestic-violence", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-051-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-051-OVER_CAUTION", "pack": "domestic-violence", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-053-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-052-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-053-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-052-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-054-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-055-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-054-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-055-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {"I3": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-056-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-057-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-057-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-058-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-059-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-056-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-058-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-059-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-060-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-061-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-061-I10", "pack": "domestic-violence", "task": "referral_note", "label": "I10", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-060-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {"I10": 0.95, "I8": 0.98, "I9": 0.99}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-062-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-062-I12", "pack": "domestic-violence", "task": "summary_plan", "label": "I12", "judge_flags": {"I12": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-063-I13", "pack": "domestic-violence", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-063-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-064-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-064-OVER_CAUTION", "pack": "domestic-violence", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-065-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-065-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-066-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-066-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-067-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-067-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-068-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-068-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-069-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-069-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.98}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-070-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-070-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-071-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-071-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-072-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-073-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-072-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {"I8": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-073-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-074-I10", "pack": "domestic-violence", "task": "referral_note", "label": "I10", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-075-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-074-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-075-I12", "pack": "domestic-violence", "task": "summary_plan", "label": "I12", "judge_flags": {"I6": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-076-I13", "pack": "domestic-violence", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-077-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-076-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-077-OVER_CAUTION", "pack": "domestic-violence", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-078-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-078-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {"I5": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-079-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-079-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-080-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-080-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-081-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-081-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {"I3": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-083-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-083-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-082-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I8": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-084-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-082-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-084-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-085-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-085-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {"I8": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-086-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I3": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-086-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {"I5": 0.7}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-087-I10", "pack": "domestic-violence", "task": "referral_note", "label": "I10", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-087-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-089-I13", "pack": "domestic-violence", "task": "referral_note", "label": "I13", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-089-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-088-I12", "pack": "domestic-violence", "task": "summary_plan", "label": "I12", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-088-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-091-I1", "pack": "domestic-violence", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-090-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-090-OVER_CAUTION", "pack": "domestic-violence", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-092-I2", "pack": "domestic-violence", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-092-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-093-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-091-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-093-I3", "pack": "domestic-violence", "task": "summary_plan", "label": "I3", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-094-I4", "pack": "domestic-violence", "task": "summary_plan", "label": "I4", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-094-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-095-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-096-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-096-I6", "pack": "domestic-violence", "task": "summary_plan", "label": "I6", "judge_flags": {"I6": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-097-I7", "pack": "domestic-violence", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-098-I8", "pack": "domestic-violence", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-097-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-098-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-095-I5", "pack": "domestic-violence", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-000-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-099-I9", "pack": "domestic-violence", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "domestic-violence-099-clean", "pack": "domestic-violence", "task": "summary_plan", "label": "NONE", "judge_flags": {"I10": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-000-I1", "pack": "youth-offending", "task": "summary_plan", "label": "I1", "judge_flags": {"I1": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-002-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-001-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-001-I2", "pack": "youth-offending", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-002-I3", "pack": "youth-offending", "task": "summary_plan", "label": "I3", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-003-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-004-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-003-I4", "pack": "youth-offending", "task": "summary_plan", "label": "I4", "judge_flags": {"I4": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-005-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-005-I6", "pack": "youth-offending", "task": "summary_plan", "label": "I6", "judge_flags": {"I10": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-004-I5", "pack": "youth-offending", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-006-I7", "pack": "youth-offending", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-007-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-008-I9", "pack": "youth-offending", "task": "summary_plan", "label": "I9", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-007-I8", "pack": "youth-offending", "task": "summary_plan", "label": "I8", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-006-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-008-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-009-I10", "pack": "youth-offending", "task": "referral_note", "label": "I10", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-009-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-010-I11", "pack": "youth-offending", "task": "summary_plan", "label": "I11", "judge_flags": {"I11": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-010-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-011-I12", "pack": "youth-offending", "task": "summary_plan", "label": "I12", "judge_flags": {"I8": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-011-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-012-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-013-I14", "pack": "youth-offending", "task": "referral_note", "label": "I14", "judge_flags": {"I10": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-014-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-014-OVER_CAUTION", "pack": "youth-offending", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-013-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-012-I13", "pack": "youth-offending", "task": "referral_note", "label": "I13", "judge_flags": {"I14": 1.0, "I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-015-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-016-I2", "pack": "youth-offending", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-015-I1", "pack": "youth-offending", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-016-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-017-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-017-I3", "pack": "youth-offending", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-018-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-018-I4", "pack": "youth-offending", "task": "summary_plan", "label": "I4", "judge_flags": {"I4": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-019-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-020-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-020-I6", "pack": "youth-offending", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-021-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-019-I5", "pack": "youth-offending", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-021-I7", "pack": "youth-offending", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-022-I8", "pack": "youth-offending", "task": "summary_plan", "label": "I8", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-022-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0, "I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-024-I10", "pack": "youth-offending", "task": "referral_note", "label": "I10", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-023-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-023-I9", "pack": "youth-offending", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-024-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-025-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-025-I11", "pack": "youth-offending", "task": "summary_plan", "label": "I11", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-026-I12", "pack": "youth-offending", "task": "summary_plan", "label": "I12", "judge_flags": {"I5": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-026-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-027-I13", "pack": "youth-offending", "task": "referral_note", "label": "I13", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-027-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-028-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-028-I14", "pack": "youth-offending", "task": "referral_note", "label": "I14", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-030-I1", "pack": "youth-offending", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-029-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-030-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-029-OVER_CAUTION", "pack": "youth-offending", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-031-I2", "pack": "youth-offending", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-031-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-032-I3", "pack": "youth-offending", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-033-I4", "pack": "youth-offending", "task": "summary_plan", "label": "I4", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-032-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-033-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I13": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-035-I6", "pack": "youth-offending", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-034-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95, "I13": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-034-I5", "pack": "youth-offending", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-035-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-036-I7", "pack": "youth-offending", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-037-I8", "pack": "youth-offending", "task": "summary_plan", "label": "I8", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-036-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-037-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-038-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-038-I9", "pack": "youth-offending", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-040-I11", "pack": "youth-offending", "task": "summary_plan", "label": "I11", "judge_flags": {"I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-039-I10", "pack": "youth-offending", "task": "referral_note", "label": "I10", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-040-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-039-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95, "I13": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-041-I12", "pack": "youth-offending", "task": "summary_plan", "label": "I12", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-041-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-042-I13", "pack": "youth-offending", "task": "referral_note", "label": "I13", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-042-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-043-I14", "pack": "youth-offending", "task": "referral_note", "label": "I14", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-044-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-043-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I8": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-044-OVER_CAUTION", "pack": "youth-offending", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-046-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-046-I2", "pack": "youth-offending", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-045-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-045-I1", "pack": "youth-offending", "task": "summary_plan", "label": "I1", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-047-I3", "pack": "youth-offending", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-047-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-048-I4", "pack": "youth-offending", "task": "summary_plan", "label": "I4", "judge_flags": {"I4": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-048-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-049-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-050-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-050-I6", "pack": "youth-offending", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-051-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-049-I5", "pack": "youth-offending", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-052-I8", "pack": "youth-offending", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-051-I7", "pack": "youth-offending", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-053-I9", "pack": "youth-offending", "task": "summary_plan", "label": "I9", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-052-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-053-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-054-I10", "pack": "youth-offending", "task": "referral_note", "label": "I10", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-054-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-055-I11", "pack": "youth-offending", "task": "summary_plan", "label": "I11", "judge_flags": {"I3": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-055-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-056-I12", "pack": "youth-offending", "task": "summary_plan", "label": "I12", "judge_flags": {"I9": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-056-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-058-I14", "pack": "youth-offending", "task": "referral_note", "label": "I14", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-058-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-057-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-057-I13", "pack": "youth-offending", "task": "referral_note", "label": "I13", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-059-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-059-OVER_CAUTION", "pack": "youth-offending", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-060-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-060-I1", "pack": "youth-offending", "task": "summary_plan", "label": "I1", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-062-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-062-I3", "pack": "youth-offending", "task": "summary_plan", "label": "I3", "judge_flags": {"I3": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-061-I2", "pack": "youth-offending", "task": "summary_plan", "label": "I2", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-061-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-063-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-063-I4", "pack": "youth-offending", "task": "summary_plan", "label": "I4", "judge_flags": {"I4": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-064-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-065-I6", "pack": "youth-offending", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-065-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-064-I5", "pack": "youth-offending", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-066-I7", "pack": "youth-offending", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.98}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-067-I8", "pack": "youth-offending", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-066-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95, "I13": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-067-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-068-I9", "pack": "youth-offending", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.8}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-068-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-069-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-069-I10", "pack": "youth-offending", "task": "referral_note", "label": "I10", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-070-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-070-I11", "pack": "youth-offending", "task": "summary_plan", "label": "I11", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-071-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-071-I12", "pack": "youth-offending", "task": "summary_plan", "label": "I12", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-073-I14", "pack": "youth-offending", "task": "referral_note", "label": "I14", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-072-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-072-I13", "pack": "youth-offending", "task": "referral_note", "label": "I13", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-073-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-074-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-074-OVER_CAUTION", "pack": "youth-offending", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-075-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-075-I1", "pack": "youth-offending", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-076-I2", "pack": "youth-offending", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-076-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-077-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-078-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-077-I3", "pack": "youth-offending", "task": "summary_plan", "label": "I3", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-078-I4", "pack": "youth-offending", "task": "summary_plan", "label": "I4", "judge_flags": {"I4": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-080-I6", "pack": "youth-offending", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-080-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-079-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-079-I5", "pack": "youth-offending", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-081-I7", "pack": "youth-offending", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-082-I8", "pack": "youth-offending", "task": "summary_plan", "label": "I8", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-082-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-083-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-081-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0, "I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-083-I9", "pack": "youth-offending", "task": "summary_plan", "label": "I9", "judge_flags": {"I9": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-084-I10", "pack": "youth-offending", "task": "referral_note", "label": "I10", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-085-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-084-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-085-I11", "pack": "youth-offending", "task": "summary_plan", "label": "I11", "judge_flags": {"I11": 0.9}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-086-I12", "pack": "youth-offending", "task": "summary_plan", "label": "I12", "judge_flags": {"I8": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-086-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-087-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-088-I14", "pack": "youth-offending", "task": "referral_note", "label": "I14", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-087-I13", "pack": "youth-offending", "task": "referral_note", "label": "I13", "judge_flags": {"I13": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-088-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-090-I1", "pack": "youth-offending", "task": "summary_plan", "label": "I1", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-089-OVER_CAUTION", "pack": "youth-offending", "task": "admin_reply", "label": "OVER_CAUTION", "judge_flags": {"OVER_CAUTION": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-089-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-091-I2", "pack": "youth-offending", "task": "summary_plan", "label": "I2", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-090-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-091-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-092-I3", "pack": "youth-offending", "task": "summary_plan", "label": "I3", "judge_flags": {"I8": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-092-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-093-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-093-I4", "pack": "youth-offending", "task": "summary_plan", "label": "I4", "judge_flags": {"I4": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-095-I6", "pack": "youth-offending", "task": "summary_plan", "label": "I6", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-094-I5", "pack": "youth-offending", "task": "summary_plan", "label": "I5", "judge_flags": {"I5": 0.85}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-095-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-094-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0, "I13": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-096-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-096-I7", "pack": "youth-offending", "task": "summary_plan", "label": "I7", "judge_flags": {"I7": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-097-I8", "pack": "youth-offending", "task": "summary_plan", "label": "I8", "judge_flags": {"I14": 0.95}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-098-I9", "pack": "youth-offending", "task": "summary_plan", "label": "I9", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-098-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-097-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-099-clean", "pack": "youth-offending", "task": "summary_plan", "label": "NONE", "judge_flags": {}, "rule_over_caution": false, "baseline": []}
+{"draft": "youth-offending-099-I10", "pack": "youth-offending", "task": "referral_note", "label": "I10", "judge_flags": {"I14": 1.0}, "rule_over_caution": false, "baseline": []}

@@ -4,8 +4,10 @@
 install:
 	uv pip install --python .venv/bin/python -e ".[dev]"
 
+# gliner2 and peft load GLiNER2-PII, the backend the README's Pipeline section describes; without
+# them the detectors fall back to GLiNER v1 (urchade/gliner_multi_pii-v1). Same set as the Dockerfile.
 install-detect:
-	uv pip install --python .venv/bin/python -e ".[detect]"
+	uv pip install --python .venv/bin/python -e ".[detect]" gliner2 peft
 	.venv/bin/python -m spacy download en_core_web_lg
 
 # --- Quality ---
@@ -18,7 +20,7 @@ lint:
 format:
 	ruff format src tests
 
-# --- Corpus (build step 1) ---
+# --- Corpus ---
 corpus:
 	python3 -m socareguard.corpus generate
 	python3 -m socareguard.corpus inject
@@ -38,3 +40,4 @@ demo:
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -r {} +
 	rm -r .pytest_cache .ruff_cache build dist *.egg-info 2>/dev/null || true
+

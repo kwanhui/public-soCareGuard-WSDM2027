@@ -10,7 +10,7 @@ from socareguard.screen.judge import FakeJudge, JudgeFlag, build_prompt, parse
 from socareguard.screen.rules import over_caution
 from socareguard.screen.screener import Screener
 
-NOTE = "Client Tan Wei Ming, NRIC S1234567D, case YC/2026/0412, at Woodgrove Secondary School."
+NOTE = "Client Tan Wei Ming, NRIC S1234567D, case YC/2026/0412, at Oakcrest Secondary School."
 
 
 def test_prompt_quotes_clauses_and_parse_filters_unknown_labels():

@@ -22,7 +22,7 @@ def test_pre_and_post_hooks_roundtrip(tmp_path):
         "messages": [
             {
                 "role": "user",
-                "content": "Client NRIC S1234567D, case YC/2026/0412, at Woodgrove Secondary School.",
+                "content": "Client NRIC S1234567D, case YC/2026/0412, at Oakcrest Secondary School.",
             }
         ],
         "metadata": {},

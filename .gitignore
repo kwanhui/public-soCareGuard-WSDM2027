@@ -1,2 +1,18 @@
+# Python
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+# SoCareGuard runtime state: the encrypted vault, its key and the ledger never leave the premises.
+vault/
+# the vault key when mounted as a Docker secret (docker-compose.yml)
+secrets/
+*.key
+*.sqlite
+*.sqlite3
+.local/
+logs/
+# provider keys
+.env

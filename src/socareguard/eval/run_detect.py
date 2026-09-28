@@ -2,7 +2,7 @@
 
 python3 -m socareguard.eval detect [--packs ...] [--limit N] [--no-gliner] [--no-presidio]
 Writes docs/metrics/detect-<tag>.json and .csv. Entity categories are scored exact and
-relaxed; attributes relaxed only (any overlap with a gold ATTRIBUTE span of the same key).
+relaxed, and attributes relaxed only (any overlap with a gold ATTRIBUTE span of the same key).
 """
 
 from __future__ import annotations
@@ -95,17 +95,72 @@ def run(notes: list[Note], use_presidio: bool, use_gliner: bool, tag: str) -> di
             w.writerow(["all", f"origin:{o}", "relaxed", "", "", "", "", v["recall"], ""])
         for k, v in result["attribute_recall"].items():
             w.writerow(["all", f"attr:{k}", "relaxed", "", "", "", "", v["recall"], ""])
-        w.writerow(
-            [
-                "all",
-                "leakage_rate",
-                "relaxed",
-                "",
-                "",
-                merged["leakage"]["direct_missed"],
-                "",
-                merged["leakage"]["leakage_rate"],
-                "",
-            ]
-        )
+        for name, missed in (
+            ("leakage_matched", "direct_missed"),
+            ("leakage_covered", "direct_uncovered"),
+        ):
+            lk = merged[name]
+            w.writerow(["all", name, "relaxed", "", "", lk[missed], "", lk["leakage_rate"], ""])
     return result
+
+
+VARIANTS = Path("tests/data/nric-variants.jsonl")
+DIRECT = set(ev.DIRECT_CATEGORIES)
+
+
+def run_variants(
+    use_presidio: bool = True,
+    use_gliner: bool = True,
+    path: Path = VARIANTS,
+    tag: str | None = None,
+) -> dict[str, Any]:
+    """Recall on the NRIC and FIN format-variant stress set: spaced, hyphenated, lower case,
+    with an "NRIC:" prefix and in parentheses. The corpus writes every identifier in the canonical
+    form of the identifier factory that the recogniser shares, so these variants are measured on
+    their own. A variant counts as detected when an NRIC span covers it exactly (``exact``) or when
+    any direct-identifier span overlaps it (``covered``, since any such span is substituted), and
+    as leaked when its text survives in the sanitised text."""
+    from socareguard.outbound.sanitise import Sanitiser
+    from socareguard.outbound.vault import Vault
+    from socareguard.policy.loader import load_pack
+
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    vault = Vault(Path("vault/eval-variants.sqlite"))
+    by_form: dict[str, list[int]] = {}
+    per_row = []
+    exact = covered = leaked = 0
+    for r in rows:
+        det = detect(r["text"], use_presidio=use_presidio, use_gliner=use_gliner, attributes=False)
+        ex = any(
+            h.category == "NRIC" and h.start == r["start"] and h.end == r["end"]
+            for h in det.entities
+        )
+        cov = any(
+            h.category in DIRECT and h.start < r["end"] and r["start"] < h.end for h in det.entities
+        )
+        san = Sanitiser(vault, load_pack("disability"), use_presidio, use_gliner)
+        out = san.sanitise(r["text"], session=f"var-{r['id']}", seed=1).text
+        vault.forget(f"var-{r['id']}")
+        lk = r["variant"] in out or r["canonical"] in out
+        exact, covered, leaked = exact + ex, covered + cov, leaked + lk
+        f = by_form.setdefault(r["form"], [0, 0])
+        f[0] += int(cov)
+        f[1] += 1
+        per_row.append(
+            {"id": r["id"], "form": r["form"], "exact": ex, "covered": cov, "leaked": lk}
+        )
+    n = len(rows)
+    res = {
+        "file": str(path),
+        "variants": n,
+        "detectors": det.detectors if rows else [],
+        "recall_exact": round(exact / n, 4) if n else None,
+        "recall_covered": round(covered / n, 4) if n else None,
+        "leaked": leaked,
+        "by_form": {k: {"covered": v[0], "total": v[1]} for k, v in by_form.items()},
+        "rows": per_row,
+    }
+    OUT.mkdir(parents=True, exist_ok=True)
+    name = f"nric-variants-{tag}.json" if tag else "nric-variants.json"
+    (OUT / name).write_text(json.dumps(res, indent=2))
+    return res

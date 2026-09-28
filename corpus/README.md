@@ -1,10 +1,10 @@
-# SoCareGuard synthetic corpus (v1)
+# SoCareGuard synthetic corpus (v1.1)
 
 Synthetic Singapore social-work case notes with exact gold spans, built to evaluate the
 outbound detectors and the inbound conduct screen. **No real case material was used at any
 stage.** Every person, identity number, address, phone number, school and case reference is
-generated; estates and towns are real Singapore place names because they are the
-quasi-identifiers under test.
+generated, and every school, shelter and service centre is invented. Estates and towns are real
+Singapore place names because they are the quasi-identifiers under test.
 
 ## Layers
 
@@ -16,15 +16,38 @@ quasi-identifiers under test.
 | Sweep | `python3 -m socareguard.corpus sweep` | `sweep-report.md` | Off-the-shelf detectors (Presidio, GLiNER) flag anything outside a gold span so spontaneous identifiers are caught, plus a fixed 30-note manual audit checklist. |
 
 Configuration is `configs/corpus-v1.yaml` (seed, counts, model, code-switch share, name-origin
-mix). The config is append-only once results are reported against it.
+mix). The config is append-only once results are reported against it. Corpus v1.1
+(`configs/corpus-v1.1.yaml`, 2026-09-27) is v1 with real private institution names replaced by
+invented ones. Seeds, templates, labels and span counts are unchanged. The layer-2 notes equal a
+re-run of `inject` on the v1 templates with the v1 identifier pools after the same renames,
+except for the four notes that named an FSC by its town (see below).
+Hospital, polyclinic, FSC and youth-home pools in `identifiers.py` were made fictional after v1
+was injected, so `inject` at the current commit does not reproduce the v1 or v1.1 notes.
 
 ## What is real and what is fictional
 
-- **Real**: HDB town names, postal sectors and street names (so an address is internally
-  consistent), public bodies (MSF, MOE, ComCare, IMH, Youth Court), a few hospital and FSC names.
-- **Fictional**: all people, NRIC/FIN numbers (valid check letters, random bodies), phone
-  numbers, block and unit numbers, school names, shelters, day activity centres, and all case
-  reference formats (`YC/2026/0412`, `FSC-2026-0288` and the like follow no real scheme).
+The real names are HDB town names, postal sectors and street names, so that an address is
+internally consistent. Public bodies are also real (MSF, MOE, ComCare, HDB, Youth Court, the
+Singapore Boys' Home, ITE College Central, East and West), as are the public hospitals and
+polyclinics that appear in the notes: Changi General Hospital, Khoo Teck Puat Hospital, Ng Teng
+Fong General Hospital, the Institute of Mental Health (IMH), and Bedok, Jurong and Yishun
+Polyclinics.
+
+Everything else is fictional. This covers all people, NRIC/FIN numbers (valid check letters,
+random bodies), phone numbers, block and unit numbers, and all case reference formats
+(`YC/2026/0412`, `FSC-2026-0288` and the like follow no real scheme). Schools, polytechnics,
+shelters, family service centres, day activity centres and youth homes other than the Singapore
+Boys' Home are invented, and employers are generic descriptions ("a logistics firm in Tuas") that
+name no company. School stems were checked against MOE's school list on data.gov.sg in September
+2026. Shelter and centre names were checked by web search.
+
+Four notes placed an FSC by its town ("Tampines FSC", "Ang Mo Kio FSC", "Queenstown FSC")
+because the template wrote `{{ESTATE}} FSC`, which matches the informal name of a real centre.
+In v1.1 these read "Harbourlight FSC" (disability-001, youth-offending-022), "Meadowvale FSC"
+(disability-066) and "Riverbend FSC" (disability-089), names from the invented FSC pool, and
+their gold span is a FACILITY span over the whole name instead of an ESTATE span over the town.
+The same literal rename was applied to the six drafts that repeat them. These four notes no
+longer equal a re-injection of their templates, which still read `{{ESTATE}} FSC`.
 
 ## Labels are generation-intent labels
 
@@ -32,12 +55,12 @@ The conduct label on a layer-3 draft records the instruction the generator recei
 expert judgement of the text it produced. Some "violating" drafts will be milder than intended
 and some "clean" drafts will contain an unintended failure. Screener metrics computed against
 these labels are therefore a demonstration of behaviour on scripted material, not validated
-accuracy. Expert double-rating is deferred to the follow-on grant.
+accuracy. Expert double-rating is left to future work.
 
 ## Known limitations
 
-- Generation and drafting use one provider (OpenAI); detection uses non-LLM models (Presidio,
-  GLiNER) so there is no generator/detector circularity, but the drafts still share a house
+- Generation and drafting use one provider (OpenAI). Detection uses non-LLM models (Presidio,
+  GLiNER), so there is no generator/detector circularity, but the drafts still share a writing
   style with the notes.
 - The generator occasionally invents an identifier in free text despite instructions. The
   sweep and the audit sample estimate the residual rate; notes with an unresolved spontaneous
@@ -78,14 +101,21 @@ From `python3 -m socareguard.corpus stats`.
 | SCHOOL | 199 |
 | THIRD_PARTY_NAME | 693 |
 
-**Sweep and audit.** Presidio (`en_core_web_lg`) and GLiNER (`urchade/gliner_multi_pii-v1`)
+In v1.1 the four town-named FSCs are FACILITY spans, so ESTATE is 309 and FACILITY 294. Every
+other count, and the QUASI total of 1,203, is unchanged.
+
+### Sweep and audit
+
+Presidio (`en_core_web_lg`) and GLiNER (`urchade/gliner_multi_pii-v1`)
 flagged 121 detections outside gold spans in 84 of 300 notes.
 Every candidate was reviewed: all are detector false positives on agency acronyms, role words,
 language names and generic organisation phrases, and none is an invented person, identifier,
 school or address. A manual read of the fixed 30-note audit sample with gold spans masked found
 no direct identifier outside a span. It did find the model writing the client's age as a plain
-number beside the `{{AGE}}` placeholder in 2 of 30 notes; that pattern was added to the
-validator and the 12 affected notes corpus-wide were regenerated with their drafts. Earlier
+number beside the `{{AGE}}` placeholder in 2 of 30 notes. That pattern was added to the
+validator, and the 12 affected notes corpus-wide were regenerated with their drafts. Earlier
 validator additions from the same pass: placeholder keys written as field labels (3 notes) and
 empty code-switch fragments (2 notes). Residual rate of unlabelled direct identifiers on the
 audited sample: 0 of 30.
+
+Corpus v1.2 (`configs/corpus-v1.2.yaml`) appends 90 compliant drafts for an external reader, 30 per pack (referral notes, and school and employer letters that stay within need-to-know), each written from an existing v1.1 note by the same drafting model and prompt. They are in `corpus/drafts/<pack>-external-v1.2.jsonl`, described in `corpus/drafts/README-v1.2.md`, and leave the v1.1 files unchanged. Like the v1.1 drafts, they are the unguarded drafter output on synthetic notes, so they carry the synthetic names and NRICs of those notes by construction.

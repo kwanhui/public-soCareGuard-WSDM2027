@@ -1,0 +1,45 @@
+# Corpus v1.1 config. Append-only once results are reported against it.
+#
+# v1.1 is corpus v1 with real private institution names replaced by invented ones: six school
+# stems that match current MOE schools, one family-violence shelter, one day activity centre name
+# that shares its stem with a special education school, one youth-services organisation, one
+# family service centre, four town-named FSCs ("Tampines FSC", "Ang Mo Kio FSC", "Queenstown
+# FSC", which match the informal names of real centres), and one school named spontaneously in a
+# layer-3 draft. Seeds, briefs, templates, labels and span totals are unchanged from v1. The
+# layer-2 notes are identical to a re-run of `inject` on the v1 templates with the v1 pools
+# (commit 795d485) after the same renames, except the four notes with a town-named FSC: these read
+# Harbourlight, Meadowvale and Riverbend FSC and carry a FACILITY gold span in place of the ESTATE
+# span (ESTATE 309, FACILITY 294 rather than 313 and 290). Gold offsets were recomputed. Drafts
+# were edited by literal substitution, not regenerated. Estates, streets, public bodies (including
+# the Singapore Boys' Home), the public hospitals, IMH and the polyclinics named in v1 are real and
+# were kept. See the CHANGELOG entry of 2026-09-27.
+seed: 20260905
+reference_date: 2026-09-01
+
+generation:
+  provider: openai
+  model: gpt-5-mini   # chosen on a 6-note trial: 6/6 valid vs 5/6 for gpt-4.1 and gpt-4.1-mini
+  temperature: 0.9  # ignored by gpt-5 models, recorded for the log
+  workers: 6
+
+drafts:
+  model: gpt-4.1-mini
+  temperature: 0.7
+
+packs:
+  disability: { n_notes: 100 }
+  domestic-violence: { n_notes: 100 }
+  youth-offending: { n_notes: 100 }
+
+# Share of notes carrying a code-switched verbatim quote, and the language mix among them.
+# Malay, Mandarin and Tamil fall back to Singlish when the client's name origin does not match.
+code_switch_share: 0.2
+code_switch_langs: { singlish: 0.5, malay: 0.2, mandarin: 0.2, tamil: 0.1 }
+
+# Client name origin mix, equal share so recall-by-origin has balanced support.
+name_origins: { chinese: 0.2, malay: 0.2, indian: 0.2, eurasian: 0.2, western: 0.2 }
+
+paths:
+  templates: corpus/templates
+  notes: corpus/notes
+  drafts: corpus/drafts

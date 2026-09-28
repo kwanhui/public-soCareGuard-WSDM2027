@@ -189,13 +189,14 @@ def make_case_ref(rng: random.Random, pack: str, year: int) -> str:
     )
 
 
-# School names are fictional. Estates are real so the quasi-identifier under test is real.
+# School stems are invented; none matches a school in MOE's school list on data.gov.sg (checked
+# 27 Sep 2026). Estates are real so the quasi-identifier under test is real.
 SCHOOL_STEMS = [
-    "Compassvale",
-    "Northlight",
+    "Larkhaven",
+    "Heronfield",
     "Riverbend",
     "Seletar Hills",
-    "Greenridge",
+    "Maplewood",
     "Eastview",
     "Harbourfront",
     "Kranji Heights",
@@ -203,11 +204,11 @@ SCHOOL_STEMS = [
     "Springleaf",
     "Tanglin Park",
     "Merlion",
-    "Casuarina",
+    "Sandpiper",
     "Bendemeer Rise",
     "Sunrise",
-    "Meridian",
-    "Woodgrove",
+    "Tidecrest",
+    "Oakcrest",
 ]
 SCHOOL_KINDS = {
     "primary": "Primary School",
@@ -231,12 +232,13 @@ def make_school(rng: random.Random, age: int) -> str:
     return f"{stem} Secondary School"
 
 
+# Facility names are invented too: no real shelter, FSC, day activity centre, home or hospital.
 FACILITIES: dict[str, list[str]] = {
     "shelter": [
         "Casa Harapan Crisis Shelter",
         "Rumah Teduh Family Shelter",
         "Haven Crest Shelter",
-        "Star Shelter",
+        "Seaglass Shelter",
     ],
     "rehabilitation centre": [
         "Northgate Centre for Youth",
@@ -246,7 +248,7 @@ FACILITIES: dict[str, list[str]] = {
     "day activity centre": [
         "Sunbeam Day Activity Centre",
         "Bright Path DAC",
-        "Lighthouse Day Activity Centre",
+        "Willowbrook Day Activity Centre",
     ],
     "hospital": [
         "Eastgate General Hospital",

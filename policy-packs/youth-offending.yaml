@@ -1,7 +1,7 @@
 id: youth-offending
 label: Youth offending and probation
 version: 1
-status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not co-PI reviewed)'
+status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not yet reviewed by practitioners)'
 legal_anchors:
 - PDPC Advisory Guidelines for the Social Service Sector §9.4 with the Personal Data Protection (Notification of
   Data Breaches) Regulations 2021 (full name + youth-offender status deemed significant harm; 3-day notification)
@@ -27,22 +27,38 @@ outbound:
     generalise_to: region
   never_leak:
   - label: full name together with offence, charge or diversion status
+    enforced_by: [NAME, ATTR:offence]
   - label: Youth Court case reference
+    enforced_by: [CASE_REF]
   - label: juvenile rehabilitation centre or place-of-detention name
+    enforced_by: [FACILITY]
   - label: school name
+    enforced_by: [SCHOOL]
   - label: co-accused names
+    enforced_by: [NAME]
+  - label: medication name or dose
+    pattern: '(?P<span>(?:\b(?!(?:about|around|approximately|approx|total|only|and|with|takes?|taking|daily|of|at|than|over|under|up|to|dose|doses|dosage|increased|reduced|from)\b)[A-Za-z][A-Za-z-]{3,}(?:\s+(?:XR|XL|SR|CR|ER|CD|LA))?\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b|\b(?:risperidone|paliperidone|olanzapine|quetiapine|aripiprazole|clozapine|haloperidol|lithium|(?:sodium\s+)?valproate|lamotrigine|carbamazepine|levetiracetam|phenytoin|sertraline|fluoxetine|escitalopram|citalopram|paroxetine|fluvoxamine|venlafaxine|duloxetine|mirtazapine|bupropion|methylphenidate|ritalin|concerta|atomoxetine|diazepam|lorazepam|clonazepam|alprazolam|zolpidem|methadone|buprenorphine|suboxone|naltrexone|donepezil|memantine|insulin|metformin)\b(?:\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b)?|(?<=\bprescribed )(?-i:[A-Z][a-z]{3,})(?:\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b)?)(?:\s+(?:(?:once|twice|three times)\s+(?:a\s+)?(?:day|daily)|daily|nightly|at night|at bedtime|every (?:morning|night|evening)|in the (?:morning|evening)|nocte|mane|as needed|(?-i:OD|ON|BD|TDS|PRN)\\b))?)'
+    withhold_as: '[medication withheld]'
+  - label: name of a prescriber or treating clinician
+    enforced_by: [NAME]
+  - label: named gang, group or crew affiliation
+    pattern: '\b(?:gangs?|groups?|crews?|cliques?|secret societ(?:y|ies)|triads?|syndicates?|factions?)\s+(?:called|named|known as|calling (?:itself|themselves))\s+(?P<span>(?:the\s+)?[''"\u2018\u201c]?(?-i:[A-Z0-9][\w''\u2019-]*)(?:\s+(?-i:[A-Z0-9][\w''\u2019-]*)){0,3}[''"\u2019\u201d]?)|(?:\bthe\s+)?(?!(?-i:(?:A|An|The|His|Her|This|That|Their|Our|One|No|Any)\b))[''"\u2018\u201c]?(?-i:[A-Z0-9][\w''\u2019-]*)(?:\s+(?-i:[A-Z0-9][\w''\u2019-]*)){0,3}[''"\u2019\u201d]?\s+(?:gang|crew|clique|secret society|triad|syndicate)\b'
+    withhold_as: '[affiliation withheld]'
+    remember: true
   - label: assessment or risk scores
     pattern: '\b(?:WAIS(?:-IV)?|WISC(?:-V)?|IQ|MMSE|MoCA|GAF|Vineland|ABAS|full[- ]scale(?: IQ)?|functional assessment)\b[^.;\n]{0,40}?\b\d{1,3}\b'
     withhold_as: '[withheld: assessment score]'
-  - label: financial-assistance amounts
-    pattern: '(?:(?:ComCare|assistance|allowance|subsidy|grant|bursary|maintenance|SMTA|LTA|MediFund|payout|benefit|income)\b[^.;\n]{0,40}?\$\s?\d[\d,]*(?:\.\d{2})?(?:\s*(?:per|/|a)\s*(?:month|mth|week|wk|day|year))?|\$\s?\d[\d,]*(?:\.\d{2})?\s*(?:per|/|a)\s*(?:month|mth|week|wk)\b[^.;\n]{0,40}?\b(?:ComCare|assistance|allowance|subsidy|grant|maintenance|SMTA|LTA))'
+  - label: 'financial amounts: assistance, income, arrears, CPF and Medisave balances'
+    pattern: '(?:(?P<kw>\b(?:ComCare|SMTA|LTA|MediFund|Medisave|MediSave|MediShield(?:\s+Life)?|CPF(?:\s+(?:Ordinary|Special|MediSave|Medisave|Retirement))?|Silver\s+Support|ElderShield|CareShield(?:\s+Life)?|assistance|allowance|subsid(?:y|ies)|grants?|bursar(?:y|ies)|maintenance|payouts?|benefits?|income|salary|wages?|earn(?:s|ed|ing|ings)?|arrears|rent(?:al)?|debts?|loans?|owe[sd]?|owing|bills?|fees?|savings|balance)\b)(?:(?!\b(?:and|but|while|whereas)\b)[^.;,\n]){0,50}?(?:,\s*)?)?(?P<span>(?:S\$|SGD\s?|\$)\s?\d[\d,]*(?:\.\d{1,2})?(?:\s*(?:per|/|a|an|each|every)\s*(?:month|mth|week|wk|day|year|yr|quarter))?)(?(kw)|(?=(?:(?!\b(?:and|but|while|whereas)\b)[^.;,\n]){0,40}?\b(?:ComCare|SMTA|LTA|MediFund|Medisave|MediSave|MediShield(?:\s+Life)?|CPF(?:\s+(?:Ordinary|Special|MediSave|Medisave|Retirement))?|Silver\s+Support|ElderShield|CareShield(?:\s+Life)?|assistance|allowance|subsid(?:y|ies)|grants?|bursar(?:y|ies)|maintenance|payouts?|benefits?|income|salary|wages?|earn(?:s|ed|ing|ings)?|arrears|rent(?:al)?|debts?|loans?|owe[sd]?|owing|bills?|fees?|savings|balance)\b))'
     withhold_as: '[withheld: amount]'
 inbound:
   categories:
   - id: I14
     default_action: escalate
     note: identifies a protected young person alongside the offence in a document for an external audience or onward
-      sharing; an internal summary for the officer's own file is not I14
+      sharing. Initials identify the young person when a school, an age or an offence sits beside them, because a
+      school or an employer can tell who is meant, so a letter that uses initials in place of the name is still I14.
+      An internal summary for the officer's own file is not I14
   - id: I8
     default_action: annotate
     note: recidivism-risk scoring or prediction stated as a finding
@@ -66,7 +82,11 @@ inbound:
     default_action: annotate
   - id: I2
     default_action: annotate
-    note: disrespectful or patronising language about the client
+    note: disrespectful or patronising language about the client. Labelling the young person by the offence ("the
+      offender", "the delinquent", "the accused", "the culprit" in place of the name or "the young person") is I2
+      whoever asked for the term and whatever the audience, but not a charge sheet or court document quoted as such.
+      A charge sheet quoted verbatim for the record keeps its own wording ("The offender did commit ..."), and a
+      quotation is never I2. Do not ask for the quoted words to be changed
   - id: I5
     default_action: annotate
     note: plan written over the client's stated wishes
@@ -87,7 +107,7 @@ inbound:
   - id: YO-2
     name: adultification bias
     grounded: false
-    note: describes a minor with adult-culpability framing; for co-PI review
+    note: describes a minor with adult-culpability framing and is flagged for practitioner review
   - id: YO-3
     name: welfare/justice dual mandate collapsed into a punitive frame
     grounded: false

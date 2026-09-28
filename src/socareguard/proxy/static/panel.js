@@ -4,19 +4,25 @@
   const TYPE_LABEL = {DIRECT: "direct identifier", QUASI: "quasi-identifier", ATTRIBUTE: "sensitive attribute", KEPT: "kept as typed (no rule in this pack)", evidence: "flagged text"};
   const DECISIONS = {
     pass: "PASS: no conduct flag. The draft in column 4 is ready to use.",
-    annotate: "ANNOTATE: use the draft, but read the flag first; apply the rewrite or record a reason to keep it.",
-    regenerate: "REGENERATE: the draft should be redrafted; regenerate it, or record a reason per flag to keep it.",
-    escalate: "ESCALATE: withheld from this screen and routed to supervisory review; it cannot be overridden here.",
+    annotate: "ANNOTATE: use the draft, but read the flag first. Apply the rewrite or record a reason to keep it.",
+    regenerate: "REGENERATE: the draft should be redrafted. Regenerate it, or record a reason per flag to keep it.",
+    escalate: "ESCALATE: withheld from this screen and routed to supervisory review. It cannot be overridden here.",
   };
+  const FLAG_LEGEND = "Clause codes refer to the SASW Code or to the statute named on the card. DV-n and similar codes are pack rules. Precision is measured on synthetic drafts (v1.2). Confidence is the judge's own estimate. Wording that the note itself uses may be echoed without a flag.";
+  const BASELINE_CAPTION = "generic harm classifier, shown for contrast";
   let current = null;      // the run shown in the columns
   let runs = {};           // {internal, external} for the audience gate
   let loadedScenario = null;
   let compareWith = null;  // internal-audience instruction for the audience-gate chip
 
   // ---------- scenario chips ----------
+  // The pack hint says where the selector's value came from, so a pack set by a scenario never
+  // carries over to the practitioner's own note without a visible line saying so.
+  function packHint(text) { const h = $("pack-hint"); if (h) h.textContent = text; }
   function clearScenario() {
     document.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
     $("scenario-summary").hidden = true;
+    if (loadedScenario) packHint(`Kept from the scenario: ${$("pack").value}. Check that it fits your note.`);
     loadedScenario = null; compareWith = null;
     $("replay-row").hidden = true; $("replay").checked = false;
   }
@@ -25,6 +31,7 @@
     if (!s) return;
     document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === b));
     $("pack").value = s.pack; $("instruction").value = s.instruction; $("note").value = s.note;
+    packHint(`Set by the scenario: ${s.pack}.`);
     loadedScenario = s;
     compareWith = s.compare_instruction || null;
     const sum = $("scenario-summary");
@@ -47,7 +54,7 @@
     const el = $("snippet-pack"); if (el) el.textContent = $("pack").value;
     const a = $("snippet-actor"); if (a) a.textContent = $("actor").value.trim() || "sw-042";
   }
-  $("pack").addEventListener("change", syncSnippet); $("actor").addEventListener("input", syncSnippet); syncSnippet();
+  $("pack").addEventListener("change", () => { syncSnippet(); packHint(`Chosen by you: ${$("pack").value}.`); }); $("actor").addEventListener("input", syncSnippet); syncSnippet();
 
   // ---------- highlighting ----------
   function highlight(text, spans, cls) {
@@ -70,21 +77,33 @@
     }
     return hits;
   }
-  // A judge quote may be elided ("... "), joined with ";" or truncated; each piece is matched on
-  // its own, and a piece that still misses is matched on its first forty characters.
-  function pieces(evidence) {
-    return String(evidence || "").split(/\s*(?:\.\.\.|…|;\s+")\s*/).map((p) => p.replace(/^["“”']+|["“”']+$/g, "").trim()).filter((p) => p.length >= 12);
+  // A judge quote may be elided ("... "), joined with ";" or truncated. Each piece is matched on
+  // its own. When none matches, the first sentence is matched loosely, and then each piece on its
+  // first forty characters.
+  const pieces = window.SoCareGuardRewrite.pieces;  // static/rewrite.js
+  // When no piece matches exactly, the first sentence of the evidence is matched with any run of
+  // spaces, line breaks or markdown marks between its words, ignoring case.
+  function firstSentence(evidence) {
+    const s = String(evidence || "").replace(/^\s*["“”']+/, "").split(/\s*(?:\.\.\.|…)\s*/)[0];
+    const m = s.match(/^.*?[.!?:](?=\s|$)/);
+    return (m ? m[0] : s).replace(/["“”']+$/, "").replace(/[.!?:]+$/, "").trim();
+  }
+  function looseFind(text, phrase) {
+    const words = phrase.split(/\s+/).filter(Boolean).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    if (words.length < 3) return [];
+    const m = new RegExp(words.join("[\\s*_#>]+"), "i").exec(text);
+    return m ? [[m.index, m.index + m[0].length]] : [];
   }
   function markAll(text, needles, cls) {
     const spans = [];
     for (const n of needles) {
       if (!n.text || n.text.length < 2) continue;
       const cands = n.fuzzy ? pieces(n.text) : [n.text];
-      for (const c of cands) {
-        let hits = findAll(text, c, !n.fuzzy);
-        if (!hits.length && n.fuzzy && c.length > 40) hits = findAll(text, c.slice(0, 40));
-        for (const [s, e] of hits) spans.push({start: s, end: e, label: n.label, title: n.title});
-      }
+      let hits = [];
+      for (const c of cands) hits = hits.concat(findAll(text, c, !n.fuzzy));
+      if (!hits.length && n.fuzzy) hits = looseFind(text, firstSentence(n.text));
+      if (!hits.length && n.fuzzy) for (const c of cands) if (c.length > 40) hits = hits.concat(findAll(text, c.slice(0, 40)));
+      for (const [s, e] of hits) spans.push({start: s, end: e, label: n.label, title: n.title});
     }
     spans.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
     return highlight(text, spans, cls);
@@ -98,6 +117,21 @@
     return `${TYPE_LABEL[r.type] || r.type} (${r.category.replace("ATTR:", "").toLowerCase()}): ${what}${r.rule ? " by rule " + r.rule : ""}`;
   }
   const cls = (r) => (r.kind === "kept" ? "KEPT" : r.type);
+  const utc = (ts) => new Date(ts * 1000).toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  // The ledger marks a staff id as attested only when the request carried a configured key.
+  function actorLabel(actor, attested) {
+    const base = String(actor || "unattributed").replace(/\s*\(self-asserted[^)]*\)\s*$/, "");
+    const att = attested != null ? !!attested : !/\(self-asserted/.test(actor || "");
+    return `${base} ${att ? "(attested)" : "(self-asserted)"}`;
+  }
+  function unrestoredWords(leak) {
+    const all = [].concat(leak.unrestored || [], leak.partial || []);
+    return all.filter((w, k) => w && all.indexOf(w) === k).sort((a, b) => b.length - a.length);
+  }
+  function precisionText(label) {
+    const p = ((window.PRECISION || {}).categories || {})[label];
+    return p ? `measured precision on synthetic drafts ${p.precision.toFixed(2)} (${window.PRECISION.version})` : "";
+  }
 
   // ---------- requests ----------
   function authHeaders(extra) {
@@ -150,13 +184,13 @@
       renderCompare();
       res.hidden = false; res.removeAttribute("aria-busy");
       scrollAffordance();
-      $("status").textContent = `Done in ${ext.sg.latency_s} s${ext.sg.replayed ? " (recorded model reply replayed; the guard ran live)" : ""}. Session ${ext.sg.session}.`;
+      $("status").textContent = `Done in ${ext.sg.latency_s} s${ext.sg.replayed ? " (recorded model reply replayed, and the guard ran live)" : ""}. Session ${ext.sg.session}.`;
       res.scrollIntoView({behavior: "smooth", block: "start"});
     } catch (e) {
       $("status").textContent = "";
       const err = $("error");
       err.hidden = false;
-      err.innerHTML = `<strong>The request did not complete.</strong> ${esc(e.message)}<br><span class="muted">Nothing was drafted. Adjust the note or try again; the previous result has been cleared.</span>`;
+      err.innerHTML = `<strong>The request did not complete.</strong> ${esc(e.message)}<br><span class="muted">Nothing was drafted. Adjust the note or try again. The previous result has been cleared.</span>`;
     } finally { $("send").disabled = false; }
   }
 
@@ -173,66 +207,84 @@
     const gen = sg.events.find((e) => e.kind === "generalise");
     const screen = sg.events.find((e) => e.kind === "screen") || {};
     const shown = panel.replacements.filter((r) => r.kind !== "derived");
+    // Surrogates left whole or in part: one list for column 4, the legend, the privacy segment
+    // and the UNRESTORED card, so the counts agree.
+    const unrestored = unrestoredWords(leak);
 
     $("col-typed").innerHTML = (run.regenerated ? `<em class="muted">Instruction revised by the panel for the regeneration:</em>\n` : "") + markAll(typed, shown.map((r) => ({text: r.original, label: cls(r), title: ruleTitle(r)})));
     $("col-out").innerHTML = markAll(send.outbound_text || "", shown.map((r) => ({text: r.outbound, label: cls(r), title: ruleTitle(r)})));
     const evidRaw = sg.flags.map((f) => ({text: unrestore(f.evidence, panel), label: "evidence", title: f.name || f.label, fuzzy: true}));
     $("col-back").innerHTML = sg.withheld ? `<span class="withheld">${esc(recv.text || "")}</span>` : markAll(recv.text || "", evidRaw, "evidence");
-    // column 4: flagged text, generalised phrases that cannot come back, unrestored fragments
+    // column 4: flagged text, generalised phrases that cannot come back or came back, unrestored fragments
     const seenMarks = sg.flags.map((f) => ({text: f.evidence, label: "evidence", title: f.name || f.label, fuzzy: true}));
-    shown.filter((r) => r.kind === "generalised" && r.outbound && r.outbound.length > 3).forEach((r) => seenMarks.push({text: r.outbound, label: cls(r), title: `generalised on the way out and not restorable; the record says: ${r.original}`}));
-    (leak.unrestored || []).forEach((u) => seenMarks.push({text: u, label: "unrestored", title: "a surrogate fragment the model reformatted; check against the record before use"}));
+    shown.filter((r) => r.kind === "generalised" && r.outbound && r.outbound.length > 3).forEach((r) => seenMarks.push({text: r.outbound, label: cls(r), title: `generalised on the way out and not restorable. The record says: ${r.original}`}));
+    // A generalised phrase (a never-leak placeholder included) that the model repeated exactly is
+    // restored to the record's wording, and is marked so that it does not read as the model's own.
+    shown.filter((r) => r.kind === "generalised" && r.outbound && (recv.text || "").includes(r.outbound) && r.original)
+      .forEach((r) => seenMarks.push({text: r.original, label: `${cls(r)} restored`, title: /\.never_leak$/.test(r.rule || "") ? "withheld outbound, restored here" : "generalised outbound, restored here"}));
+    unrestored.forEach((u) => seenMarks.push({text: u, label: "unrestored", title: "a surrogate fragment that the model reformatted. Check it against the record before use."}));
     (run.applied || []).forEach((t) => seenMarks.push({text: t, label: "rewrite", title: "applied rewrite"}));
     $("col-seen").innerHTML = sg.withheld
       ? `<span class="withheld">${esc(data.choices[0].message.content)}</span>`
       : markAll(data.choices[0].message.content, seenMarks);
     scrollAffordance();
 
+    const restoredN = sg.withheld ? 0 : $("col-seen").querySelectorAll("mark.restored").length;
+    const located = new Set(Array.from($("col-seen").querySelectorAll("mark.evidence")).map((m) => m.title)).size;
     const counts = {DIRECT: 0, QUASI: 0, ATTRIBUTE: 0, KEPT: 0};
     shown.forEach((r) => { counts[cls(r)] = (counts[cls(r)] || 0) + 1; });
     $("legend").innerHTML = ["DIRECT", "QUASI", "ATTRIBUTE"].map((t) => `<span class="key"><mark class="${t}">&nbsp;&nbsp;&nbsp;</mark> ${TYPE_LABEL[t]}: ${counts[t] || 0}</span>`).join("") +
       (counts.KEPT ? `<span class="key"><mark class="KEPT">&nbsp;&nbsp;&nbsp;</mark> ${TYPE_LABEL.KEPT}: ${counts.KEPT}</span>` : "") +
       (sg.withheld ? `<span class="key"><mark class="evidence">text</mark> flagged text: withheld with the draft</span>` :
-        `<span class="key"><mark class="evidence">text</mark> flagged text: ${$("col-seen").querySelectorAll("mark.evidence").length} of ${sg.flags.length} flag${sg.flags.length === 1 ? "" : "s"} located${(run.applied || []).length ? `, ${run.applied.length} rewritten` : ""}</span>`) +
-      ((leak.unrestored || []).length ? `<span class="key"><mark class="unrestored">text</mark> unrestored fragment: ${leak.unrestored.length}</span>` : "");
+        `<span class="key"><mark class="evidence">text</mark> flagged text: ${located} of ${sg.flags.length} flag${sg.flags.length === 1 ? "" : "s"} located${located < sg.flags.length ? " (the flag card below quotes the full text)" : ""}${(run.applied || []).length ? `, ${run.applied.length} rewritten` : ""}</span>`) +
+      (restoredN ? `<span class="key" id="legend-restored"><mark class="restored">text</mark> restored from the record: ${restoredN}</span>` : "") +
+      (unrestored.length ? `<span class="key" id="legend-unrestored"><mark class="unrestored">text</mark> unrestored surrogate: ${unrestored.length}</span>` : "");
 
     const d = $("decision"); d.className = "decision " + sg.decision;
     const privacyOk = !!leak.passed;
     const invented = leak.n_invented || 0;
     const baseline = screen.baseline_flags && screen.baseline_flags.length ? screen.baseline_flags.join(", ") : "none";
     const baselineName = screen.baseline_model ? "OpenAI moderation" : "harm classifier (not run)";
-    const unrestoredTip = (leak.unrestored || []).length ? ` title="unrestored: ${esc(leak.unrestored.join(", "))}"` : "";
+    const unrestoredTip = unrestored.length ? ` title="unrestored: ${esc(unrestored.join(", "))}"` : "";
     const overridden = Object.keys(run.overrides).length;
     d.innerHTML = [
       `<span class="seg head">Decision: ${esc(sg.decision.toUpperCase())}${sg.withheld ? " · draft withheld" : ""}${overridden ? ` · ${overridden} flag${overridden === 1 ? "" : "s"} overridden by ${esc(sg.actor)}` : ""}</span>`,
+      `<span class="seg${sg.pack_defaulted ? " warn" : ""}" id="pack-seg"${sg.pack_defaulted ? ' title="No pack was named on the request, so the deployment default ran."' : ""}>pack: ${esc(sg.pack)}${sg.pack_defaulted ? " (default)" : ""}</span>`,
       `<span class="seg">${sub.n_spans || 0} identifiers substituted · ${gen ? gen.rules.length : 0} generalised${sub.n_kept ? ` · ${sub.n_kept} kept as typed` : ""}</span>`,
-      `<span class="seg ${privacyOk ? "ok" : "bad"}"${unrestoredTip}>${privacyOk ? "nothing original came back, every surrogate restored" : `privacy check: ${leak.n_echoed || 0} original echoed, ${leak.n_unrestored || 0} surrogate fragment${leak.n_unrestored === 1 ? "" : "s"} unrestored (marked in column 4)`}</span>`,
+      `<span class="seg ${privacyOk ? "ok" : "bad"}"${unrestoredTip}>${privacyOk ? "nothing original came back, every surrogate restored" : `privacy check: ${leak.n_echoed || 0} original echoed, ${unrestored.length} surrogate${unrestored.length === 1 ? "" : "s"} unrestored (marked in column 4)`}</span>`,
       invented ? `<span class="seg warn">${invented} identifier${invented === 1 ? "" : "s"} invented by the model (I13)</span>` : "",
       (reid.ambiguous_generalised || []).length ? `<span class="seg muted" title="${esc(reid.ambiguous_generalised.join(" | "))}">${reid.ambiguous_generalised.length} generalised phrase${reid.ambiguous_generalised.length === 1 ? "" : "s"} left as is (shared by two originals)</span>` : "",
-      `<span class="seg ${sg.flags.length ? "warn" : "ok"}" title="Disclosure categories apply to an external audience. Auto reads the audience from your instruction; the selector above overrides it.">conduct screen: ${sg.flags.length} flag${sg.flags.length === 1 ? "" : "s"}${screen.audience ? ` (${screen.audience} audience${$("audience").value === "auto" ? ", read from the instruction" : ""})` : ""}</span>`,
-      `<span class="seg muted" title="What a generic safety filter says about the same reply, for contrast">${esc(baselineName)}: ${esc(baseline)}</span>`,
+      `<span class="seg ${sg.flags.length ? "warn" : "ok"}" title="Disclosure categories apply to an external audience. Auto reads the audience from your instruction. The selector above overrides it.">conduct screen: ${sg.flags.length} flag${sg.flags.length === 1 ? "" : "s"}${screen.audience ? ` (${screen.audience} audience${$("audience").value === "auto" ? ", read from the instruction" : ""})` : ""}</span>`,
+      `<span class="seg muted" id="baseline-seg">${esc(baselineName)}: ${esc(baseline)} <span class="segcap">(${BASELINE_CAPTION})</span></span>`,
+      `<span class="seg muted">actor: ${esc(actorLabel(sg.ledger_row.actor, sg.ledger_row.actor_attested))}</span>`,
     ].filter(Boolean).join("");
+    $("ledgersum").textContent = `Ledger: actor: ${actorLabel(sg.ledger_row.actor, sg.ledger_row.actor_attested)} · transfer basis: ${sg.ledger_row.transfer_basis || "not recorded"}`;
     $("glossary").textContent = DECISIONS[sg.decision] || "";
 
     // flag cards, each with its own override
-    $("flags").innerHTML = sg.flags.map((f, i) => {
+    $("flags").innerHTML = (sg.flags.length ? `<p class="flaglegend" id="flag-legend">${esc(FLAG_LEGEND)}</p>` : "") + sg.flags.map((f, i) => {
       const name = f.name || (window.TAXONOMY[f.label] || {}).name || f.label;
       const canOverride = f.severity !== "escalate";
       const ov = run.overrides[f.label];
+      // An unrestored surrogate is an invented name or place in the draft: shown at Major
+      // severity, with every unrestored string listed.
+      const isUnrestored = f.label === "UNRESTORED";
       return `
-      <div class="flag ${f.severity}" data-flag="${esc(f.label)}">
+      <div class="flag ${f.severity}${isUnrestored ? " major" : ""}" data-flag="${esc(f.label)}">
         <div class="flaghead">
           <h3>${esc(name)}</h3>
-          <span class="pill ${f.severity}">${esc(f.severity)}</span>
+          <span class="pill ${isUnrestored ? "major" : f.severity}">${isUnrestored ? "major: replace before use" : esc(f.severity)}</span>
           <span class="badge" title="taxonomy category">${esc(f.label)}</span>
           <span class="clause" title="${esc((window.TAXONOMY[f.label] || {}).clause_text || "")}">${/^[A-D]\.\d/.test(f.clause) ? "SASW Code clause " + esc(f.clause) : esc(f.clause)}</span>
-          ${f.confidence != null ? `<span class="clause">judge confidence ${Math.round(f.confidence * 100)}%</span>` : ""}
+          <span class="clause" title="The judge's own confidence is the model's score for this flag. Measured precision is the share of this category's flags that matched the label on 600 labelled synthetic drafts (results-v1.2, docs/metrics.md).">${esc([f.confidence != null ? `judge's own confidence ${f.confidence.toFixed(2)}` : "", precisionText(f.label)].filter(Boolean).join("; "))}</span>
+          <span class="draftnote">Draft taxonomy, not yet practitioner-reviewed</span>
         </div>
         ${f.reason ? `<p class="why">${esc(f.reason)}</p>` : ""}
+        ${isUnrestored && unrestored.length ? `<div class="unrestored-list"><span class="cap">Unrestored in column 4 (${unrestored.length})</span><ul>${unrestored.map((u) => `<li><mark class="unrestored">${esc(u)}</mark></li>`).join("")}</ul>Replace each from the case record before using the draft.</div>` : ""}
         <div class="evidence"><span class="cap">Flagged text</span>${esc(f.evidence)}</div>
-        ${f.rewrite ? `<div class="rewrite"><span class="cap">Suggested rewrite</span>${esc(f.rewrite)}<div class="rowbtn"><button type="button" class="secondary small accept" data-i="${i}">Use this rewrite</button><span class="status" id="accept-${i}"></span></div></div>` : ""}
+        ${f.rewrite ? `<div class="rewrite"><span class="cap">Suggested rewrite</span>${esc(f.rewrite)}<div class="rowbtn"><button type="button" class="secondary small accept" data-i="${i}">Use this rewrite (your decision, recorded)</button><span class="status" id="accept-${i}"></span></div><div class="manual-rewrite" id="manual-${i}" hidden></div></div>` : ""}
         ${canOverride && !sg.withheld ? `<form class="flag-override" data-i="${i}" ${ov ? "hidden" : ""}>
-          <label>Keep the draft despite this flag. Your reason is written to the ledger beside it, as typed and on this server only; do not put client details in it.
+          <label>Keep the draft despite this flag. Your reason is written to the ledger beside it, as typed and on this server only. Do not put client details in it.
             <textarea rows="2" required placeholder="Reason for keeping it"></textarea></label>
           <button type="submit" class="secondary small">Record reason and keep</button>
         </form>` : ""}
@@ -244,8 +296,13 @@
     const note = $("escalate-note");
     if (sg.withheld || sg.decision === "escalate") {
       note.hidden = false;
-      note.innerHTML = `<strong>Escalated to supervisory review.</strong> ${sg.withheld ? "The draft is withheld from this screen and retained on this server for a supervisor to release." : "This flag cannot be overridden by the practitioner."} The escalation is in the ledger row below.`;
-      $("release").hidden = !sg.withheld; $("released").hidden = true; $("release-status").textContent = "";
+      note.innerHTML = `<strong>Escalated to supervisory review.</strong> ${sg.withheld ? "The draft is withheld from this screen and retained on this server for a supervisor to release." : "This flag cannot be overridden by the practitioner."} The escalation is in the ledger row below.` +
+        `<div class="sessionid"><span>Session id</span><code id="esc-session">${esc(sg.session)}</code><button type="button" class="secondary small" id="copy-session">Copy</button><span id="copy-status" class="status" role="status"></span><span>Give this session id to your supervisor.</span></div>`;
+      $("copy-session").addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(sg.session); $("copy-status").textContent = "Copied."; }
+        catch (e) { const r = document.createRange(); r.selectNodeContents($("esc-session")); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); $("copy-status").textContent = "Selected; press Ctrl+C."; }
+      });
+      $("release").hidden = !sg.withheld; $("released").hidden = true; $("release-status").textContent = ""; $("release-prior").hidden = true;
     } else { note.hidden = true; $("release").hidden = true; }
     const regen = $("regenerate");
     regen.hidden = !(sg.decision === "regenerate" || sg.decision === "annotate") || sg.withheld;
@@ -291,14 +348,14 @@
     renderLedger(rows.concat(current.extraRows || []));
   }
 
-  const LEDGER_KEYS = [["ts", "Time"], ["decision", "Decision"], ["actor", "Actor"], ["actor_attested", "Actor attested"], ["pack", "Policy pack"], ["recipients", "Recipients of the pseudonymised text"], ["transfer_basis", "Transfer basis"], ["replayed_reply", "Recorded reply replayed"], ["payload_sha256", "Payload hash"], ["n_identifiers_substituted", "Identifiers substituted"], ["n_generalised", "Generalised"], ["leakcheck_passed", "Privacy check passed"], ["n_invented", "Invented by the model"], ["flags", "Flags"], ["withheld", "Draft withheld"], ["override_reason", "Reason"], ["request_row_sha256", "Refers to request row"], ["prev_sha256", "Previous row hash"], ["row_sha256", "This row hash"]];
+  const LEDGER_KEYS = [["ts", "Time"], ["decision", "Decision"], ["actor", "Actor"], ["actor_attested", "Actor attested"], ["pack", "Policy pack"], ["recipients", "Recipients of the pseudonymised text"], ["transfer_basis", "Transfer basis"], ["replayed_reply", "Recorded reply replayed"], ["payload_sha256", "Payload hash"], ["n_identifiers_substituted", "Identifiers substituted"], ["n_generalised", "Generalised"], ["leakcheck_passed", "Privacy check passed"], ["n_invented", "Invented by the model"], ["flags", "Flags"], ["withheld", "Draft withheld"], ["override_reason", "Reason"], ["request_row_sha256", "Refers to request row"], ["prior_release_row_sha256", "Earlier release rows"], ["seq", "Row number"], ["prev_sha256", "Previous row hash"], ["row_sha256", "This row hash"]];
   const short = (h) => (typeof h === "string" && /^[0-9a-f]{64}$/.test(h)) ? `<span title="${h}">${h.slice(0, 16)}…</span>` : esc(h);
   function renderLedger(items) {
-    $("ledger").innerHTML = items.filter((x) => x && x.row).map(({label, row}) => `<div class="rowlabel">${esc(label)}</div><table class="row"><tbody>` + LEDGER_KEYS.filter(([k]) => row[k] !== undefined && row[k] !== null).map(([k, lab]) => {
+    $("ledger").innerHTML = items.filter((x) => x && x.row).map(({label, row}) => `<div class="rowlabel">${esc(label)}${row.actor ? ` · actor: ${esc(actorLabel(row.actor, row.actor_attested))}` : ""}</div><table class="row"><tbody>` + LEDGER_KEYS.filter(([k]) => row[k] !== undefined && row[k] !== null).map(([k, lab]) => {
       let v = row[k];
-      if (k === "ts") v = esc(new Date(v * 1000).toISOString().replace("T", " ").slice(0, 19) + " UTC");
+      if (k === "ts") v = esc(utc(v));
       else if (k === "recipients") v = esc(v.map((x) => `${x.role}: ${x.model}`).join(" · "));
-      else if (Array.isArray(v)) v = esc(v.join(", "));
+      else if (Array.isArray(v)) v = v.every((x) => typeof x === "string" && /^[0-9a-f]{64}$/.test(x)) ? v.map(short).join(", ") : esc(v.join(", "));
       else if (typeof v === "boolean") v = v ? "yes" : "no";
       else v = short(v);
       return `<tr><th>${esc(lab)}</th><td>${v}</td></tr>`; }).join("") + `</tbody></table>`).join("");
@@ -352,24 +409,25 @@
     const f = current.sg.flags[i];
     if (!f || !f.rewrite) return;
     const seenPre = $("col-seen");
-    let plain = seenPre.textContent;
-    const whole = f.rewrite.length > 0.6 * plain.length || /^\s*(subject|dear)\b/i.test(f.rewrite);
-    const found = whole ? [plain] : (plain.includes(f.evidence) ? [f.evidence] : pieces(f.evidence).filter((p) => plain.includes(p)));
-    if (!found.length) { $(`accept-${i}`).textContent = "The flagged text is not verbatim in column 4, so nothing was changed or recorded; paste the rewrite yourself."; return; }
-    if (whole) plain = f.rewrite;  // the judge rewrote the whole draft, so it replaces the whole draft
-    else {
-      // the first located fragment becomes the rewrite; every other located fragment is removed
-      found.forEach((frag, k) => { plain = plain.split(frag).join(k === 0 ? f.rewrite : ""); });
-      plain = plain.replace(/[ \t]{2,}/g, " ").replace(/\s+([.,;])/g, "$1");
+    const out = window.SoCareGuardRewrite.applyRewrite(seenPre.textContent, f.evidence, f.rewrite);
+    if (out.status === "not_found") {
+      // Nothing is appended: the practitioner places the rewrite by hand.
+      const box = $(`manual-${i}`);
+      box.hidden = false;
+      box.innerHTML = `<span class="cap">Place this rewrite yourself</span><pre>${esc(f.rewrite)}</pre>`;
+      $(`accept-${i}`).textContent = "The flagged text is not verbatim in column 4, so nothing was changed or recorded. Copy the rewrite below into the draft where it belongs.";
+      return;
     }
-    current.data.choices[0].message.content = plain;
-    current.applied = (current.applied || []).concat([f.rewrite]);
+    current.data.choices[0].message.content = out.text;
+    if (out.status === "whole" || out.inserted) current.applied = (current.applied || []).concat([out.status === "whole" ? f.rewrite : out.inserted]);
     render(current);
     const m = seenPre.querySelector("mark.rewrite");
     if (m) { seenPre.classList.add("expanded"); m.scrollIntoView({behavior: "smooth", block: "center"}); }
+    const n = out.dropped.length;
+    const left = n ? ` ${n} sentence${n === 1 ? "" : "s"} of the rewrite ${n === 1 ? "was" : "were"} left out because the draft already says ${n === 1 ? "it" : "them"}.` : "";
     try {
       const data = await ledgerWrite("rewrite_accepted", [f.label], "suggested rewrite applied in the panel");
-      $(`accept-${i}`).textContent = whole ? "The rewrite replaced the whole draft in column 4 and was recorded in the ledger." : "Applied in column 4 and recorded in the ledger.";
+      $(`accept-${i}`).textContent = (out.status === "whole" ? "The rewrite replaced the whole draft in column 4 and was recorded in the ledger." : "Applied in place in column 4 and recorded in the ledger.") + left;
       $(`flagstate-${i}`).textContent = "Rewrite applied.";
       addLedgerRow(`rewrite accepted for ${f.label}`, data.ledger_row);
     } catch (e) { $(`accept-${i}`).textContent = "Applied in column 4, but could not be recorded: " + e.message; }
@@ -379,7 +437,7 @@
     if (!current || !current.sg.withheld) return;
     const btn = ev.target.querySelector("button"); btn.disabled = true;
     try {
-      const h = authHeaders({"X-SoCareGuard-Role": "supervisor", "X-SoCareGuard-Actor": $("release-actor").value.trim()});
+      const h = authHeaders({"X-SoCareGuard-Role": "supervisor", "X-SoCareGuard-Actor": $("release-actor").value.trim(), "X-SoCareGuard-Session-Token": current.sg.session_token});
       const r = await fetch(`/v1/sessions/${current.sg.session}/withheld?reason=${encodeURIComponent($("release-reason").value)}`, {headers: h});
       const data = await r.json();
       if (!r.ok) throw new Error((data.error && data.error.message) || data.detail || r.statusText);
@@ -387,6 +445,9 @@
       $("released-text").innerHTML = markAll(data.reply, (data.flags || []).map((f) => ({text: f.evidence, label: "evidence", title: f.name || f.label, fuzzy: true})), "evidence");
       $("released-text").classList.add("expanded");
       $("release-status").textContent = `Released and recorded (row ${data.ledger_row.row_sha256.slice(0, 12)}…).`;
+      const prior = data.prior_releases || [];
+      $("release-prior").hidden = !prior.length;
+      $("release-prior").textContent = prior.map((x) => { const a = actorLabel(x.actor); const i = a.lastIndexOf(" ("); return `Released earlier by ${a.slice(0, i)} (${x.ts ? utc(x.ts) : "time not recorded"}, ${a.slice(i + 2, -1)}).`; }).join(" ");
       current.released = {by: data.ledger_row.actor, flags: data.flags || []};
       const head = $("decision").querySelector(".seg.head");
       if (head) head.innerHTML += ` · released to ${esc(data.ledger_row.actor)}`;
@@ -397,7 +458,8 @@
         if (f.rewrite && !card.querySelector(".rewrite")) ev.insertAdjacentHTML("afterend", `<div class="rewrite"><span class="cap">Suggested rewrite (supervisor view)</span>${esc(f.rewrite)}</div>`);
       });
       addLedgerRow("supervisor release", data.ledger_row);
-    } catch (e) { $("release-status").textContent = "Refused: " + e.message; btn.disabled = false; }
+    } catch (e) { $("release-status").textContent = "Refused: " + e.message; }
+    finally { btn.disabled = false; }  // a supervisor may record a second release (a handoff or a correction)
   });
   $("regenerate").addEventListener("click", () => {
     if (!current) return;

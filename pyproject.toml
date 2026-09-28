@@ -42,8 +42,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kwanhui/public-soCareGuard-WSDM2027"
-Issues = "https://github.com/kwanhui/public-soCareGuard-WSDM2027/issues"
+Homepage = "https://github.com/kwanhui/public-SoCareGuard-WSDM2027"
+Issues = "https://github.com/kwanhui/public-SoCareGuard-WSDM2027/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

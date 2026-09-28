@@ -14,7 +14,7 @@ positive (no action). The audit checklist below is a fixed random sample for man
 | note | span | text | label | detector | score |
 |---|---|---|---|---|---|
 | disability-000 | 1791-1803 | MSF casework | case reference | gliner | 0.54 |
-| disability-001 | 915-923 | HDB flat | address | gliner | 0.63 |
+| disability-001 | 919-927 | HDB flat | address | gliner | 0.63 |
 | disability-002 | 1717-1738 | Family Service Centre | organization | gliner | 0.85 |
 | disability-002 | 1909-1951 | Medical Social Worker, Disability Services | organization | gliner | 0.66 |
 | disability-003 | 479-487 | Singlish | NRP | presidio | 0.85 |
@@ -22,8 +22,8 @@ positive (no action). The audit checklist below is a fixed random sample for man
 | disability-007 | 1611-1615 | D.C. | LOCATION | presidio | 0.85 |
 | disability-008 | 716-721 | Tamil | NRP | presidio | 0.85 |
 | disability-008 | 822-827 | Tamil | NRP | presidio | 0.85 |
-| disability-009 | 326-334 | HDB flat | address | gliner | 0.55 |
-| disability-009 | 1681-1688 | FSC/MSF | organization | gliner | 0.53 |
+| disability-009 | 327-335 | HDB flat | address | gliner | 0.55 |
+| disability-009 | 1683-1690 | FSC/MSF | organization | gliner | 0.53 |
 | disability-015 | 1739-1759 | Community Healthcare | organization | gliner | 0.74 |
 | disability-020 | 1764-1790 | SSO/Community Legal Clinic | organization | gliner | 0.87 |
 | disability-022 | 1708-1715 | MSF/SSO | organization | gliner | 0.51 |
@@ -40,12 +40,12 @@ positive (no action). The audit checklist below is a fixed random sample for man
 | disability-030 | 1555-1566 | MSF/ComCare | organization | gliner | 0.87 |
 | disability-031 | 1083-1089 | Ecomap | PERSON | presidio | 0.85 |
 | disability-040 | 187-190 | Son | PERSON | presidio | 0.85 |
-| disability-046 | 2103-2124 | MSF/Community Support | organization | gliner | 0.80 |
+| disability-046 | 2105-2126 | MSF/Community Support | organization | gliner | 0.80 |
 | disability-051 | 1885-1892 | FSC/MSF | organization | gliner | 0.83 |
 | disability-055 | 257-260 | DAC | school | gliner | 0.70 |
 | disability-055 | 1369-1372 | DAC | school | gliner | 0.62 |
 | disability-055 | 1523-1526 | DAC | school | gliner | 0.60 |
-| disability-056 | 1627-1634 | Liaised | PERSON | presidio | 0.85 |
+| disability-056 | 1628-1635 | Liaised | PERSON | presidio | 0.85 |
 | disability-059 | 420-426 | Speech | PERSON | presidio | 0.85 |
 | disability-062 | 1883-1894 | MSF/ComCare | organization | gliner | 0.57 |
 | disability-063 | 543-564 | Social Service Office | organization | gliner | 0.62 |
@@ -68,7 +68,7 @@ positive (no action). The audit checklist below is a fixed random sample for man
 | disability-097 | 171-190 | MOE transition team | organization | gliner | 0.85 |
 | disability-098 | 1609-1620 | MSF/ComCare | organization | gliner | 0.69 |
 | disability-099 | 1389-1405 | HDB Town Council | organization | gliner | 0.93 |
-| disability-099 | 1609-1620 | SSO/ComCare | organization | gliner | 0.78 |
+| disability-099 | 1634-1645 | SSO/ComCare | organization | gliner | 0.78 |
 | domestic-violence-011 | 818-824 | Jangan | PERSON | presidio | 0.85 |
 | domestic-violence-015 | 960-963 | Wah | PERSON | presidio | 0.85 |
 | domestic-violence-016 | 289-295 | Client | person | gliner | 0.67 |
@@ -111,14 +111,14 @@ positive (no action). The audit checklist below is a fixed random sample for man
 | youth-offending-011 | 1246-1251 | Malay | NRP | presidio | 0.85 |
 | youth-offending-014 | 1458-1469 | MSF/ComCare | organization | gliner | 0.52 |
 | youth-offending-021 | 1774-1780 | Mother | person | gliner | 0.56 |
-| youth-offending-022 | 727-735 | Singlish | NRP | presidio | 0.85 |
-| youth-offending-022 | 848-856 | Singlish | NRP | presidio | 0.85 |
+| youth-offending-022 | 730-738 | Singlish | NRP | presidio | 0.85 |
+| youth-offending-022 | 851-859 | Singlish | NRP | presidio | 0.85 |
 | youth-offending-024 | 1983-1990 | FSC/MSF | organization | gliner | 0.69 |
 | youth-offending-025 | 1429-1434 | Malay | NRP | presidio | 0.85 |
-| youth-offending-026 | 1016-1022 | Mother | person | gliner | 0.54 |
-| youth-offending-026 | 1820-1827 | MSF/SSO | organization | gliner | 0.70 |
-| youth-offending-027 | 462-468 | Mother | person | gliner | 0.87 |
-| youth-offending-027 | 668-674 | Mother | person | gliner | 0.83 |
+| youth-offending-026 | 1015-1021 | Mother | person | gliner | 0.54 |
+| youth-offending-026 | 1819-1826 | MSF/SSO | organization | gliner | 0.70 |
+| youth-offending-027 | 460-466 | Mother | person | gliner | 0.87 |
+| youth-offending-027 | 666-672 | Mother | person | gliner | 0.83 |
 | youth-offending-032 | 907-915 | Singlish | NRP | presidio | 0.85 |
 | youth-offending-039 | 1790-1796 | Liaise | PERSON | presidio | 0.85 |
 | youth-offending-043 | 629-655 | Saya takut kalau dia terus | PERSON | presidio | 0.85 |
@@ -128,10 +128,10 @@ positive (no action). The audit checklist below is a fixed random sample for man
 | youth-offending-069 | 668-671 | Wah | PERSON | presidio | 0.85 |
 | youth-offending-070 | 475-481 | Mother | person | gliner | 0.84 |
 | youth-offending-070 | 1201-1207 | Muslim | NRP | presidio | 0.85 |
-| youth-offending-071 | 1704-1711 | Liaised | PERSON | presidio | 0.85 |
+| youth-offending-071 | 1703-1710 | Liaised | PERSON | presidio | 0.85 |
 | youth-offending-083 | 1373-1378 | Malay | NRP | presidio | 0.85 |
 | youth-offending-083 | 1440-1445 | Malay | NRP | presidio | 0.85 |
-| youth-offending-088 | 1574-1595 | Family Service Centre | organization | gliner | 0.57 |
+| youth-offending-088 | 1575-1596 | Family Service Centre | organization | gliner | 0.57 |
 | youth-offending-094 | 1660-1666 | Liaise | PERSON | presidio | 0.85 |
 | youth-offending-099 | 1536-1542 | Liaise | PERSON | presidio | 0.85 |
 

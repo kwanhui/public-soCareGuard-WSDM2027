@@ -5,7 +5,8 @@ Three questions, answered before the practitioner sees anything:
    model guessed or the outbound step missed it. Either way it is logged.)
 2. After restoration, does the reply contain a direct identifier that is neither an original
    nor a surrogate from this session? (An invented identifier: conduct category I13.)
-3. Is any surrogate, or a distinctive fragment of one, left unrestored?
+3. Is any surrogate, or a distinctive fragment of one, left unrestored, or was a reformatted
+   surrogate left whole because only part of it could be restored?
 ``passed`` covers 1 and 3; 2 is reported as an I13 flag so that a model hallucination is never
 displayed as a privacy failure.
 """
@@ -27,6 +28,7 @@ class LeakResult:
     original_echoed: list[str] = field(default_factory=list)
     invented: list[DetectedSpan] = field(default_factory=list)
     unrestored: list[str] = field(default_factory=list)
+    partial: list[str] = field(default_factory=list)
 
     def event(self, seq: int) -> LeakCheck:
         leaks = list(self.invented) + [
@@ -41,6 +43,7 @@ class LeakResult:
             n_invented=len(self.invented),
             n_unrestored=len(self.unrestored),
             unrestored=list(self.unrestored),
+            partial=list(self.partial),
         )
 
 
@@ -70,6 +73,18 @@ def _norm(t: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", t)
 
 
+def _placeholder(text: str, start: int, end: int) -> bool:
+    """Whether a detected span sits inside a template slot the model wrote, such as "[School
+    Name]" or "[Name of Crisis Shelter]": a slot with no digits names no one. A bracketed
+    identifier with digits ("[S1234567D]") is still checked."""
+    left = text.rfind("[", 0, start + 1)
+    right = text.find("]", end - 1)
+    if left == -1 or right == -1 or "]" in text[left:start] or "[" in text[end:right]:
+        return False
+    slot = text[left + 1 : right]
+    return len(slot) <= 60 and "\n" not in slot and not re.search(r"\d", slot)
+
+
 def leak_check(
     raw_reply: str,
     restored: Restored,
@@ -96,6 +111,10 @@ def leak_check(
     invented = []
     for h in det.entities:
         norm = _norm(h.text)
+        if _placeholder(restored.text, h.start, h.end):
+            continue
+        if h.category == "URL" and not re.search(r"(?i)^(?:https?://)?[^/]+/[^/\s]", h.text):
+            continue  # a home page ("www.msf.gov.sg") names no one
         if (
             (h.category in DIRECT or h.category in _PLACES)
             and h.category != "NAME"
@@ -116,10 +135,11 @@ def leak_check(
             )
     # ``passed`` is the privacy claim: nothing original came back and every surrogate was
     # restored. An identifier the model invented is a conduct finding (I13), not a leak.
-    passed = not echoed and not restored.unrestored_surrogates
+    passed = not echoed and not restored.unrestored_surrogates and not restored.partial
     return LeakResult(
         passed=passed,
         original_echoed=echoed,
         invented=invented,
         unrestored=restored.unrestored_surrogates,
+        partial=list(restored.partial),
     )

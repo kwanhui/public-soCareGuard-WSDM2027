@@ -1,10 +1,14 @@
 """Span-level detection metrics against corpus gold spans.
 
 Reports exact and relaxed (overlap) precision, recall and F1 per category and overall,
-plus recall by name origin (the WSDM-relevance hook and a fairness finding), and
-leakage rate: the share of gold DIRECT spans not covered by any detection, which is the
-headline safety number. Conventions follow the de-identification literature (exact and
-partial match as in the i2b2 shared tasks); Cohen's kappa is never reported for spans.
+plus recall by name origin (the WSDM-relevance hook and a fairness finding), and two
+leakage rates over gold DIRECT spans. Matched leakage counts a gold span as missed when no
+detection of the same category (names counted together) overlaps it under one-to-one matching.
+It is the recall complement and the number reported for corpus v1. Covered leakage counts a
+gold span as leaked only when no detection of any direct-identifier category overlaps it, since
+any such detection is substituted before the text leaves. It approximates what reaches the
+provider unmasked, before the sanitiser's own decisions. Conventions follow the de-identification literature (exact and
+partial match as in the i2b2 shared tasks), and Cohen's kappa is never reported for spans.
 """
 
 from __future__ import annotations
@@ -13,6 +17,29 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
 from socareguard.corpus.schema import Note, Span, SpanType
+
+# Categories whose detections are replaced by a surrogate (or withheld) before text leaves.
+DIRECT_CATEGORIES = frozenset(
+    {
+        "NAME",
+        "THIRD_PARTY_NAME",
+        "NRIC",
+        "PHONE",
+        "ADDRESS",
+        "DOB",
+        "CASE_REF",
+        "EMAIL",
+        "PASSPORT",
+        "WORK_PERMIT",
+        "BANK_ACCOUNT",
+        "HANDLE",
+        "URL",
+        "MRN",
+        "WARD_BED",
+        "VEHICLE",
+        "STAFF_ID",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -62,6 +89,10 @@ class Report:
 
     def as_dict(self) -> dict:
         n_direct = self.leakage.get("direct_gold", 0)
+
+        def rate(k: str) -> float:
+            return round(self.leakage.get(k, 0) / n_direct, 4) if n_direct else 0.0
+
         return {
             "exact": {k: v.as_dict() for k, v in sorted(self.exact.items())},
             "relaxed": {k: v.as_dict() for k, v in sorted(self.relaxed.items())},
@@ -69,11 +100,15 @@ class Report:
                 k: {"recall": round(v.recall, 4), "n": v.tp + v.fn}
                 for k, v in sorted(self.recall_by_origin.items())
             },
-            "leakage": {
-                **self.leakage,
-                "leakage_rate": round(self.leakage.get("direct_missed", 0) / n_direct, 4)
-                if n_direct
-                else 0.0,
+            "leakage_matched": {
+                "direct_gold": n_direct,
+                "direct_missed": self.leakage.get("direct_missed", 0),
+                "leakage_rate": rate("direct_missed"),
+            },
+            "leakage_covered": {
+                "direct_gold": n_direct,
+                "direct_uncovered": self.leakage.get("direct_uncovered", 0),
+                "leakage_rate": rate("direct_uncovered"),
             },
         }
 
@@ -142,9 +177,15 @@ def score_note(
             else:
                 o.fn += 1
     direct = [gi for gi, g in enumerate(gold) if g.type is SpanType.DIRECT]
+    shields = [p for p in preds if p.category in DIRECT_CATEGORIES]
     rep.leakage = {
         "direct_gold": len(direct),
         "direct_missed": sum(1 for gi in direct if gi not in matched_relaxed),
+        "direct_uncovered": sum(
+            1
+            for gi in direct
+            if not any(_overlap(gold[gi].start, gold[gi].end, p.start, p.end) for p in shields)
+        ),
     }
     return rep
 

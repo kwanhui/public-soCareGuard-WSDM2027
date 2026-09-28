@@ -1,7 +1,7 @@
 """Encrypted local vault for the surrogate mapping.
 
 Originals are stored AES-256-GCM encrypted under a master key that never leaves the
-premises; surrogates are stored in clear because the inbound side looks them up in the
+premises. Surrogates are stored in clear because the inbound side looks them up in the
 model's reply. The mapping is per session and is never exported. The vault is the
 component PDPC's Guide to Basic Anonymisation calls the identity mapping table, and the
 requirement that it be kept apart from the pseudonymised payload is met by construction:
@@ -11,6 +11,7 @@ only the payload crosses the boundary.
 from __future__ import annotations
 
 import base64
+import binascii
 import os
 import sqlite3
 import threading
@@ -24,13 +25,46 @@ DEFAULT_PATH = Path(os.environ.get("SOCAREGUARD_VAULT", "vault/socareguard.sqlit
 KEY_ENV = "SOCAREGUARD_VAULT_KEY"
 
 
+def _decode_key(text: str, source: str) -> bytes:
+    """A 256-bit key written as base64 (the key file's own format)."""
+    try:
+        key = base64.b64decode(text.strip(), validate=True)
+    except (ValueError, binascii.Error):
+        key = b""
+    if len(key) != 32:
+        raise RuntimeError(
+            f"{source} is not a 256-bit key in base64 (44 characters ending in '='). Set "
+            f"{KEY_ENV} to the path of a key file or to the key itself."
+        )
+    return key
+
+
+def _env_key(value: str) -> bytes:
+    """``SOCAREGUARD_VAULT_KEY`` holds either the path to a key file or the key itself (base64).
+    A value that names an existing file is read as a key file; a value that looks like a path
+    (it contains a slash and does not decode as a key) but names no file is an error, so a
+    mistyped mount point never silently becomes a key."""
+    candidate = Path(value).expanduser()
+    if candidate.is_file():
+        return _decode_key(candidate.read_text(), f"key file {candidate}")
+    try:
+        return _decode_key(value, KEY_ENV)
+    except RuntimeError:
+        if "/" in value or value.endswith(".key"):
+            raise RuntimeError(
+                f"{KEY_ENV} names {value}, which is not a file, and is not a base64 key either"
+            ) from None
+        raise
+
+
 def _master_key(path: Path) -> bytes:
-    """Read the key from the environment (base64) or from ``<vault>.key`` created with mode 600."""
+    """Read the key from ``SOCAREGUARD_VAULT_KEY`` (a key file's path, or the key in base64) or
+    from ``<vault>.key``, created with mode 600 when neither exists."""
     if os.environ.get(KEY_ENV):
-        return base64.b64decode(os.environ[KEY_ENV])
+        return _env_key(os.environ[KEY_ENV])
     key_file = path.with_suffix(".key")
     if key_file.exists():
-        return base64.b64decode(key_file.read_text().strip())
+        return _decode_key(key_file.read_text(), f"key file {key_file}")
     if (
         path.exists()
         and path.stat().st_size > 0

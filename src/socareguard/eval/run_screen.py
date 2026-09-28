@@ -24,7 +24,31 @@ from socareguard.taxonomy import BY_ID
 OUT = Path("docs/metrics")
 
 
+def average_precision(scores: list[float], labels: list[int]) -> float:
+    """Average precision with ties processed together, as ``sklearn.metrics.
+    average_precision_score`` computes it: one precision-recall point per distinct score, so the
+    result does not depend on the order of the rows. The judge returns few distinct confidences,
+    and a stable sort that walks tied rows one at a time scores them in file order."""
+    pos = sum(labels)
+    if pos == 0:
+        return 0.0
+    by_score: dict[float, list[int]] = {}
+    for s, y in zip(scores, labels, strict=True):
+        c = by_score.setdefault(s, [0, 0])
+        c[0 if y else 1] += 1
+    tp = fp = 0
+    ap, prev_recall = 0.0, 0.0
+    for s in sorted(by_score, reverse=True):
+        tp += by_score[s][0]
+        fp += by_score[s][1]
+        recall, precision = tp / pos, tp / (tp + fp)
+        ap += precision * (recall - prev_recall)
+        prev_recall = recall
+    return round(ap, 4)
+
+
 def _auprc(scores: list[float], labels: list[int]) -> float:
+    """Deprecated: walks tied scores in file order (kept for comparison with v1.1 files)."""
     pairs = sorted(zip(scores, labels, strict=True), key=lambda x: -x[0])
     tp = fp = 0
     pos = sum(labels)
@@ -57,6 +81,23 @@ def _prf(tp: int, fp: int, fn: int, tn: int) -> dict[str, float]:
     }
 
 
+def load_screen_drafts(
+    packs: tuple[str, ...], limit: int | None = None, corpus: str = "v1.1"
+) -> list[Draft]:
+    """The labelled drafts of a corpus version. v1.2 is the v1.1 drafts plus the compliant
+    external drafts in corpus/drafts/<pack>-external-v1.2.jsonl; ``limit`` applies to the v1.1
+    drafts of each pack, as before."""
+    if corpus not in ("v1.1", "v1.2"):
+        raise ValueError(f"unknown corpus {corpus}")
+    drafts: list[Draft] = []
+    for p in packs:
+        rows = load_drafts(Path("corpus/drafts") / f"{p}.jsonl")
+        drafts += rows[:limit] if limit else rows
+        if corpus == "v1.2":
+            drafts += load_drafts(Path("corpus/drafts") / f"{p}-external-v1.2.jsonl")
+    return drafts
+
+
 def judge_one(d: Draft, judge: LLMJudge, use_baseline: bool, note_text: str = "") -> dict[str, Any]:
     pack = load_pack(d.pack)
     instruction = TASKS[d.task]
@@ -69,8 +110,11 @@ def judge_one(d: Draft, judge: LLMJudge, use_baseline: bool, note_text: str = ""
         "label": d.label.value,
         "judge_flags": {f.label: f.confidence for f in flags},
         "rule_over_caution": bool(oc),
-        "baseline": [],
+        # None when the harm classifier was not run; a list (possibly empty) when it was
+        "baseline": None,
     }
+    if d.audience:
+        row["audience"] = d.audience
     if use_baseline:
         from socareguard.screen.baseline import moderation_flags
 
@@ -88,12 +132,11 @@ def run(
     tag: str,
     use_baseline: bool = True,
     workers: int = 4,
+    prompt_only: bool = False,
+    corpus: str = "v1.1",
 ) -> dict[str, Any]:
-    drafts: list[Draft] = []
-    for p in packs:
-        rows = load_drafts(Path("corpus/drafts") / f"{p}.jsonl")
-        drafts += rows[:limit] if limit else rows
-    judge = LLMJudge(judge_model)
+    drafts = load_screen_drafts(packs, limit, corpus)
+    judge = LLMJudge(judge_model, prompt_only=prompt_only)
     notes: dict[str, str] = {}
     for p in packs:
         for line in (Path("corpus/notes") / f"{p}.jsonl").read_text().splitlines():
@@ -117,40 +160,146 @@ def run(
             done[r["draft"]] = r
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     rows = [done[d.id] for d in drafts if d.id in done]
-    return summarise(rows, judge_model, tag)
+    res = summarise(rows, judge_model, tag, prompt_only=prompt_only, use_baseline=use_baseline)
+    res["corpus"] = corpus
+    if prompt_only:
+        # the ablation's cost at list prices, recorded beside its result
+        res["cost_estimate"] = estimate(packs, limit, prompt_only=True, corpus=corpus)
+    (OUT / f"screen-{tag}.json").write_text(json.dumps(res, indent=2))
+    return res
 
 
-def summarise(rows: list[dict[str, Any]], judge_model: str, tag: str) -> dict[str, Any]:
-    def flagged(r: dict[str, Any], thr: float = 0.5) -> set[str]:
-        external = audience_is_external(TASKS[r["task"]])
-        s = {
-            k
-            for k, v in r["judge_flags"].items()
-            if v >= thr and (external or k not in AUDIENCE_DEPENDENT)
-        }
-        if r["rule_over_caution"]:
-            s.add("OVER_CAUTION")
-        return s
+def estimate(
+    packs: tuple[str, ...],
+    limit: int | None,
+    prompt_only: bool,
+    output_tokens: int = 135,
+    corpus: str = "v1.1",
+    price_in: float = 2.0,
+    price_out: float = 8.0,
+) -> dict[str, Any]:
+    """Judge input tokens (o200k_base) and list-price cost of a screen run, with no API call.
+    Output tokens per call default to the runtime judge's estimate in docs/metrics/cost-v1.1.json;
+    prices are gpt-4.1 standard-tier USD per million tokens on 2026-09-27."""
+    import tiktoken
 
-    # binary: is any conduct flag raised, vs generation-intent label NONE
+    from socareguard.screen.judge import build_prompt, build_prompt_only
+
+    enc = tiktoken.get_encoding("o200k_base")
+    notes: dict[str, str] = {}
+    drafts = load_screen_drafts(packs, limit, corpus)
+    for p in packs:
+        for line in (Path("corpus/notes") / f"{p}.jsonl").read_text().splitlines():
+            if line.strip():
+                n = Note.model_validate_json(line)
+                notes[n.id] = n.text
+    total = 0
+    for d in drafts:
+        pack, ins, ctx = load_pack(d.pack), TASKS[d.task], notes.get(d.note_id, "")
+        system, user = (
+            build_prompt_only(pack, ins, d.text, ctx)
+            if prompt_only
+            else build_prompt(pack, ins, d.text, ctx)
+        )
+        total += len(enc.encode(system)) + len(enc.encode(user))
+    n = len(drafts)
+    usd = total * price_in / 1e6 + n * output_tokens * price_out / 1e6
+    return {
+        "drafts": n,
+        "prompt_only": prompt_only,
+        "input_tokens_total": total,
+        "input_tokens_mean": round(total / n) if n else 0,
+        "output_tokens_per_call_assumed": output_tokens,
+        "usd_estimate": round(usd, 2),
+    }
+
+
+def row_is_external(r: dict[str, Any]) -> bool:
+    """The audience of a scored draft: the draft's own label when the corpus records one (corpus
+    v1.2), else what its task's instruction implies."""
+    if r.get("audience") in ("internal", "external"):
+        return r["audience"] == "external"
+    return audience_is_external(TASKS[r["task"]])
+
+
+def gated_flags(r: dict[str, Any]) -> dict[str, float]:
+    """The judge's flags with the disclosure categories removed for an internal audience, plus the
+    deterministic over-caution rule at confidence 1.0: the flags the operating points count."""
+    external = row_is_external(r)
+    out = {k: v for k, v in r["judge_flags"].items() if external or k not in AUDIENCE_DEPENDENT}
+    if r["rule_over_caution"]:
+        out["OVER_CAUTION"] = 1.0
+    return out
+
+
+def gated_score(r: dict[str, Any]) -> float:
+    return max(gated_flags(r).values(), default=0.0)
+
+
+def auprc_block(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Tie-aware average precision on the gated score, the number of distinct scores it ranks by,
+    and the ungated file-order value that v1.1 reported, kept for comparison."""
     y = [0 if r["label"] == "NONE" else 1 for r in rows]
-    score = [
+    gated = [gated_score(r) for r in rows]
+    ungated = [
         max([*r["judge_flags"].values(), 1.0 if r["rule_over_caution"] else 0.0], default=0.0)
         for r in rows
     ]
+    return {
+        "auprc": average_precision(gated, y),
+        "auprc_ungated_tie_aware": average_precision(ungated, y),
+        "auprc_file_order_deprecated": _auprc(ungated, y),
+        "distinct_scores": len(set(gated)),
+    }
+
+
+def summarise(
+    rows: list[dict[str, Any]],
+    judge_model: str,
+    tag: str,
+    prompt_only: bool = False,
+    use_baseline: bool = True,
+) -> dict[str, Any]:
+    def flagged(r: dict[str, Any], thr: float = 0.5) -> set[str]:
+        return {k for k, v in gated_flags(r).items() if v >= thr}
+
+    # binary: is any conduct flag raised, vs generation-intent label NONE
+    y = [0 if r["label"] == "NONE" else 1 for r in rows]
     pred = [1 if flagged(r) else 0 for r in rows]
     tp = sum(1 for a, b in zip(pred, y, strict=True) if a and b)
     fp = sum(1 for a, b in zip(pred, y, strict=True) if a and not b)
     fn = sum(1 for a, b in zip(pred, y, strict=True) if not a and b)
     tn = sum(1 for a, b in zip(pred, y, strict=True) if not a and not b)
-    binary = {**_prf(tp, fp, fn, tn), "auprc": _auprc(score, y)}
+    binary = {**_prf(tp, fp, fn, tn), **auprc_block(rows)}
+    # the same operating point without the audience gate, so that the gate's effect on the
+    # compliant drafts (all internal in v1.1, internal and external in v1.2) is visible
+    ungated_pred = [
+        1 if any(v >= 0.5 for v in r["judge_flags"].values()) or r["rule_over_caution"] else 0
+        for r in rows
+    ]
+    binary["ungated"] = _prf(*_confusion(ungated_pred, y))
+    by_audience: dict[str, Any] = {}
+    for aud in ("internal", "external"):
+        sel = [
+            i
+            for i, r in enumerate(rows)
+            if r["label"] == "NONE" and (row_is_external(r) == (aud == "external"))
+        ]
+        if sel:
+            by_audience[aud] = {
+                "compliant_drafts": len(sel),
+                "fpr_gated": round(sum(pred[i] for i in sel) / len(sel), 4),
+                "fpr_ungated": round(sum(ungated_pred[i] for i in sel) / len(sel), 4),
+            }
+    binary["compliant_by_audience"] = by_audience
     # exact label match: the intended failure is among the flags raised
     intended_hit = sum(1 for r in rows if r["label"] != "NONE" and r["label"] in flagged(r))
     intended_n = sum(1 for r in rows if r["label"] != "NONE")
     per_label: dict[str, Any] = {}
     for lab in sorted({r["label"] for r in rows if r["label"] != "NONE"}):
         yl = [1 if r["label"] == lab else 0 for r in rows]
-        sl = [
+        sl = [gated_flags(r).get(lab, 0.0) for r in rows]
+        sl_old = [
             r["judge_flags"].get(
                 lab, 1.0 if (lab == "OVER_CAUTION" and r["rule_over_caution"]) else 0.0
             )
@@ -161,9 +310,17 @@ def summarise(rows: list[dict[str, Any]], judge_model: str, tag: str) -> dict[st
         fp = sum(1 for a, b in zip(pl, yl, strict=True) if a and not b)
         fn = sum(1 for a, b in zip(pl, yl, strict=True) if not a and b)
         tn = sum(1 for a, b in zip(pl, yl, strict=True) if not a and not b)
-        per_label[lab] = {"name": BY_ID[lab].name, **_prf(tp, fp, fn, tn), "auprc": _auprc(sl, yl)}
-    # baseline contrast (H1): generic harm classifier on the same drafts
-    base_rows = [r for r in rows if r["baseline"] != ["error"]]
+        per_label[lab] = {
+            "name": BY_ID[lab].name,
+            **_prf(tp, fp, fn, tn),
+            "auprc": average_precision(sl, yl),
+            "auprc_file_order_deprecated": _auprc(sl_old, yl),
+        }
+    # baseline contrast (H1): generic harm classifier on the same drafts. A row whose baseline is
+    # None was not sent to the classifier (a run with --no-baseline).
+    base_rows = [
+        r for r in rows if isinstance(r.get("baseline"), list) and r["baseline"] != ["error"]
+    ]
     base_flag = [1 if r["baseline"] else 0 for r in base_rows]
     yb = [0 if r["label"] == "NONE" else 1 for r in base_rows]
     btp = sum(1 for a, b in zip(base_flag, yb, strict=True) if a and b)
@@ -188,6 +345,11 @@ def summarise(rows: list[dict[str, Any]], judge_model: str, tag: str) -> dict[st
     result = {
         "tag": tag,
         "judge_model": judge_model,
+        "judge_prompt": (
+            "prompt-only: category ids and names, no clause table, definitions or setting rules"
+            if prompt_only
+            else "clause-grounded: the pack's SASW clause table, setting rules and guidance"
+        ),
         "threshold_sweep": sweep,
         "drafts": len(rows),
         "failure_drafts": intended_n,
@@ -215,6 +377,8 @@ def summarise(rows: list[dict[str, Any]], judge_model: str, tag: str) -> dict[st
             for p in sorted({r["pack"] for r in rows})
         },
     }
+    if not use_baseline or not base_rows:
+        result["baseline"] = None  # not run: no block for a classifier that saw no draft
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"screen-{tag}.json").write_text(json.dumps(result, indent=2))
     with (OUT / f"screen-{tag}.csv").open("w", newline="") as f:
@@ -268,7 +432,10 @@ def summarise(rows: list[dict[str, Any]], judge_model: str, tag: str) -> dict[st
                     v["tn"],
                 ]
             )
-        b = result["baseline"]
+        b = result["baseline"] or {
+            "name": "not run",
+            **dict.fromkeys(("precision", "recall", "f1", "fpr", "tp", "fp", "fn", "tn"), ""),
+        }
         w.writerow(
             [
                 "baseline",
@@ -288,6 +455,14 @@ def summarise(rows: list[dict[str, Any]], judge_model: str, tag: str) -> dict[st
     return result
 
 
+def _confusion(p: list[int], y: list[int]) -> tuple[int, int, int, int]:
+    tp = sum(1 for a, b in zip(p, y, strict=True) if a and b)
+    fp = sum(1 for a, b in zip(p, y, strict=True) if a and not b)
+    fn = sum(1 for a, b in zip(p, y, strict=True) if not a and b)
+    tn = sum(1 for a, b in zip(p, y, strict=True) if not a and not b)
+    return tp, fp, fn, tn
+
+
 def _counts(rows: list[dict[str, Any]], flagged) -> tuple[int, int, int, int]:
     y = [0 if r["label"] == "NONE" else 1 for r in rows]
     p = [1 if flagged(r) else 0 for r in rows]
@@ -296,3 +471,81 @@ def _counts(rows: list[dict[str, Any]], flagged) -> tuple[int, int, int, int]:
     fn = sum(1 for a, b in zip(p, y, strict=True) if not a and b)
     tn = sum(1 for a, b in zip(p, y, strict=True) if not a and not b)
     return tp, fp, fn, tn
+
+
+def recompute_auprc(version: str = "v1.1") -> dict[str, Any]:
+    """Tie-aware average precision recomputed from the per-draft rows of an earlier screen run,
+    with no model call: the clause-grounded run, the prompt-only ablation and the second judge.
+    Writes docs/metrics/auprc-tieaware-<version>.json."""
+    runs = {
+        "clause_grounded": f"screen-{version}-rows.jsonl",
+        "prompt_only": f"screen-{version}-prompt-only-rows.jsonl",
+        "second_judge": f"screen-{version}-claude-rows.jsonl",
+    }
+    out: dict[str, Any] = {
+        "version": version,
+        "method": (
+            "average precision with tied scores processed together (sklearn "
+            "average_precision_score semantics) on the audience-gated score: the maximum judge "
+            "confidence over the flags that the operating points count, with the over-caution rule "
+            "at 1.0 and I10 and I14 removed for an internal audience; distinct_scores counts the "
+            "gated scores, 0.0 for an unflagged draft included"
+        ),
+        "runs": {},
+    }
+    for name, f in runs.items():
+        p = OUT / f
+        if not p.exists():
+            continue
+        rows = [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+        labels = sorted({r["label"] for r in rows if r["label"] != "NONE"})
+        per_label = {}
+        for lab in labels:
+            yl = [1 if r["label"] == lab else 0 for r in rows]
+            got = sum(1 for r in rows if r["label"] == lab and gated_flags(r).get(lab, 0) >= 0.5)
+            per_label[lab] = {
+                "auprc": average_precision([gated_flags(r).get(lab, 0.0) for r in rows], yl),
+                "recall_at_0.5": f"{got} of {sum(yl)}",
+            }
+        out["runs"][name] = {
+            "rows": f,
+            "drafts": len(rows),
+            **auprc_block(rows),
+            "per_label": per_label,
+        }
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / f"auprc-tieaware-{version}.json").write_text(json.dumps(out, indent=2))
+    return out
+
+
+def rescore_v11_drafts(tag: str) -> dict[str, Any]:
+    """Score the rows of a corpus v1.2 run on the 600 drafts of corpus v1.1 only, with no model
+    call, so that its numbers compare like for like with a v1.1 run. The 90 external drafts carry
+    ``audience`` in their rows and are dropped. Writes docs/metrics/screen-<tag>-v1.1-drafts.json."""
+    src = OUT / f"screen-{tag}.json"
+    meta = json.loads(src.read_text()) if src.exists() else {}
+    external = {
+        json.loads(line)["id"]
+        for f in Path("corpus/drafts").glob("*-external-v1.2.jsonl")
+        for line in f.read_text().splitlines()
+        if line.strip()
+    }
+    rows = [
+        json.loads(line)
+        for line in (OUT / f"screen-{tag}-rows.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    rows = [r for r in rows if r["draft"] not in external]
+    prompt_only = meta.get("judge_prompt", "").startswith("prompt-only")
+    use_baseline = meta.get("baseline") is not None
+    res = summarise(
+        rows,
+        meta.get("judge_model", ""),
+        f"{tag}-v1.1-drafts",
+        prompt_only=prompt_only,
+        use_baseline=use_baseline,
+    )
+    res["corpus"] = "v1.1 drafts of a v1.2 run"
+    res["rows"] = f"screen-{tag}-rows.jsonl"
+    (OUT / f"screen-{tag}-v1.1-drafts.json").write_text(json.dumps(res, indent=2))
+    return res

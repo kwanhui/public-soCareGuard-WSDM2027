@@ -67,6 +67,23 @@ def cmd_drafts(a: argparse.Namespace, cfg: dict[str, Any]) -> None:
         print(f"{p}: {len(ds)} drafts {drafts_mod.label_counts(ds)} -> {out}")
 
 
+def cmd_drafts_external(a: argparse.Namespace, cfg: dict[str, Any]) -> None:
+    """Corpus v1.2: compliant drafts for an external reader (referral notes, school and employer
+    letters that stay within need-to-know), appended as new files beside the v1.1 drafts."""
+    notes = {p: load_notes(cfg, (p,)) for p in a.packs}
+    if a.estimate:
+        print(json.dumps(drafts_mod.estimate_external(notes, cfg), indent=1))
+        return
+    load_dotenv()
+    for p, ns in notes.items():
+        out = drafts_mod.draft_external_pack(ns, cfg)
+        ds = drafts_mod.load_drafts(out)
+        tasks: dict[str, int] = {}
+        for d in ds:
+            tasks[d.task] = tasks.get(d.task, 0) + 1
+        print(f"{p}: {len(ds)} external drafts {tasks} -> {out}")
+
+
 def cmd_sweep(a: argparse.Namespace, cfg: dict[str, Any]) -> None:
     from socareguard.corpus import sweep as sw
 
@@ -119,6 +136,12 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--sample", type=int, default=30)
     s.add_argument("--no-gliner", action="store_true")
     sub.add_parser("stats", parents=[common], help="corpus statistics")
+    de = sub.add_parser(
+        "drafts-external",
+        parents=[common],
+        help="corpus v1.2: compliant external drafts (needs configs/corpus-v1.2.yaml)",
+    )
+    de.add_argument("--estimate", action="store_true", help="print the cost and call nothing")
     a = ap.parse_args(argv)
     cfg = load_config(a.config)
     {
@@ -127,6 +150,7 @@ def main(argv: list[str] | None = None) -> None:
         "drafts": cmd_drafts,
         "sweep": cmd_sweep,
         "stats": cmd_stats,
+        "drafts-external": cmd_drafts_external,
     }[a.cmd](a, cfg)
 
 

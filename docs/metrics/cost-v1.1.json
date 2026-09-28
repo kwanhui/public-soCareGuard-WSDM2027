@@ -1,0 +1,42 @@
+{
+ "prices": {
+  "date": "2026-09-27",
+  "source": "https://developers.openai.com/api/docs/pricing (standard tier)",
+  "openai/gpt-4.1-mini": {
+   "input": 0.4,
+   "output": 1.6
+  },
+  "openai/gpt-4.1": {
+   "input": 2.0,
+   "output": 8.0
+  },
+  "openai/omni-moderation-latest": {
+   "input": 0.0,
+   "output": 0.0
+  }
+ },
+ "drafting": {
+  "model": "openai/gpt-4.1-mini",
+  "source": "26 live request rows of ledger.jsonl (usage field)",
+  "input_tokens_mean": 169,
+  "output_tokens_mean": 197,
+  "usd": 0.000382
+ },
+ "judge": {
+  "model": "openai/gpt-4.1",
+  "source": "input: build_prompt over 4 recorded Use Case scenarios, o200k_base; output: 1.00 flags per request (77 request rows) x 127 tokens per flag (39 saved flags)",
+  "input_tokens_mean": 2334,
+  "input_tokens_range": [
+   2057,
+   2558
+  ],
+  "output_tokens_est": 135,
+  "usd": 0.005747
+ },
+ "moderation": {
+  "model": "openai/omni-moderation-latest",
+  "usd": 0.0
+ },
+ "per_draft_usd": 0.00613,
+ "per_1000_drafts_usd": 6.13
+}

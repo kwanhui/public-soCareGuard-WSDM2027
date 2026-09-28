@@ -23,4 +23,7 @@ USER app
 
 ENV PORT=7860 SOCAREGUARD_SANDBOX=1 SOCAREGUARD_MAX_REQUESTS_PER_HOUR=20 SOCAREGUARD_TRUST_PROXY=1 SOCAREGUARD_RETENTION_HOURS=24
 EXPOSE 7860
+# /healthz answers without a key; the image has no curl, so Python makes the request.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/healthz' % os.environ.get('PORT', '7860'), timeout=4)" || exit 1
 CMD ["sh", "-c", "python -m socareguard.proxy --host 0.0.0.0 --port ${PORT}"]

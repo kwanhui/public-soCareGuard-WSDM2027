@@ -21,11 +21,12 @@ from socareguard.outbound.vault import Vault
 from socareguard.policy.loader import load_pack
 from socareguard.scenarios.events import Action, Receive, Reidentify, Send
 from socareguard.scenarios.events import Ledger as LedgerEvent
+from socareguard.screen import rules
 
 TRANSFER_BASIS = os.environ.get(
     "SOCAREGUARD_TRANSFER_BASIS",
-    "pseudonymised transfer; legal basis and provider terms to be asserted by the deployer "
-    "(set SOCAREGUARD_TRANSFER_BASIS)",
+    "pseudonymised transfer under the deployer's provider terms; the legal basis is "
+    "stated by the deployer (default statement, not yet set for this deployment)",
 )
 BUILD = os.environ.get("SOCAREGUARD_BUILD", "")
 
@@ -71,7 +72,7 @@ class GuardedResult:
 
 
 class Guard:
-    """Holds the vault, ledger and detectors; ``run`` performs one guarded completion."""
+    """Holds the vault, ledger and detectors. ``run`` performs one guarded completion."""
 
     def __init__(
         self,
@@ -96,10 +97,15 @@ class Guard:
         self.screener = screener
 
     def outbound(
-        self, messages: list[dict[str, str]], pack_id: str, session: str, seed: int | None = None
+        self,
+        messages: list[dict[str, str]],
+        pack_id: str,
+        session: str,
+        seed: int | None = None,
+        audience: str | None = None,
     ):
         pack = load_pack(pack_id)
-        san = Sanitiser(self.vault, pack, self.use_presidio, self.use_gliner)
+        san = Sanitiser(self.vault, pack, self.use_presidio, self.use_gliner, audience=audience)
         out_msgs, events, known, seq = [], [], set(), 1
         payload_parts = []
         replacements: list[dict[str, str]] = []
@@ -173,25 +179,35 @@ class Guard:
             source_text=source_text,
             outbound_text=context,
         )
-        events = [
-            Reidentify(
-                seq=seq, n_restored=r.n_restored, ambiguous_generalised=r.ambiguous_generalised
-            ),
-            lk.event(seq + 1),
-        ]
-        flags, decision, screen_events = [], "pass", []
+        flags, decision, events = [], "pass", []
         if self.screener is not None:
             # Screen the pseudonymised reply: the judge provider never sees an original identifier.
-            flags, decision, screen_events = self.screener.screen(
+            # The screen event comes first in the stream because the screen reads the reply as
+            # received, before re-identification; it takes the leak check's invented identifiers
+            # (I13), which are found on the restored text and reported in the leakcheck event.
+            flags, decision, events = self.screener.screen(
                 reply_raw,
                 pack,
-                seq + 2,
+                seq,
                 instruction=instruction,
                 leaks=lk.invented,
                 context=context,
                 audience=audience,
             )
-            events += screen_events
+        # A surrogate left in the re-identified draft gets its own card, so the annotate decision
+        # it causes is never silent.
+        left = rules.unrestored_surrogate(r.text, lk.unrestored, lk.partial)
+        if left is not None:
+            flags = [*flags, left]
+        n = len(events)
+        events += [
+            Reidentify(
+                seq=seq + n,
+                n_restored=r.n_restored,
+                ambiguous_generalised=r.ambiguous_generalised,
+            ),
+            lk.event(seq + n + 1),
+        ]
         if (not lk.passed or lk.invented) and decision == "pass":
             decision = "annotate"
         return r, lk, flags, decision, events
@@ -210,8 +226,17 @@ class Guard:
         audience_header: str | None = None,
     ) -> GuardedResult:
         session = session or uuid.uuid4().hex[:12]
+        # The audience decides how a named employer leaves: the header's value, or else the one
+        # the instruction implies, as the screen reads it.
+        resolved_audience = (
+            audience
+            if audience in ("internal", "external")
+            else "external"
+            if rules.audience_is_external(_instruction(messages), pack_id)
+            else "internal"
+        )
         out_msgs, events, known, payload_hash, payload, seq, replacements = self.outbound(
-            messages, pack_id, session, seed
+            messages, pack_id, session, seed, audience=resolved_audience
         )
         events.append(
             Send(
@@ -340,12 +365,14 @@ class Guard:
                     (e.audience for e in in_events if e.kind == "screen"), "not screened"
                 ),
                 "audience_source": "header" if audience_header else "instruction",
+                "employer_treatment": _employer_treatment(replacements, resolved_audience),
                 "n_restored": r.n_restored,
                 "leakcheck_passed": lk.passed,
                 "leakcheck_detail": {
                     "echoed": len(lk.original_echoed),
                     "unrestored": list(lk.unrestored),
                     "ambiguous_generalised": list(r.ambiguous_generalised),
+                    "partial": list(lk.partial),
                 },
                 "n_invented": len(lk.invented),
                 "flags": [f.label for f in flags],
@@ -436,6 +463,18 @@ def _sanitise_message(
     return san.sanitise(content, session=session, seed=seed, seq_start=seq, attribute_floor=floor)
 
 
+def _employer_treatment(replacements: list[dict], audience: str) -> str | None:
+    """How a named employer left the premises, for the ledger row and the panel: a reversible
+    surrogate (internal audience, restored in the draft) or its kind (external audience, not
+    restored). None when the note names no employer."""
+    kinds = {r["kind"] for r in replacements if r["category"] == "EMPLOYER"}
+    if "surrogate" in kinds:
+        return f"surrogate, restored in the draft ({audience} audience)"
+    if "generalised" in kinds:
+        return f"generalised to its kind, not restored ({audience} audience)"
+    return None
+
+
 def _withheld_notice(flags, session: str) -> str:
     labels = ", ".join(sorted({f.label for f in flags if f.severity == "escalate"})) or "escalation"
     return (
@@ -460,6 +499,7 @@ def _reason(lk, flags, decision: str) -> str:
     if not lk.passed:
         parts.append(
             f"leak check: {len(lk.original_echoed)} echoed, {len(lk.unrestored)} unrestored"
+            + (f", {len(lk.partial)} restored in part and left whole" if lk.partial else "")
         )
     if lk.invented:
         parts.append(f"{len(lk.invented)} identifier(s) invented by the model")

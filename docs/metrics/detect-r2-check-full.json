@@ -1,0 +1,1035 @@
+{
+  "tag": "r2-check-full",
+  "notes": 300,
+  "detectors": [
+    "sg",
+    "gazetteer",
+    "presidio",
+    "fastino/gliner2-privacy-filter-PII-multi"
+  ],
+  "overall": {
+    "exact": {
+      "ADDRESS": {
+        "tp": 110,
+        "fp": 5,
+        "fn": 4,
+        "precision": 0.9565,
+        "recall": 0.9649,
+        "f1": 0.9607
+      },
+      "AGE": {
+        "tp": 268,
+        "fp": 9,
+        "fn": 33,
+        "precision": 0.9675,
+        "recall": 0.8904,
+        "f1": 0.9273
+      },
+      "ALL": {
+        "tp": 4004,
+        "fp": 270,
+        "fn": 169,
+        "precision": 0.9368,
+        "recall": 0.9595,
+        "f1": 0.948
+      },
+      "CASE_REF": {
+        "tp": 214,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "DOB": {
+        "tp": 101,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.9902,
+        "recall": 1.0,
+        "f1": 0.9951
+      },
+      "EMPLOYER": {
+        "tp": 59,
+        "fp": 94,
+        "fn": 41,
+        "precision": 0.3856,
+        "recall": 0.59,
+        "f1": 0.4664
+      },
+      "ESTATE": {
+        "tp": 286,
+        "fp": 28,
+        "fn": 23,
+        "precision": 0.9108,
+        "recall": 0.9256,
+        "f1": 0.9181
+      },
+      "FACILITY": {
+        "tp": 278,
+        "fp": 37,
+        "fn": 16,
+        "precision": 0.8825,
+        "recall": 0.9456,
+        "f1": 0.913
+      },
+      "NAME": {
+        "tp": 1361,
+        "fp": 81,
+        "fn": 48,
+        "precision": 0.9438,
+        "recall": 0.9659,
+        "f1": 0.9548
+      },
+      "NRIC": {
+        "tp": 302,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "PHONE": {
+        "tp": 137,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "SCHOOL": {
+        "tp": 198,
+        "fp": 15,
+        "fn": 1,
+        "precision": 0.9296,
+        "recall": 0.995,
+        "f1": 0.9612
+      },
+      "THIRD_PARTY_NAME": {
+        "tp": 690,
+        "fp": 0,
+        "fn": 3,
+        "precision": 1.0,
+        "recall": 0.9957,
+        "f1": 0.9978
+      }
+    },
+    "relaxed": {
+      "ADDRESS": {
+        "tp": 114,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "AGE": {
+        "tp": 268,
+        "fp": 9,
+        "fn": 33,
+        "precision": 0.9675,
+        "recall": 0.8904,
+        "f1": 0.9273
+      },
+      "ALL": {
+        "tp": 4073,
+        "fp": 189,
+        "fn": 100,
+        "precision": 0.9557,
+        "recall": 0.976,
+        "f1": 0.9657
+      },
+      "CASE_REF": {
+        "tp": 214,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "DOB": {
+        "tp": 101,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.9902,
+        "recall": 1.0,
+        "f1": 0.9951
+      },
+      "EMPLOYER": {
+        "tp": 80,
+        "fp": 73,
+        "fn": 20,
+        "precision": 0.5229,
+        "recall": 0.8,
+        "f1": 0.6324
+      },
+      "ESTATE": {
+        "tp": 286,
+        "fp": 28,
+        "fn": 23,
+        "precision": 0.9108,
+        "recall": 0.9256,
+        "f1": 0.9181
+      },
+      "FACILITY": {
+        "tp": 279,
+        "fp": 36,
+        "fn": 15,
+        "precision": 0.8857,
+        "recall": 0.949,
+        "f1": 0.9163
+      },
+      "NAME": {
+        "tp": 1403,
+        "fp": 28,
+        "fn": 6,
+        "precision": 0.9804,
+        "recall": 0.9957,
+        "f1": 0.988
+      },
+      "NRIC": {
+        "tp": 302,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "PHONE": {
+        "tp": 137,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "SCHOOL": {
+        "tp": 199,
+        "fp": 14,
+        "fn": 0,
+        "precision": 0.9343,
+        "recall": 1.0,
+        "f1": 0.966
+      },
+      "THIRD_PARTY_NAME": {
+        "tp": 690,
+        "fp": 0,
+        "fn": 3,
+        "precision": 1.0,
+        "recall": 0.9957,
+        "f1": 0.9978
+      }
+    },
+    "recall_by_origin": {
+      "chinese": {
+        "recall": 0.993,
+        "n": 428
+      },
+      "eurasian": {
+        "recall": 0.9948,
+        "n": 385
+      },
+      "indian": {
+        "recall": 1.0,
+        "n": 456
+      },
+      "malay": {
+        "recall": 0.9952,
+        "n": 413
+      },
+      "western": {
+        "recall": 0.9952,
+        "n": 420
+      }
+    },
+    "leakage_matched": {
+      "direct_gold": 2970,
+      "direct_missed": 9,
+      "leakage_rate": 0.003
+    },
+    "leakage_covered": {
+      "direct_gold": 2970,
+      "direct_uncovered": 3,
+      "leakage_rate": 0.001
+    }
+  },
+  "per_pack": {
+    "disability": {
+      "exact": {
+        "ADDRESS": {
+          "tp": 35,
+          "fp": 2,
+          "fn": 2,
+          "precision": 0.9459,
+          "recall": 0.9459,
+          "f1": 0.9459
+        },
+        "AGE": {
+          "tp": 86,
+          "fp": 0,
+          "fn": 15,
+          "precision": 1.0,
+          "recall": 0.8515,
+          "f1": 0.9198
+        },
+        "ALL": {
+          "tp": 1261,
+          "fp": 126,
+          "fn": 88,
+          "precision": 0.9092,
+          "recall": 0.9348,
+          "f1": 0.9218
+        },
+        "CASE_REF": {
+          "tp": 48,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "DOB": {
+          "tp": 30,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.9677,
+          "recall": 1.0,
+          "f1": 0.9836
+        },
+        "EMPLOYER": {
+          "tp": 29,
+          "fp": 56,
+          "fn": 22,
+          "precision": 0.3412,
+          "recall": 0.5686,
+          "f1": 0.4265
+        },
+        "ESTATE": {
+          "tp": 97,
+          "fp": 17,
+          "fn": 7,
+          "precision": 0.8509,
+          "recall": 0.9327,
+          "f1": 0.8899
+        },
+        "FACILITY": {
+          "tp": 131,
+          "fp": 10,
+          "fn": 16,
+          "precision": 0.9291,
+          "recall": 0.8912,
+          "f1": 0.9097
+        },
+        "NAME": {
+          "tp": 420,
+          "fp": 36,
+          "fn": 25,
+          "precision": 0.9211,
+          "recall": 0.9438,
+          "f1": 0.9323
+        },
+        "NRIC": {
+          "tp": 100,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PHONE": {
+          "tp": 44,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "SCHOOL": {
+          "tp": 0,
+          "fp": 4,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "THIRD_PARTY_NAME": {
+          "tp": 241,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9959,
+          "f1": 0.9979
+        }
+      },
+      "relaxed": {
+        "ADDRESS": {
+          "tp": 37,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AGE": {
+          "tp": 86,
+          "fp": 0,
+          "fn": 15,
+          "precision": 1.0,
+          "recall": 0.8515,
+          "f1": 0.9198
+        },
+        "ALL": {
+          "tp": 1298,
+          "fp": 84,
+          "fn": 51,
+          "precision": 0.9392,
+          "recall": 0.9622,
+          "f1": 0.9506
+        },
+        "CASE_REF": {
+          "tp": 48,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "DOB": {
+          "tp": 30,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.9677,
+          "recall": 1.0,
+          "f1": 0.9836
+        },
+        "EMPLOYER": {
+          "tp": 43,
+          "fp": 42,
+          "fn": 8,
+          "precision": 0.5059,
+          "recall": 0.8431,
+          "f1": 0.6324
+        },
+        "ESTATE": {
+          "tp": 97,
+          "fp": 17,
+          "fn": 7,
+          "precision": 0.8509,
+          "recall": 0.9327,
+          "f1": 0.8899
+        },
+        "FACILITY": {
+          "tp": 132,
+          "fp": 9,
+          "fn": 15,
+          "precision": 0.9362,
+          "recall": 0.898,
+          "f1": 0.9167
+        },
+        "NAME": {
+          "tp": 440,
+          "fp": 11,
+          "fn": 5,
+          "precision": 0.9756,
+          "recall": 0.9888,
+          "f1": 0.9821
+        },
+        "NRIC": {
+          "tp": 100,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PHONE": {
+          "tp": 44,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "SCHOOL": {
+          "tp": 0,
+          "fp": 4,
+          "fn": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "THIRD_PARTY_NAME": {
+          "tp": 241,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9959,
+          "f1": 0.9979
+        }
+      },
+      "recall_by_origin": {
+        "chinese": {
+          "recall": 0.9834,
+          "n": 181
+        },
+        "eurasian": {
+          "recall": 0.9851,
+          "n": 134
+        },
+        "indian": {
+          "recall": 1.0,
+          "n": 133
+        },
+        "malay": {
+          "recall": 1.0,
+          "n": 136
+        },
+        "western": {
+          "recall": 0.9903,
+          "n": 103
+        }
+      },
+      "leakage_matched": {
+        "direct_gold": 946,
+        "direct_missed": 6,
+        "leakage_rate": 0.0063
+      },
+      "leakage_covered": {
+        "direct_gold": 946,
+        "direct_uncovered": 1,
+        "leakage_rate": 0.0011
+      }
+    },
+    "domestic-violence": {
+      "exact": {
+        "ADDRESS": {
+          "tp": 34,
+          "fp": 3,
+          "fn": 2,
+          "precision": 0.9189,
+          "recall": 0.9444,
+          "f1": 0.9315
+        },
+        "AGE": {
+          "tp": 95,
+          "fp": 0,
+          "fn": 5,
+          "precision": 1.0,
+          "recall": 0.95,
+          "f1": 0.9744
+        },
+        "ALL": {
+          "tp": 1201,
+          "fp": 101,
+          "fn": 56,
+          "precision": 0.9224,
+          "recall": 0.9554,
+          "f1": 0.9386
+        },
+        "CASE_REF": {
+          "tp": 31,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "DOB": {
+          "tp": 32,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "EMPLOYER": {
+          "tp": 30,
+          "fp": 24,
+          "fn": 18,
+          "precision": 0.5556,
+          "recall": 0.625,
+          "f1": 0.5882
+        },
+        "ESTATE": {
+          "tp": 94,
+          "fp": 10,
+          "fn": 8,
+          "precision": 0.9038,
+          "recall": 0.9216,
+          "f1": 0.9126
+        },
+        "FACILITY": {
+          "tp": 97,
+          "fp": 20,
+          "fn": 0,
+          "precision": 0.8291,
+          "recall": 1.0,
+          "f1": 0.9065
+        },
+        "NAME": {
+          "tp": 481,
+          "fp": 35,
+          "fn": 21,
+          "precision": 0.9322,
+          "recall": 0.9582,
+          "f1": 0.945
+        },
+        "NRIC": {
+          "tp": 101,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PHONE": {
+          "tp": 42,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "SCHOOL": {
+          "tp": 45,
+          "fp": 9,
+          "fn": 0,
+          "precision": 0.8333,
+          "recall": 1.0,
+          "f1": 0.9091
+        },
+        "THIRD_PARTY_NAME": {
+          "tp": 119,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.9835,
+          "f1": 0.9917
+        }
+      },
+      "relaxed": {
+        "ADDRESS": {
+          "tp": 36,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AGE": {
+          "tp": 95,
+          "fp": 0,
+          "fn": 5,
+          "precision": 1.0,
+          "recall": 0.95,
+          "f1": 0.9744
+        },
+        "ALL": {
+          "tp": 1230,
+          "fp": 65,
+          "fn": 27,
+          "precision": 0.9498,
+          "recall": 0.9785,
+          "f1": 0.9639
+        },
+        "CASE_REF": {
+          "tp": 31,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "DOB": {
+          "tp": 32,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "EMPLOYER": {
+          "tp": 37,
+          "fp": 17,
+          "fn": 11,
+          "precision": 0.6852,
+          "recall": 0.7708,
+          "f1": 0.7255
+        },
+        "ESTATE": {
+          "tp": 94,
+          "fp": 10,
+          "fn": 8,
+          "precision": 0.9038,
+          "recall": 0.9216,
+          "f1": 0.9126
+        },
+        "FACILITY": {
+          "tp": 97,
+          "fp": 20,
+          "fn": 0,
+          "precision": 0.8291,
+          "recall": 1.0,
+          "f1": 0.9065
+        },
+        "NAME": {
+          "tp": 501,
+          "fp": 9,
+          "fn": 1,
+          "precision": 0.9824,
+          "recall": 0.998,
+          "f1": 0.9901
+        },
+        "NRIC": {
+          "tp": 101,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PHONE": {
+          "tp": 42,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "SCHOOL": {
+          "tp": 45,
+          "fp": 9,
+          "fn": 0,
+          "precision": 0.8333,
+          "recall": 1.0,
+          "f1": 0.9091
+        },
+        "THIRD_PARTY_NAME": {
+          "tp": 119,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.9835,
+          "f1": 0.9917
+        }
+      },
+      "recall_by_origin": {
+        "chinese": {
+          "recall": 1.0,
+          "n": 129
+        },
+        "eurasian": {
+          "recall": 1.0,
+          "n": 91
+        },
+        "indian": {
+          "recall": 1.0,
+          "n": 155
+        },
+        "malay": {
+          "recall": 0.985,
+          "n": 133
+        },
+        "western": {
+          "recall": 0.9913,
+          "n": 115
+        }
+      },
+      "leakage_matched": {
+        "direct_gold": 865,
+        "direct_missed": 3,
+        "leakage_rate": 0.0035
+      },
+      "leakage_covered": {
+        "direct_gold": 865,
+        "direct_uncovered": 2,
+        "leakage_rate": 0.0023
+      }
+    },
+    "youth-offending": {
+      "exact": {
+        "ADDRESS": {
+          "tp": 41,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AGE": {
+          "tp": 87,
+          "fp": 9,
+          "fn": 13,
+          "precision": 0.9062,
+          "recall": 0.87,
+          "f1": 0.8878
+        },
+        "ALL": {
+          "tp": 1542,
+          "fp": 43,
+          "fn": 25,
+          "precision": 0.9729,
+          "recall": 0.984,
+          "f1": 0.9784
+        },
+        "CASE_REF": {
+          "tp": 135,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "DOB": {
+          "tp": 39,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "EMPLOYER": {
+          "tp": 0,
+          "fp": 14,
+          "fn": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "ESTATE": {
+          "tp": 95,
+          "fp": 1,
+          "fn": 8,
+          "precision": 0.9896,
+          "recall": 0.9223,
+          "f1": 0.9548
+        },
+        "FACILITY": {
+          "tp": 50,
+          "fp": 7,
+          "fn": 0,
+          "precision": 0.8772,
+          "recall": 1.0,
+          "f1": 0.9346
+        },
+        "NAME": {
+          "tp": 460,
+          "fp": 10,
+          "fn": 2,
+          "precision": 0.9787,
+          "recall": 0.9957,
+          "f1": 0.9871
+        },
+        "NRIC": {
+          "tp": 101,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PHONE": {
+          "tp": 51,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "SCHOOL": {
+          "tp": 153,
+          "fp": 2,
+          "fn": 1,
+          "precision": 0.9871,
+          "recall": 0.9935,
+          "f1": 0.9903
+        },
+        "THIRD_PARTY_NAME": {
+          "tp": 330,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "relaxed": {
+        "ADDRESS": {
+          "tp": 41,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AGE": {
+          "tp": 87,
+          "fp": 9,
+          "fn": 13,
+          "precision": 0.9062,
+          "recall": 0.87,
+          "f1": 0.8878
+        },
+        "ALL": {
+          "tp": 1545,
+          "fp": 40,
+          "fn": 22,
+          "precision": 0.9748,
+          "recall": 0.986,
+          "f1": 0.9803
+        },
+        "CASE_REF": {
+          "tp": 135,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "DOB": {
+          "tp": 39,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "EMPLOYER": {
+          "tp": 0,
+          "fp": 14,
+          "fn": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "ESTATE": {
+          "tp": 95,
+          "fp": 1,
+          "fn": 8,
+          "precision": 0.9896,
+          "recall": 0.9223,
+          "f1": 0.9548
+        },
+        "FACILITY": {
+          "tp": 50,
+          "fp": 7,
+          "fn": 0,
+          "precision": 0.8772,
+          "recall": 1.0,
+          "f1": 0.9346
+        },
+        "NAME": {
+          "tp": 462,
+          "fp": 8,
+          "fn": 0,
+          "precision": 0.983,
+          "recall": 1.0,
+          "f1": 0.9914
+        },
+        "NRIC": {
+          "tp": 101,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PHONE": {
+          "tp": 51,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "SCHOOL": {
+          "tp": 154,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.9935,
+          "recall": 1.0,
+          "f1": 0.9968
+        },
+        "THIRD_PARTY_NAME": {
+          "tp": 330,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "recall_by_origin": {
+        "chinese": {
+          "recall": 1.0,
+          "n": 118
+        },
+        "eurasian": {
+          "recall": 1.0,
+          "n": 160
+        },
+        "indian": {
+          "recall": 1.0,
+          "n": 168
+        },
+        "malay": {
+          "recall": 1.0,
+          "n": 144
+        },
+        "western": {
+          "recall": 1.0,
+          "n": 202
+        }
+      },
+      "leakage_matched": {
+        "direct_gold": 1159,
+        "direct_missed": 0,
+        "leakage_rate": 0.0
+      },
+      "leakage_covered": {
+        "direct_gold": 1159,
+        "direct_uncovered": 0,
+        "leakage_rate": 0.0
+      }
+    }
+  },
+  "attribute_recall": {
+    "capacity": {
+      "recall": 0.9872,
+      "n": 78
+    },
+    "diagnosis": {
+      "recall": 1.0,
+      "n": 76
+    },
+    "disability": {
+      "recall": 0.85,
+      "n": 100
+    },
+    "dv_disclosure": {
+      "recall": 0.82,
+      "n": 100
+    },
+    "minor": {
+      "recall": 0.91,
+      "n": 100
+    },
+    "offence": {
+      "recall": 0.95,
+      "n": 100
+    },
+    "ppo": {
+      "recall": 1.0,
+      "n": 79
+    },
+    "safety_plan": {
+      "recall": 0.8088,
+      "n": 68
+    }
+  },
+  "latency_s": {
+    "p50": 0.9651,
+    "p95": 1.1162,
+    "mean": 1.0014
+  }
+}

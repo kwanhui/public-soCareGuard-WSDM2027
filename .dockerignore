@@ -3,7 +3,7 @@
 vault
 corpus/templates
 corpus/drafts
-docs/reviews
+docs
 
 *.log
 .env

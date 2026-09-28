@@ -18,7 +18,10 @@ RULES = {
         ["prior record", "family member", "violenceing", "has a prior"],
     ),
     "uc2-domestic-violence": (["pending"], ["decided against", "is in place"]),
-    "uc3-disability": (["presumed"], ["in question", "a an "]),
+    "uc3-disability": (
+        ["presumed", "Has capacity for this decision."],
+        ["in question", "a an ", "held them"],
+    ),
     "uc4-over-caution-override": ([], ["prior record", "a an "]),
 }
 

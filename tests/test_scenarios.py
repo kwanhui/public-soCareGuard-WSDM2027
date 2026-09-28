@@ -58,3 +58,21 @@ def test_policy_packs_reference_known_categories():
             assert c["id"] in BY_ID, (p, c)
             assert pack["id"] in BY_ID[c["id"]].packs
         assert pack["override"]["requires_reason"] is True
+
+
+def test_a_recording_without_expects_validates_with_a_warning(capsys):
+    """Round 2, WSDM-N4: `scenarios validate` exited 1 on escalation.jsonl, so `make scenarios`
+    failed on the shipped fixtures."""
+    probs = replay.validate(SCEN_DIR / "escalation.jsonl")
+    assert probs and all(p.startswith(replay.WARNING) for p in probs), probs
+    import pytest
+
+    with pytest.raises(SystemExit) as e:
+        replay.main(["validate"])
+    assert e.value.code == 0, capsys.readouterr().out
+
+
+def test_a_skipped_screen_is_not_called_a_build_step():
+    import inspect
+
+    assert "build step" not in inspect.getsource(replay)

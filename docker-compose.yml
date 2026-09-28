@@ -9,14 +9,36 @@ services:
       SOCAREGUARD_SANDBOX: "0"
       SOCAREGUARD_MAX_REQUESTS_PER_HOUR: "0"
       SOCAREGUARD_TRUST_PROXY: "0"
-      SOCAREGUARD_RETENTION_HOURS: "0"
+      # Vault mappings and sessions older than 30 days are purged. "0" keeps them until
+      # DELETE /v1/sessions/{id}, and the proxy logs a WARNING at start-up when it is 0.
+      SOCAREGUARD_RETENTION_HOURS: "720"
       SOCAREGUARD_VAULT: /app/vault/socareguard.sqlite
       SOCAREGUARD_LEDGER: /app/vault/ledger.jsonl
+      # By default the vault key is a file beside the vault on the same volume
+      # (/app/vault/socareguard.key, mode 600), so a snapshot of the volume holds both.
+      # To keep the key off that volume, put the key (base64 of 32 bytes) in
+      # ./secrets/socareguard_vault_key, readable by the container's user, and uncomment this
+      # line and the two `secrets` blocks below. For an existing vault, copy the current key
+      # there (`docker compose cp socareguard:/app/vault/socareguard.key ...`). A new key would
+      # leave the old mappings unreadable. For a new vault, generate one with
+      # python3 -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"
+      # SOCAREGUARD_VAULT_KEY: /run/secrets/socareguard_vault_key
       PORT: "8080"
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
       - socareguard-vault:/app/vault
+    # secrets:
+    #   - socareguard_vault_key
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
 volumes:
   socareguard-vault:
+# secrets:
+#   socareguard_vault_key:
+#     file: ./secrets/socareguard_vault_key

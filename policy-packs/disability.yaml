@@ -1,7 +1,7 @@
 id: disability
 label: Disability services
 version: 1
-status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not co-PI reviewed)'
+status: 'draft (v1: categories complete, judge-executable; clause grounding unchanged, not yet reviewed by practitioners)'
 legal_anchors:
 - SASW Code of Professional Ethics 3rd Rev. (2017) A.1.b, A.2.a-b, A.2.e, A.3.d
 - PDPC Advisory Guidelines for the Social Service Sector (rev. 2024) §3.39 (Mental Capacity Act)
@@ -12,7 +12,7 @@ consent_architecture:
   - donee_or_deputy
   - assent_obtained
   note: A.3.d requires consent of a responsible adult where the client cannot consent AND assent from the client
-    as far as possible; a boolean consent flag is not enough.
+    as far as possible. A boolean consent flag is not enough.
 outbound:
   attributes:
   - key: disability
@@ -36,11 +36,18 @@ outbound:
     pattern: '\b(?:WAIS(?:-IV)?|WISC(?:-V)?|IQ|MMSE|MoCA|GAF|Vineland|ABAS|full[- ]scale(?: IQ)?|functional assessment)\b[^.;\n]{0,40}?\b\d{1,3}\b'
     withhold_as: '[withheld: assessment score]'
   - label: guardianship, deputyship and donee status with names
-    pattern: '\b(?:deputyship|guardianship|donee|lasting power of attorney|LPA)\b[^.;\n]{0,80}'
+    pattern: '\b(?:deputyship|guardianship|donee|lasting power of attorney|LPA)\b[^.;\n]{0,80}\w*|(?-i:[A-Z])[^.;\n]{0,60}?\b(?:is|as|was|remains|acts as)\s+(?:his|her|their|the)\s+(?:(?:court[- ]appointed|appointed|legal)\s+)?(?:deputy|guardian|donee)\b[^.;\n]{0,120}\w*|(?-i:[A-Z])[^.;\n]{0,60}?\b(?:(?:has been|have been|had been|was|is|were)\s+)?(?:appointed|named|registered)\s+(?:as\s+)?(?:(?:her|his|their|the|a)\s+)?(?:court[- ]appointed\s+)?(?:deputy|donee|guardian)\b(?:(?!\s+and\b)[^.;\n]){0,120}\w*|\b(?:deputy|guardian|donee)\s*:[^.;\n]{0,60}\w*'
     withhold_as: '[withheld: deputyship or donee status; see record]'
+    internal_audience: substitute
+  - label: medication name or dose
+    pattern: '(?P<span>(?:\b(?!(?:about|around|approximately|approx|total|only|and|with|takes?|taking|daily|of|at|than|over|under|up|to|dose|doses|dosage|increased|reduced|from)\b)[A-Za-z][A-Za-z-]{3,}(?:\s+(?:XR|XL|SR|CR|ER|CD|LA))?\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b|\b(?:risperidone|paliperidone|olanzapine|quetiapine|aripiprazole|clozapine|haloperidol|lithium|(?:sodium\s+)?valproate|lamotrigine|carbamazepine|levetiracetam|phenytoin|sertraline|fluoxetine|escitalopram|citalopram|paroxetine|fluvoxamine|venlafaxine|duloxetine|mirtazapine|bupropion|methylphenidate|ritalin|concerta|atomoxetine|diazepam|lorazepam|clonazepam|alprazolam|zolpidem|methadone|buprenorphine|suboxone|naltrexone|donepezil|memantine|insulin|metformin)\b(?:\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b)?|(?<=\bprescribed )(?-i:[A-Z][a-z]{3,})(?:\s*\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|units?|iu)\b)?)(?:\s+(?:(?:once|twice|three times)\s+(?:a\s+)?(?:day|daily)|daily|nightly|at night|at bedtime|every (?:morning|night|evening)|in the (?:morning|evening)|nocte|mane|as needed|(?-i:OD|ON|BD|TDS|PRN)\\b))?)'
+    withhold_as: '[medication withheld]'
+  - label: name of a prescriber or treating clinician
+    enforced_by: [NAME]
   - label: care-arrangement addresses
-  - label: financial-assistance amounts
-    pattern: '(?:(?:ComCare|assistance|allowance|subsidy|grant|bursary|maintenance|SMTA|LTA|MediFund|payout|benefit|income)\b[^.;\n]{0,40}?\$\s?\d[\d,]*(?:\.\d{2})?(?:\s*(?:per|/|a)\s*(?:month|mth|week|wk|day|year))?|\$\s?\d[\d,]*(?:\.\d{2})?\s*(?:per|/|a)\s*(?:month|mth|week|wk)\b[^.;\n]{0,40}?\b(?:ComCare|assistance|allowance|subsidy|grant|maintenance|SMTA|LTA))'
+    enforced_by: [ADDRESS]
+  - label: 'financial amounts: assistance, income, arrears, CPF and Medisave balances'
+    pattern: '(?:(?P<kw>\b(?:ComCare|SMTA|LTA|MediFund|Medisave|MediSave|MediShield(?:\s+Life)?|CPF(?:\s+(?:Ordinary|Special|MediSave|Medisave|Retirement))?|Silver\s+Support|ElderShield|CareShield(?:\s+Life)?|assistance|allowance|subsid(?:y|ies)|grants?|bursar(?:y|ies)|maintenance|payouts?|benefits?|income|salary|wages?|earn(?:s|ed|ing|ings)?|arrears|rent(?:al)?|debts?|loans?|owe[sd]?|owing|bills?|fees?|savings|balance)\b)(?:(?!\b(?:and|but|while|whereas)\b)[^.;,\n]){0,50}?(?:,\s*)?)?(?P<span>(?:S\$|SGD\s?|\$)\s?\d[\d,]*(?:\.\d{1,2})?(?:\s*(?:per|/|a|an|each|every)\s*(?:month|mth|week|wk|day|year|yr|quarter))?)(?(kw)|(?=(?:(?!\b(?:and|but|while|whereas)\b)[^.;,\n]){0,40}?\b(?:ComCare|SMTA|LTA|MediFund|Medisave|MediSave|MediShield(?:\s+Life)?|CPF(?:\s+(?:Ordinary|Special|MediSave|Medisave|Retirement))?|Silver\s+Support|ElderShield|CareShield(?:\s+Life)?|assistance|allowance|subsid(?:y|ies)|grants?|bursar(?:y|ies)|maintenance|payouts?|benefits?|income|salary|wages?|earn(?:s|ed|ing|ings)?|arrears|rent(?:al)?|debts?|loans?|owe[sd]?|owing|bills?|fees?|savings|balance)\b))'
     withhold_as: '[withheld: amount]'
 inbound:
   categories:
@@ -58,7 +65,10 @@ inbound:
     note: new diagnosis or medication advice
   - id: I11
     default_action: annotate
-    note: consent recorded without guardian/deputy or assent
+    note: consent recorded without guardian/deputy or assent. This includes proxy consent without
+      authority, where a relative or caregiver signs or consents on the client's behalf and no deputy,
+      donee or guardian is appointed. A draft that records that consent as valid, or calls the relative
+      a legal guardian, engages I11.
   - id: I3
     default_action: annotate
   - id: I13
@@ -84,7 +94,7 @@ inbound:
   - id: DIS-1
     name: deficit-only framing
     grounded: false
-    note: reframes the disability in deficit-only terms against the social model; for co-PI review
+    note: reframes the disability in deficit-only terms against the social model and is flagged for practitioner review
   - id: DIS-2
     name: capacity conflation
     grounded: true

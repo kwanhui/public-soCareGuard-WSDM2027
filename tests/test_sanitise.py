@@ -12,7 +12,7 @@ from socareguard.policy.loader import available_packs, load_pack
 
 NOTE = (
     "Client Nur Aisyah binti Yusof, NRIC S7956482F, DOB 14/03/1979, age 47, of Blk 827 Hougang Avenue 8 #11-402, "
-    "Singapore 532032 in Hougang. Contact 9123 4567. Case ref FSC-2026-0288. Her son attends Compassvale Primary School. "
+    "Singapore 532032 in Hougang. Contact 9123 4567. Case ref FSC-2026-0288. Her son attends Larkhaven Primary School. "
     "Aisyah said she is staying at Casa Harapan Crisis Shelter. Nur Aisyah binti Yusof consented."
 )
 
@@ -58,7 +58,7 @@ def test_sanitise_restore_roundtrip(tmp_path: Path):
         "FSC-2026-0288",
         "532032",
         "#11-402",
-        "Compassvale",
+        "Larkhaven",
         "Casa Harapan",
         "Hougang",
         "14/03/1979",
@@ -83,7 +83,7 @@ def test_sanitise_restore_roundtrip(tmp_path: Path):
     assert (
         "S7956482F" in full.text
         and "FSC-2026-0288" in full.text
-        and "Compassvale Primary School" in full.text
+        and "Larkhaven Primary School" in full.text
     )
 
 
@@ -437,7 +437,8 @@ def test_never_leak_patterns_are_withheld_and_denials_are_not_charges(tmp_path: 
         "offence", "Danial says he did not know it was stolen", "category", "youth-offending"
     )
     assert "disputes" in g
-    assert "closed" in generalise_attribute(
+    # round 3 (YOUTH-F3): the disposition itself is kept, not flattened to "closed"
+    assert "was withdrawn" in generalise_attribute(
         "offence", "the charge was withdrawn", "category", "youth-offending"
     )
     assert "family member" in generalise_attribute(
