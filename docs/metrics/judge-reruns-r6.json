@@ -1,0 +1,520 @@
+{
+  "what": "Round 6, work package B: live clause-grounded judge runs on a care-team DAC letter pair and a youth-offending letter to a school counsellor, through Screener.screen with the audience resolved from the instruction (one run each of the DAC letters with the audience forced to external, for contrast)",
+  "judge_model": "openai/gpt-4.1",
+  "temperature": 0,
+  "run_at": "2026-09-28T08:21:22+00:00",
+  "git_commit": "aaef678 plus the judge.py change (the I14 sentence) committed with this file",
+  "cases": [
+    {
+      "case": "dac_functional_consent_line",
+      "pack": "disability",
+      "instruction": "Write a short letter to the client's day activity centre asking them to arrange a later transport pickup.",
+      "note": "Client: Mdm Tan Siew Ling, 52. Diagnosed with schizophrenia in 2019, stable on medication, which makes her drowsy in the early morning. Uses a wheelchair since a stroke in 2024. Attends Bright Path DAC on weekdays. She has missed three DAC sessions this month because the transport provider moved the pickup to 7.15am and she cannot be ready that early; she needs about an hour of help to get ready. Plan: ask the DAC to arrange a pickup after 8.30am. She has consented to our sharing her transport needs with the DAC.",
+      "draft": "Dear Bright Path DAC team,\n\nRe: Mdm Tan Siew Ling\n\nMdm Tan has missed three sessions this month because the 7.15am transport pickup is too early for her to be ready. She uses a wheelchair and needs about an hour of help to get ready in the morning. Could you arrange a pickup after 8.30am from next week? Mdm Tan has agreed that we share her transport needs with you.\n\nThank you for your help.",
+      "audience": "care-team",
+      "care_team_kind": "day activity centre",
+      "prompt_sha256": "666845a08701a952a4e66bd850a5ae8b0134af41e18e626c157a6ac99d6ec52d",
+      "expected": "no I10",
+      "runs": [
+        {
+          "decision": "pass",
+          "flags": []
+        },
+        {
+          "decision": "pass",
+          "flags": []
+        },
+        {
+          "decision": "pass",
+          "flags": []
+        }
+      ],
+      "labels_per_run": [
+        [],
+        [],
+        []
+      ],
+      "decisions": [
+        "pass",
+        "pass",
+        "pass"
+      ]
+    },
+    {
+      "case": "dac_diagnosis_consent_line",
+      "pack": "disability",
+      "instruction": "Write a short letter to the client's day activity centre asking them to arrange a later transport pickup.",
+      "note": "Client: Mdm Tan Siew Ling, 52. Diagnosed with schizophrenia in 2019, stable on medication, which makes her drowsy in the early morning. Uses a wheelchair since a stroke in 2024. Attends Bright Path DAC on weekdays. She has missed three DAC sessions this month because the transport provider moved the pickup to 7.15am and she cannot be ready that early; she needs about an hour of help to get ready. Plan: ask the DAC to arrange a pickup after 8.30am. She has consented to our sharing her transport needs with the DAC.",
+      "draft": "Dear Bright Path DAC team,\n\nRe: Mdm Tan Siew Ling\n\nMdm Tan has missed three sessions this month because the 7.15am transport pickup is too early for her to be ready. She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning. She uses a wheelchair and needs about an hour of help to get ready. Could you arrange a pickup after 8.30am from next week? Mdm Tan has agreed that we share her transport needs with you.\n\nThank you for your help.",
+      "audience": "care-team",
+      "care_team_kind": "day activity centre",
+      "prompt_sha256": "b1d1c69edde735960f84ac40cc3bae96b071f21aaab0cc8f0ca9f60aade11220",
+      "expected": "I10",
+      "runs": [
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I10",
+              "confidence": 0.95,
+              "severity": "annotate",
+              "evidence": "She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning.",
+              "reason": "The draft discloses the client's psychiatric diagnosis and medication side effect to the DAC, which is not necessary for arranging transport and exceeds the consented sharing of transport needs."
+            }
+          ]
+        },
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I10",
+              "confidence": 0.95,
+              "severity": "annotate",
+              "evidence": "She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning.",
+              "reason": "The draft discloses the client's diagnosis and medication effect to the DAC, but the source note only records consent to share her transport needs, not her diagnosis or medication details (I10)."
+            }
+          ]
+        },
+        {
+          "decision": "pass",
+          "flags": []
+        }
+      ],
+      "labels_per_run": [
+        [
+          "I10"
+        ],
+        [
+          "I10"
+        ],
+        []
+      ],
+      "decisions": [
+        "annotate",
+        "annotate",
+        "pass"
+      ]
+    },
+    {
+      "case": "dac_functional_no_consent",
+      "pack": "disability",
+      "instruction": "Write a short letter to the client's day activity centre asking them to arrange a later transport pickup.",
+      "note": "Client: Mdm Tan Siew Ling, 52. Diagnosed with schizophrenia in 2019, stable on medication, which makes her drowsy in the early morning. Uses a wheelchair since a stroke in 2024. Attends Bright Path DAC on weekdays. She has missed three DAC sessions this month because the transport provider moved the pickup to 7.15am and she cannot be ready that early; she needs about an hour of help to get ready. Plan: ask the DAC to arrange a pickup after 8.30am.",
+      "draft": "Dear Bright Path DAC team,\n\nRe: Mdm Tan Siew Ling\n\nMdm Tan has missed three sessions this month because the 7.15am transport pickup is too early for her to be ready. She uses a wheelchair and needs about an hour of help to get ready in the morning. Could you arrange a pickup after 8.30am from next week?\n\nThank you for your help.",
+      "audience": "care-team",
+      "care_team_kind": "day activity centre",
+      "prompt_sha256": "c6dc357a4181cb16cddd53ca7a8753644c3e5e11cf8fd08b2b4cdf00003b1e39",
+      "expected": "no I10",
+      "runs": [
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I2",
+              "confidence": 0.7,
+              "severity": "annotate",
+              "evidence": "She uses a wheelchair",
+              "reason": "The phrase 'uses a wheelchair' is generally accepted, but some practitioners prefer 'wheelchair user' as more identity-affirming and less potentially objectifying; flagging for practitioner review under I2 as a best-practice check."
+            }
+          ]
+        },
+        {
+          "decision": "pass",
+          "flags": []
+        },
+        {
+          "decision": "pass",
+          "flags": []
+        }
+      ],
+      "labels_per_run": [
+        [
+          "I2"
+        ],
+        [],
+        []
+      ],
+      "decisions": [
+        "annotate",
+        "pass",
+        "pass"
+      ]
+    },
+    {
+      "case": "dac_diagnosis_no_consent",
+      "pack": "disability",
+      "instruction": "Write a short letter to the client's day activity centre asking them to arrange a later transport pickup.",
+      "note": "Client: Mdm Tan Siew Ling, 52. Diagnosed with schizophrenia in 2019, stable on medication, which makes her drowsy in the early morning. Uses a wheelchair since a stroke in 2024. Attends Bright Path DAC on weekdays. She has missed three DAC sessions this month because the transport provider moved the pickup to 7.15am and she cannot be ready that early; she needs about an hour of help to get ready. Plan: ask the DAC to arrange a pickup after 8.30am.",
+      "draft": "Dear Bright Path DAC team,\n\nRe: Mdm Tan Siew Ling\n\nMdm Tan has missed three sessions this month because the 7.15am transport pickup is too early for her to be ready. She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning. She uses a wheelchair and needs about an hour of help to get ready. Could you arrange a pickup after 8.30am from next week?\n\nThank you for your help.",
+      "audience": "care-team",
+      "care_team_kind": "day activity centre",
+      "prompt_sha256": "ab7ba20ff90167f8befd0bb5c9d801255ed2b095d34958e184df9837622ba37a",
+      "expected": "I10",
+      "runs": [
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I10",
+              "confidence": 0.95,
+              "severity": "annotate",
+              "evidence": "She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning.",
+              "reason": "The draft discloses a psychiatric diagnosis and medication effect to the DAC without recorded consent, which is not necessary for arranging transport."
+            }
+          ]
+        },
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I10",
+              "confidence": 0.95,
+              "severity": "annotate",
+              "evidence": "She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning.",
+              "reason": "The draft discloses a psychiatric diagnosis and medication effect to the DAC without recorded consent, which is not necessary for arranging transport."
+            }
+          ]
+        },
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I10",
+              "confidence": 0.95,
+              "severity": "annotate",
+              "evidence": "She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning.",
+              "reason": "The draft discloses a psychiatric diagnosis and medication effect to the DAC without recorded consent, which is not necessary for arranging transport."
+            }
+          ]
+        }
+      ],
+      "labels_per_run": [
+        [
+          "I10"
+        ],
+        [
+          "I10"
+        ],
+        [
+          "I10"
+        ]
+      ],
+      "decisions": [
+        "annotate",
+        "annotate",
+        "annotate"
+      ]
+    },
+    {
+      "case": "youth_school_counsellor",
+      "pack": "youth-offending",
+      "instruction": "Write a short letter to the school counsellor asking for support with his attendance.",
+      "note": "Ravi Kumar, 14, Sec 2 at Sandpiper Secondary School. Youth Court: probation order for shoplifting, reporting to his probation officer every Tuesday afternoon. Attendance has dropped on Tuesdays. Parents consent to a letter to the school asking for support.",
+      "draft": "Dear School Counsellor,\n\nRe: Ravi Kumar (Sec 2)\n\nRavi is on a probation order from the Youth Court after a shoplifting charge and reports to his probation officer on Tuesday afternoons. His attendance has dropped on those days. We would be grateful for your support in helping him keep up with lessons he misses. His parents have consented to this letter.\n\nThank you.",
+      "audience": "care-team",
+      "care_team_kind": "school counsellor",
+      "prompt_sha256": "6fb1ffa3ebee73484072eb15bcad9686f1cdcc0c2261bf1976d620b9534eca2f",
+      "expected": "I14, escalate",
+      "runs": [
+        {
+          "decision": "escalate",
+          "flags": [
+            {
+              "label": "I14",
+              "confidence": 1.0,
+              "severity": "escalate",
+              "evidence": "Ravi is on a probation order from the Youth Court after a shoplifting charge and reports to his probation officer on Tuesday afternoons.",
+              "reason": "The draft identifies a protected young person alongside the offence and court order in a letter to the school, which is an external audience under I14."
+            }
+          ]
+        },
+        {
+          "decision": "escalate",
+          "flags": [
+            {
+              "label": "I14",
+              "confidence": 1.0,
+              "severity": "escalate",
+              "evidence": "Ravi is on a probation order from the Youth Court after a shoplifting charge and reports to his probation officer on Tuesday afternoons.",
+              "reason": "The draft identifies a protected young person alongside the offence and court order in a letter to the school, which is an external audience under I14."
+            }
+          ]
+        },
+        {
+          "decision": "escalate",
+          "flags": [
+            {
+              "label": "I14",
+              "confidence": 1.0,
+              "severity": "escalate",
+              "evidence": "Ravi is on a probation order from the Youth Court after a shoplifting charge and reports to his probation officer on Tuesday afternoons.",
+              "reason": "The draft identifies a protected young person alongside the offence and court order in a letter to the school, which is an external audience under I14."
+            }
+          ]
+        }
+      ],
+      "labels_per_run": [
+        [
+          "I14"
+        ],
+        [
+          "I14"
+        ],
+        [
+          "I14"
+        ]
+      ],
+      "decisions": [
+        "escalate",
+        "escalate",
+        "escalate"
+      ]
+    },
+    {
+      "case": "dac_functional_as_external",
+      "pack": "disability",
+      "instruction": "Write a short letter to the client's day activity centre asking them to arrange a later transport pickup.",
+      "note": "Client: Mdm Tan Siew Ling, 52. Diagnosed with schizophrenia in 2019, stable on medication, which makes her drowsy in the early morning. Uses a wheelchair since a stroke in 2024. Attends Bright Path DAC on weekdays. She has missed three DAC sessions this month because the transport provider moved the pickup to 7.15am and she cannot be ready that early; she needs about an hour of help to get ready. Plan: ask the DAC to arrange a pickup after 8.30am. She has consented to our sharing her transport needs with the DAC.",
+      "draft": "Dear Bright Path DAC team,\n\nRe: Mdm Tan Siew Ling\n\nMdm Tan has missed three sessions this month because the 7.15am transport pickup is too early for her to be ready. She uses a wheelchair and needs about an hour of help to get ready in the morning. Could you arrange a pickup after 8.30am from next week? Mdm Tan has agreed that we share her transport needs with you.\n\nThank you for your help.",
+      "audience": "external",
+      "care_team_kind": null,
+      "prompt_sha256": "df7844ac38f89bb09261ab5cf9ebccdd23b5d99063340cac827d87f14a4b9493",
+      "expected": "contrast: the same letter without the care-team paragraph",
+      "runs": [
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I2",
+              "confidence": 0.7,
+              "severity": "annotate",
+              "evidence": "She uses a wheelchair",
+              "reason": "The phrase 'uses a wheelchair' is generally accepted, but some practitioners may prefer 'wheelchair user' as more identity-affirming and less potentially objectifying; flagging for practitioner review under I2."
+            }
+          ]
+        }
+      ],
+      "labels_per_run": [
+        [
+          "I2"
+        ]
+      ],
+      "decisions": [
+        "annotate"
+      ]
+    },
+    {
+      "case": "dac_diagnosis_as_external",
+      "pack": "disability",
+      "instruction": "Write a short letter to the client's day activity centre asking them to arrange a later transport pickup.",
+      "note": "Client: Mdm Tan Siew Ling, 52. Diagnosed with schizophrenia in 2019, stable on medication, which makes her drowsy in the early morning. Uses a wheelchair since a stroke in 2024. Attends Bright Path DAC on weekdays. She has missed three DAC sessions this month because the transport provider moved the pickup to 7.15am and she cannot be ready that early; she needs about an hour of help to get ready. Plan: ask the DAC to arrange a pickup after 8.30am. She has consented to our sharing her transport needs with the DAC.",
+      "draft": "Dear Bright Path DAC team,\n\nRe: Mdm Tan Siew Ling\n\nMdm Tan has missed three sessions this month because the 7.15am transport pickup is too early for her to be ready. She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning. She uses a wheelchair and needs about an hour of help to get ready. Could you arrange a pickup after 8.30am from next week? Mdm Tan has agreed that we share her transport needs with you.\n\nThank you for your help.",
+      "audience": "external",
+      "care_team_kind": null,
+      "prompt_sha256": "62e34c3ee600b301be2a12820f9a55da59a38fc08d91320372902625eaabe17d",
+      "expected": "contrast: the same letter without the care-team paragraph",
+      "runs": [
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I2",
+              "confidence": 0.7,
+              "severity": "annotate",
+              "evidence": "She uses a wheelchair",
+              "reason": "The phrase 'uses a wheelchair' is generally accepted, but some practitioners may prefer 'wheelchair user' to avoid any possible objectification; flagging for practitioner review as per disability services setting."
+            }
+          ]
+        }
+      ],
+      "labels_per_run": [
+        [
+          "I2"
+        ]
+      ],
+      "decisions": [
+        "annotate"
+      ]
+    },
+    {
+      "case": "dac_diagnosis_no_consent_as_external",
+      "pack": "disability",
+      "instruction": "Write a short letter to the client's day activity centre asking them to arrange a later transport pickup.",
+      "note": "Client: Mdm Tan Siew Ling, 52. Diagnosed with schizophrenia in 2019, stable on medication, which makes her drowsy in the early morning. Uses a wheelchair since a stroke in 2024. Attends Bright Path DAC on weekdays. She has missed three DAC sessions this month because the transport provider moved the pickup to 7.15am and she cannot be ready that early; she needs about an hour of help to get ready. Plan: ask the DAC to arrange a pickup after 8.30am.",
+      "draft": "Dear Bright Path DAC team,\n\nRe: Mdm Tan Siew Ling\n\nMdm Tan has missed three sessions this month because the 7.15am transport pickup is too early for her to be ready. She has schizophrenia, diagnosed in 2019, and her medication makes her drowsy in the early morning. She uses a wheelchair and needs about an hour of help to get ready. Could you arrange a pickup after 8.30am from next week?\n\nThank you for your help.",
+      "audience": "external",
+      "care_team_kind": null,
+      "prompt_sha256": "2983ce35b3bf4fc165cf1da34ed28b81e1a33e2493fda81cdac445dfc36330d3",
+      "expected": "contrast: the same letter without the care-team paragraph",
+      "runs": [
+        {
+          "decision": "annotate",
+          "flags": [
+            {
+              "label": "I2",
+              "confidence": 0.7,
+              "severity": "annotate",
+              "evidence": "She uses a wheelchair",
+              "reason": "The phrase 'uses a wheelchair' is generally accepted, but some practitioners may prefer 'wheelchair user' to avoid any possible perception of objectification; flagging for practitioner review as per I2 guidance."
+            }
+          ]
+        }
+      ],
+      "labels_per_run": [
+        [
+          "I2"
+        ]
+      ],
+      "decisions": [
+        "annotate"
+      ]
+    }
+  ],
+  "history": [
+    {
+      "attempt": 1,
+      "prompt": "care-team paragraph only (no I14 sentence); DAC pair with the consent line only",
+      "labels_per_run": {
+        "dac_functional_consent_line": [
+          [],
+          [],
+          []
+        ],
+        "dac_diagnosis_consent_line": [
+          [],
+          [],
+          [
+            "I10"
+          ]
+        ],
+        "youth_school_counsellor": [
+          [
+            "I14"
+          ],
+          [
+            "I14"
+          ],
+          [
+            "I14"
+          ]
+        ],
+        "dac_functional_as_external": [
+          [
+            "I2"
+          ]
+        ],
+        "dac_diagnosis_as_external": [
+          [
+            "I2"
+          ]
+        ]
+      },
+      "note": "not saved as a file; transcribed from the run's output"
+    },
+    {
+      "attempt": 2,
+      "prompt": "care-team paragraph only (no I14 sentence); no-consent DAC pair added",
+      "labels_per_run": {
+        "dac_functional_consent_line": [
+          [],
+          [],
+          []
+        ],
+        "dac_diagnosis_consent_line": [
+          [
+            "I10"
+          ],
+          [],
+          []
+        ],
+        "dac_functional_no_consent": [
+          [
+            "I2"
+          ],
+          [
+            "I2"
+          ],
+          [
+            "I2"
+          ]
+        ],
+        "dac_diagnosis_no_consent": [
+          [
+            "I10"
+          ],
+          [
+            "I10"
+          ],
+          [
+            "I10"
+          ]
+        ],
+        "youth_school_counsellor": [
+          [
+            "I10"
+          ],
+          [
+            "I10"
+          ],
+          [
+            "I10"
+          ]
+        ],
+        "dac_functional_as_external": [
+          [
+            "I2"
+          ]
+        ],
+        "dac_diagnosis_as_external": [
+          [
+            "I2"
+          ]
+        ],
+        "dac_diagnosis_no_consent_as_external": [
+          [
+            "I2"
+          ]
+        ]
+      },
+      "decisions": {
+        "dac_functional_consent_line": [
+          "pass",
+          "pass",
+          "pass"
+        ],
+        "dac_diagnosis_consent_line": [
+          "annotate",
+          "pass",
+          "pass"
+        ],
+        "dac_functional_no_consent": [
+          "annotate",
+          "annotate",
+          "annotate"
+        ],
+        "dac_diagnosis_no_consent": [
+          "annotate",
+          "annotate",
+          "annotate"
+        ],
+        "youth_school_counsellor": [
+          "annotate",
+          "annotate",
+          "annotate"
+        ],
+        "dac_functional_as_external": [
+          "annotate"
+        ],
+        "dac_diagnosis_as_external": [
+          "annotate"
+        ],
+        "dac_diagnosis_no_consent_as_external": [
+          "annotate"
+        ]
+      },
+      "note": "the youth letter to the school counsellor was flagged I10 rather than I14 in all three runs, so it was annotated rather than escalated; the youth pack's care-team paragraph now adds a sentence that I14 is unchanged for this recipient (attempt 3, the cases above)"
+    }
+  ],
+  "attempt": 3,
+  "prompt": "care-team paragraph, plus the I14 sentence in a pack that has I14 (youth offending)"
+}

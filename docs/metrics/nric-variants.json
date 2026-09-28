@@ -1,0 +1,287 @@
+{
+  "file": "tests/data/nric-variants.jsonl",
+  "variants": 30,
+  "detectors": [
+    "sg",
+    "gazetteer",
+    "presidio",
+    "fastino/gliner2-privacy-filter-PII-multi"
+  ],
+  "recall_exact": 1.0,
+  "recall_covered": 1.0,
+  "leaked": 0,
+  "by_form": {
+    "compact": {
+      "covered": 2,
+      "total": 2
+    },
+    "lower": {
+      "covered": 2,
+      "total": 2
+    },
+    "spaced": {
+      "covered": 2,
+      "total": 2
+    },
+    "spaced_lower": {
+      "covered": 2,
+      "total": 2
+    },
+    "hyphenated": {
+      "covered": 2,
+      "total": 2
+    },
+    "hyphenated_lower": {
+      "covered": 2,
+      "total": 2
+    },
+    "prefix_colon": {
+      "covered": 2,
+      "total": 2
+    },
+    "prefix_colon_nospace": {
+      "covered": 2,
+      "total": 2
+    },
+    "parentheses": {
+      "covered": 2,
+      "total": 2
+    },
+    "parentheses_spaced": {
+      "covered": 2,
+      "total": 2
+    },
+    "letter_space_only": {
+      "covered": 2,
+      "total": 2
+    },
+    "check_space_only": {
+      "covered": 2,
+      "total": 2
+    },
+    "mixed_case": {
+      "covered": 2,
+      "total": 2
+    },
+    "in_list": {
+      "covered": 2,
+      "total": 2
+    },
+    "end_of_sentence": {
+      "covered": 2,
+      "total": 2
+    }
+  },
+  "rows": [
+    {
+      "id": "nric-variant-01",
+      "form": "compact",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-02",
+      "form": "compact",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-03",
+      "form": "lower",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-04",
+      "form": "lower",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-05",
+      "form": "spaced",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-06",
+      "form": "spaced",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-07",
+      "form": "spaced_lower",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-08",
+      "form": "spaced_lower",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-09",
+      "form": "hyphenated",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-10",
+      "form": "hyphenated",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-11",
+      "form": "hyphenated_lower",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-12",
+      "form": "hyphenated_lower",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-13",
+      "form": "prefix_colon",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-14",
+      "form": "prefix_colon",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-15",
+      "form": "prefix_colon_nospace",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-16",
+      "form": "prefix_colon_nospace",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-17",
+      "form": "parentheses",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-18",
+      "form": "parentheses",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-19",
+      "form": "parentheses_spaced",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-20",
+      "form": "parentheses_spaced",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-21",
+      "form": "letter_space_only",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-22",
+      "form": "letter_space_only",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-23",
+      "form": "check_space_only",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-24",
+      "form": "check_space_only",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-25",
+      "form": "mixed_case",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-26",
+      "form": "mixed_case",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-27",
+      "form": "in_list",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-28",
+      "form": "in_list",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-29",
+      "form": "end_of_sentence",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    },
+    {
+      "id": "nric-variant-30",
+      "form": "end_of_sentence",
+      "exact": true,
+      "covered": true,
+      "leaked": false
+    }
+  ]
+}

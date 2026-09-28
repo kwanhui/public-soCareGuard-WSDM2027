@@ -1,0 +1,12 @@
+.venv
+.git
+vault
+corpus/templates
+corpus/drafts
+docs
+
+*.log
+.env
+.env.*
+!.env.example
+__pycache__

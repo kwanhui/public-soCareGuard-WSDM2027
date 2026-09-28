@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoCareGuard supervisor view</title>
+<link rel="stylesheet" href="/static/panel.css">
+</head>
+<body class="supervisor">
+<header>
+  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">supervisor view</span></div>
+  {% if sandbox %}<div class="banner"><p>Synthetic-data sandbox. Do not enter real client information.</p></div>{% endif %}
+</header>
+<main>
+{% if not signed_in %}
+  <section class="sup-block" id="sup-signin">
+    <h1>Sign in</h1>
+    {% if error %}<p class="error" id="login-error" role="alert">{{ error }}</p>{% endif %}
+    {% if keyed %}
+    <form id="sup-login" method="post" action="/supervisor/login">
+      <p class="summary">This deployment requires a supervisor key (SOCAREGUARD_SUPERVISOR_KEYS).</p>
+      <label>Supervisor key<input id="login-key" name="key" type="password" autocomplete="off" required></label>
+      <label>Your staff id (written to the record)<input id="login-staff" name="staff_id" placeholder="e.g. sup-007"></label>
+      <button type="submit" id="login-submit" class="btn-primary">Sign in</button>
+    </form>
+    {% else %}
+    <form id="sup-login" method="post" action="/supervisor/login">
+      <p class="login-note" id="login-note"><strong>Demonstration login.</strong> This is a simplistic authentication for demonstration purposes only, with a fixed shared credential and no rate limiting or lockout, and it must be replaced with proper authentication (per-user credentials or single sign-on, a supervisor role that the deployment checks, session expiry and audit) before any production deployment.</p>
+      <p class="summary">Sandbox credential: user name admin, password demo1234. Every visitor shares it, so a session that another browser created opens with stand-ins only.</p>
+      <label>User name<input id="login-user" name="username" autocomplete="username" required></label>
+      <label>Password<input id="login-password" name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit" id="login-submit" class="btn-primary">Sign in</button>
+    </form>
+    {% endif %}
+    <p class="summary"><a href="/" class="back-link">Back to the panel</a></p>
+  </section>
+{% else %}
+  <div class="sup-who" id="sup-who"><span>Signed in as {{ actor }}{% if attested %} with a supervisor key{% else %}, typed in{% endif %}.</span>
+    <form method="post" action="/supervisor/logout" class="inline-form"><button type="submit" class="secondary small" id="logout">Sign out</button></form></div>
+  {% if error %}<p class="error" id="filter-error" role="alert">{{ error }}</p>{% endif %}
+
+  <section class="sup-block chain {{ 'ok' if s.chain.ok else 'bad' }}" id="chain" aria-labelledby="chain-h">
+    <h2 id="chain-h">Chain check of the record</h2>
+    <p id="chain-status" class="chain-status">{{ s.chain.message }}</p>
+    <dl class="chain-fields">
+      <dt>Rows in the record</dt><dd id="chain-rows">{{ s.chain.rows }}</dd>
+      <dt>Record fingerprint (head hash)</dt><dd id="chain-head"><code title="{{ s.chain.head_sha256 or '' }}">{{ (s.chain.head_sha256 or 'no rows yet')[:16] }}{% if s.chain.head_sha256 %}…{% endif %}</code></dd>
+      <dt>Gaps</dt><dd id="chain-gap">{{ 'no gaps' if s.chain.first_gap is none else 'first gap at row ' ~ s.chain.first_gap }}</dd>
+      <dt>Last logged fingerprint</dt><dd id="chain-logged">{% if s.chain.last_logged %}<code title="{{ s.chain.last_logged.head_sha256 }}">{{ s.chain.last_logged.head_sha256[:16] }}…</code>, {{ s.chain.last_logged.rows }} rows, {{ 'matches the file' if s.chain.logged_head_matches else 'does not match the file' }}{% else %}nothing logged since the server started{% endif %}</dd>
+    </dl>
+    <p class="hint">The check recomputes the record's fingerprint, which changes when any row is edited, removed or reordered. Compare the fingerprint with the last <code>ledger head</code> line shipped off this host. A match there is what shows that no rows at the end were rewritten.</p>
+  </section>
+
+  <section class="sup-block" id="queue" aria-labelledby="queue-h">
+    <h2 id="queue-h">Needs your release <span class="count" id="queue-count">{{ s.queue|length }}</span></h2>
+    {% if s.queue %}
+    <table class="sup-table" id="queue-table">
+      <thead><tr><th>Session</th><th>Policy pack</th><th>Time</th><th>Categories</th><th>Practitioner</th><th>Review</th></tr></thead>
+      <tbody>
+      {% for q in s.queue %}<tr data-session="{{ q.session }}">
+        <td><code>{{ q.session }}</code></td>
+        <td>{{ q.pack }}</td>
+        <td>{{ q.time }}</td>
+        <td>{% for c in q.categories %}<span class="badge" title="{{ c.clause }}">{{ c.label }}</span> {% endfor %}</td>
+        <td>{{ q.practitioner_label }}</td>
+        <td><button type="button" class="secondary small review-open" data-session="{{ q.session }}">Review and release</button><span class="status review-status"></span></td>
+      </tr>{% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty" id="queue-empty">No withheld draft is waiting for release.</p>
+    {% endif %}
+    <p class="hint" id="queue-hint">A withheld draft stays here until a supervisor releases it with a reason. Choose "Review and release": the review page opens in a new tab with the release form at the foot, under the flags. The practitioner's panel has the same form. A review link is read-only apart from that release, lasts {{ review_minutes }} minutes and is written to the record.{% if not attested %} With the sandbox login, a session that another browser created opens with stand-ins only: what left the premises, what the model replied, the flags and the rows of the record.{% endif %}</p>
+  </section>
+
+  <section class="sup-block" id="filters" aria-labelledby="filters-h">
+    <h2 id="filters-h">Filter the period</h2>
+    {% for g in groups %}<div class="fgroup" role="group" aria-label="{{ g.label }}" data-group="{{ g.name }}">
+      <span class="chiplabel">{{ g.label }}</span>
+      {% for c in g.chips %}<a class="fchip{{ ' active' if c.active }}" data-filter="{{ g.name }}" data-value="{{ c.value }}" href="{{ c.url }}"{% if c.active %} aria-current="true"{% endif %}>{{ c.label }}</a>{% endfor %}
+    </div>{% endfor %}
+    <form id="date-form" class="date-form" method="get" action="/supervisor">
+      {% for k in ['pack', 'category', 'actor', 'kind'] %}{% if raw.get(k) %}<input type="hidden" name="{{ k }}" value="{{ raw.get(k) }}">{% endif %}{% endfor %}
+      <label>From<input type="date" id="date-since" name="since" value="{{ raw.get('since') if raw.get('since') and raw.get('since') != 'all' else '' }}"></label>
+      <label>To<input type="date" id="date-until" name="until" value="{{ raw.get('until') or '' }}"></label>
+      <button type="submit" class="secondary small" id="date-apply">Apply dates</button>
+    </form>
+    <p class="hint" id="period">Period: {{ s.filters.period.since }} to {{ s.filters.period.until }}.</p>
+  </section>
+
+  <section class="sup-block" id="actions" aria-labelledby="actions-h">
+    <h2 id="actions-h">Escalations, releases, passages kept with a reason, rewrites used and reviews opened</h2>
+    <p class="hint" id="clause-note">Clause codes such as B.3.a refer to the Singapore Association of Social Workers Code of Professional Ethics (the SASW Code). CYPA is the Children and Young Persons Act.</p>
+    {% if s.actions %}
+    <table class="sup-table" id="actions-table">
+      <thead><tr><th>Time</th><th>Actor</th><th>Category and clause</th><th>Decision</th><th>Reason</th><th>Request row</th><th>Session</th></tr></thead>
+      <tbody>
+      {% for a in s.actions %}<tr data-kind="{{ a.kind }}" data-session="{{ a.session }}">
+        <td>{{ a.time }}</td>
+        <td>{{ a.actor_label }}</td>
+        <td>{% for c in a.categories %}<span class="badge">{{ c.label }}</span>{% if c.clause %} {{ c.clause }}{% endif %}{% if not loop.last %}, {% endif %}{% else %}none{% endfor %}</td>
+        <td>{{ a.decision }}</td>
+        <td>{{ a.reason or 'none recorded' }}</td>
+        <td>{% if a.request_row_sha256 %}<code title="{{ a.request_row_sha256 }}">{{ a.request_row_sha256[:12] }}…</code>{% else %}none{% endif %}</td>
+        <td>{% if a.session %}<code>{{ a.session }}</code> <button type="button" class="secondary small review-open" data-session="{{ a.session }}">Open read-only</button><span class="status review-status"></span>{% endif %}</td>
+      </tr>{% endfor %}
+      </tbody>
+    </table>
+    {% if s.total > s.actions|length %}<p class="hint">Showing the newest {{ s.actions|length }} of {{ s.total }} rows.</p>{% endif %}
+    {% else %}
+    <p class="empty" id="actions-empty">No escalation, release, passage kept with a reason or rewrite used in this period.</p>
+    {% endif %}
+  </section>
+
+  <section class="sup-block" id="counts" aria-labelledby="counts-h">
+    <h2 id="counts-h">Counts for the period</h2>
+    <ul class="counts">
+      {% for k, n in s.counts.items() %}<li data-kind="{{ k }}"><span class="n">{{ n }}</span> {{ kind_singular[k] if n == 1 else kind_plural[k] }}</li>{% endfor %}
+    </ul>
+  </section>
+{% endif %}
+</main>
+<footer>
+  <span>Rows list no note or reply text. Reasons with an NRIC, phone number or case reference are refused when they are written.</span>
+  <span><a href="/" id="panel-link">panel</a> · <a href="/v1/ledger/verify">check the record's chain</a></span>
+</footer>
+<script src="/static/supervisor.js"></script>
+</body>
+</html>

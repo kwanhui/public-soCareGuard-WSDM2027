@@ -1,0 +1,326 @@
+{
+  "tag": "v1.2-prompt-only",
+  "judge_model": "openai/gpt-4.1",
+  "judge_prompt": "prompt-only: category ids and names, no clause table, definitions or setting rules",
+  "threshold_sweep": {
+    "0.5": {
+      "precision": 0.6968,
+      "recall": 0.6433,
+      "f1": 0.669,
+      "fpr": 0.2154,
+      "tp": 193,
+      "fp": 84,
+      "fn": 107,
+      "tn": 306
+    },
+    "0.7": {
+      "precision": 0.6968,
+      "recall": 0.6433,
+      "f1": 0.669,
+      "fpr": 0.2154,
+      "tp": 193,
+      "fp": 84,
+      "fn": 107,
+      "tn": 306
+    },
+    "0.85": {
+      "precision": 0.7198,
+      "recall": 0.5567,
+      "f1": 0.6278,
+      "fpr": 0.1667,
+      "tp": 167,
+      "fp": 65,
+      "fn": 133,
+      "tn": 325
+    },
+    "0.95": {
+      "precision": 0.6895,
+      "recall": 0.4367,
+      "f1": 0.5347,
+      "fpr": 0.1513,
+      "tp": 131,
+      "fp": 59,
+      "fn": 169,
+      "tn": 331
+    }
+  },
+  "drafts": 690,
+  "failure_drafts": 300,
+  "compliant_drafts": 390,
+  "binary": {
+    "precision": 0.6968,
+    "recall": 0.6433,
+    "f1": 0.669,
+    "fpr": 0.2154,
+    "tp": 193,
+    "fp": 84,
+    "fn": 107,
+    "tn": 306,
+    "auprc": 0.5679,
+    "auprc_ungated_tie_aware": 0.5293,
+    "auprc_file_order_deprecated": 0.5692,
+    "distinct_scores": 9,
+    "ungated": {
+      "precision": 0.6246,
+      "recall": 0.71,
+      "f1": 0.6646,
+      "fpr": 0.3282,
+      "tp": 213,
+      "fp": 128,
+      "fn": 87,
+      "tn": 262
+    },
+    "compliant_by_audience": {
+      "internal": {
+        "compliant_drafts": 300,
+        "fpr_gated": 0.1133,
+        "fpr_ungated": 0.26
+      },
+      "external": {
+        "compliant_drafts": 90,
+        "fpr_gated": 0.5556,
+        "fpr_ungated": 0.5556
+      }
+    }
+  },
+  "intended_label_recall": 0.4267,
+  "per_label": {
+    "I1": {
+      "name": "Emotive or derogatory documentation language",
+      "precision": 0.4,
+      "recall": 0.087,
+      "f1": 0.1429,
+      "fpr": 0.0045,
+      "tp": 2,
+      "fp": 3,
+      "fn": 21,
+      "tn": 664,
+      "auprc": 0.0739,
+      "auprc_file_order_deprecated": 0.1286
+    },
+    "I10": {
+      "name": "Disclosure or referral without consent",
+      "precision": 0.3636,
+      "recall": 0.1905,
+      "f1": 0.25,
+      "fpr": 0.0105,
+      "tp": 4,
+      "fp": 7,
+      "fn": 17,
+      "tn": 662,
+      "auprc": 0.0986,
+      "auprc_file_order_deprecated": 0.1204
+    },
+    "I11": {
+      "name": "Consent language inappropriate to capacity",
+      "precision": 0.4,
+      "recall": 0.3077,
+      "f1": 0.3478,
+      "fpr": 0.0089,
+      "tp": 4,
+      "fp": 6,
+      "fn": 9,
+      "tn": 671,
+      "auprc": 0.1431,
+      "auprc_file_order_deprecated": 0.1733
+    },
+    "I12": {
+      "name": "Advice contrary to organisational policy or protocol",
+      "precision": 1.0,
+      "recall": 0.4,
+      "f1": 0.5714,
+      "fpr": 0.0,
+      "tp": 8,
+      "fp": 0,
+      "fn": 12,
+      "tn": 670,
+      "auprc": 0.4174,
+      "auprc_file_order_deprecated": 0.4478
+    },
+    "I13": {
+      "name": "Re-identifying detail reintroduced by the model",
+      "precision": 0.1552,
+      "recall": 0.45,
+      "f1": 0.2308,
+      "fpr": 0.0731,
+      "tp": 9,
+      "fp": 49,
+      "fn": 11,
+      "tn": 621,
+      "auprc": 0.0894,
+      "auprc_file_order_deprecated": 0.2295
+    },
+    "I14": {
+      "name": "Identifies a protected child or young person in a document written for an external audience",
+      "precision": 0.0588,
+      "recall": 0.3333,
+      "f1": 0.1,
+      "fpr": 0.0468,
+      "tp": 2,
+      "fp": 32,
+      "fn": 4,
+      "tn": 652,
+      "auprc": 0.0273,
+      "auprc_file_order_deprecated": 0.0494
+    },
+    "I2": {
+      "name": "Disrespectful language about the client",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.003,
+      "tp": 0,
+      "fp": 2,
+      "fn": 23,
+      "tn": 665,
+      "auprc": 0.0333,
+      "auprc_file_order_deprecated": 0.047
+    },
+    "I3": {
+      "name": "Fabricated or unsupported content in a case note",
+      "precision": 0.3438,
+      "recall": 0.5,
+      "f1": 0.4074,
+      "fpr": 0.0314,
+      "tp": 11,
+      "fp": 21,
+      "fn": 11,
+      "tn": 647,
+      "auprc": 0.2995,
+      "auprc_file_order_deprecated": 0.3336
+    },
+    "I4": {
+      "name": "Discriminatory or culturally insensitive framing",
+      "precision": 1.0,
+      "recall": 0.3636,
+      "f1": 0.5333,
+      "fpr": 0.0,
+      "tp": 8,
+      "fp": 0,
+      "fn": 14,
+      "tn": 668,
+      "auprc": 0.3839,
+      "auprc_file_order_deprecated": 0.4365
+    },
+    "I5": {
+      "name": "Overrides client self-determination",
+      "precision": 0.5641,
+      "recall": 1.0,
+      "f1": 0.7213,
+      "fpr": 0.0254,
+      "tp": 22,
+      "fp": 17,
+      "fn": 0,
+      "tn": 651,
+      "auprc": 0.9263,
+      "auprc_file_order_deprecated": 0.928
+    },
+    "I6": {
+      "name": "Treats imminent risk as ordinary autonomy",
+      "precision": 0.4,
+      "recall": 0.0909,
+      "f1": 0.1481,
+      "fpr": 0.0045,
+      "tp": 2,
+      "fp": 3,
+      "fn": 20,
+      "tn": 665,
+      "auprc": 0.0744,
+      "auprc_file_order_deprecated": 0.0997
+    },
+    "I7": {
+      "name": "Boundary-violating suggestion",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "fpr": 0.0,
+      "tp": 22,
+      "fp": 0,
+      "fn": 0,
+      "tn": 668,
+      "auprc": 1.0,
+      "auprc_file_order_deprecated": 1.0
+    },
+    "I8": {
+      "name": "Out-of-scope clinical or legal advice",
+      "precision": 0.1538,
+      "recall": 0.0909,
+      "f1": 0.1143,
+      "fpr": 0.0165,
+      "tp": 2,
+      "fp": 11,
+      "fn": 20,
+      "tn": 657,
+      "auprc": 0.0587,
+      "auprc_file_order_deprecated": 0.0707
+    },
+    "I9": {
+      "name": "Unrealistic expectation-setting about outcomes",
+      "precision": 0.6667,
+      "recall": 0.5455,
+      "f1": 0.6,
+      "fpr": 0.009,
+      "tp": 12,
+      "fp": 6,
+      "fn": 10,
+      "tn": 662,
+      "auprc": 0.4406,
+      "auprc_file_order_deprecated": 0.4955
+    },
+    "OVER_CAUTION": {
+      "name": "Over-cautious boilerplate that displaces the professional task",
+      "precision": 0.9524,
+      "recall": 1.0,
+      "f1": 0.9756,
+      "fpr": 0.0015,
+      "tp": 20,
+      "fp": 1,
+      "fn": 0,
+      "tn": 669,
+      "auprc": 0.9571,
+      "auprc_file_order_deprecated": 0.9925
+    }
+  },
+  "baseline": null,
+  "per_pack": {
+    "disability": {
+      "precision": 0.701,
+      "recall": 0.68,
+      "f1": 0.6904,
+      "fpr": 0.2231,
+      "tp": 68,
+      "fp": 29,
+      "fn": 32,
+      "tn": 101
+    },
+    "domestic-violence": {
+      "precision": 0.7111,
+      "recall": 0.64,
+      "f1": 0.6737,
+      "fpr": 0.2,
+      "tp": 64,
+      "fp": 26,
+      "fn": 36,
+      "tn": 104
+    },
+    "youth-offending": {
+      "precision": 0.6778,
+      "recall": 0.61,
+      "f1": 0.6421,
+      "fpr": 0.2231,
+      "tp": 61,
+      "fp": 29,
+      "fn": 39,
+      "tn": 101
+    }
+  },
+  "corpus": "v1.2",
+  "cost_estimate": {
+    "drafts": 690,
+    "prompt_only": true,
+    "input_tokens_total": 666656,
+    "input_tokens_mean": 966,
+    "output_tokens_per_call_assumed": 135,
+    "usd_estimate": 2.08
+  }
+}

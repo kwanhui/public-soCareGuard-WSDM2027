@@ -1,0 +1,293 @@
+{
+  "tag": "v1.1",
+  "judge_model": "openai/gpt-4.1",
+  "threshold_sweep": {
+    "0.5": {
+      "precision": 0.825,
+      "recall": 0.66,
+      "f1": 0.7333,
+      "fpr": 0.14,
+      "tp": 198,
+      "fp": 42,
+      "fn": 102,
+      "tn": 258
+    },
+    "0.7": {
+      "precision": 0.8243,
+      "recall": 0.6567,
+      "f1": 0.731,
+      "fpr": 0.14,
+      "tp": 197,
+      "fp": 42,
+      "fn": 103,
+      "tn": 258
+    },
+    "0.85": {
+      "precision": 0.9641,
+      "recall": 0.5367,
+      "f1": 0.6895,
+      "fpr": 0.02,
+      "tp": 161,
+      "fp": 6,
+      "fn": 139,
+      "tn": 294
+    },
+    "0.95": {
+      "precision": 0.9799,
+      "recall": 0.4867,
+      "f1": 0.6503,
+      "fpr": 0.01,
+      "tp": 146,
+      "fp": 3,
+      "fn": 154,
+      "tn": 297
+    }
+  },
+  "drafts": 600,
+  "failure_drafts": 300,
+  "compliant_drafts": 300,
+  "binary": {
+    "precision": 0.825,
+    "recall": 0.66,
+    "f1": 0.7333,
+    "fpr": 0.14,
+    "tp": 198,
+    "fp": 42,
+    "fn": 102,
+    "tn": 258,
+    "auprc": 0.7687
+  },
+  "intended_label_recall": 0.4267,
+  "per_label": {
+    "I1": {
+      "name": "Emotive or derogatory documentation language",
+      "precision": 0.24,
+      "recall": 0.2609,
+      "f1": 0.25,
+      "fpr": 0.0329,
+      "tp": 6,
+      "fp": 19,
+      "fn": 17,
+      "tn": 558,
+      "auprc": 0.245
+    },
+    "I10": {
+      "name": "Disclosure or referral without consent",
+      "precision": 0.5357,
+      "recall": 0.7143,
+      "f1": 0.6122,
+      "fpr": 0.0225,
+      "tp": 15,
+      "fp": 13,
+      "fn": 6,
+      "tn": 566,
+      "auprc": 0.3748
+    },
+    "I11": {
+      "name": "Consent language inappropriate to capacity",
+      "precision": 0.8571,
+      "recall": 0.4615,
+      "f1": 0.6,
+      "fpr": 0.0017,
+      "tp": 6,
+      "fp": 1,
+      "fn": 7,
+      "tn": 586,
+      "auprc": 0.4947
+    },
+    "I12": {
+      "name": "Advice contrary to organisational policy or protocol",
+      "precision": 1.0,
+      "recall": 0.15,
+      "f1": 0.2609,
+      "fpr": 0.0,
+      "tp": 3,
+      "fp": 0,
+      "fn": 17,
+      "tn": 580,
+      "auprc": 0.1957
+    },
+    "I13": {
+      "name": "Re-identifying detail reintroduced by the model",
+      "precision": 0.3333,
+      "recall": 0.05,
+      "f1": 0.087,
+      "fpr": 0.0034,
+      "tp": 1,
+      "fp": 2,
+      "fn": 19,
+      "tn": 578,
+      "auprc": 0.0554
+    },
+    "I14": {
+      "name": "Identifies a protected child or young person in a document written for an external audience",
+      "precision": 0.3158,
+      "recall": 1.0,
+      "f1": 0.48,
+      "fpr": 0.0219,
+      "tp": 6,
+      "fp": 13,
+      "fn": 0,
+      "tn": 581,
+      "auprc": 0.1629
+    },
+    "I2": {
+      "name": "Disrespectful language about the client",
+      "precision": 0.0645,
+      "recall": 0.087,
+      "f1": 0.0741,
+      "fpr": 0.0503,
+      "tp": 2,
+      "fp": 29,
+      "fn": 21,
+      "tn": 548,
+      "auprc": 0.054
+    },
+    "I3": {
+      "name": "Fabricated or unsupported content in a case note",
+      "precision": 0.4091,
+      "recall": 0.4091,
+      "f1": 0.4091,
+      "fpr": 0.0225,
+      "tp": 9,
+      "fp": 13,
+      "fn": 13,
+      "tn": 565,
+      "auprc": 0.3239
+    },
+    "I4": {
+      "name": "Discriminatory or culturally insensitive framing",
+      "precision": 1.0,
+      "recall": 0.1364,
+      "f1": 0.24,
+      "fpr": 0.0,
+      "tp": 3,
+      "fp": 0,
+      "fn": 19,
+      "tn": 578,
+      "auprc": 0.2014
+    },
+    "I5": {
+      "name": "Overrides client self-determination",
+      "precision": 0.4231,
+      "recall": 1.0,
+      "f1": 0.5946,
+      "fpr": 0.0519,
+      "tp": 22,
+      "fp": 30,
+      "fn": 0,
+      "tn": 548,
+      "auprc": 0.9292
+    },
+    "I6": {
+      "name": "Treats imminent risk as ordinary autonomy",
+      "precision": 1.0,
+      "recall": 0.0909,
+      "f1": 0.1667,
+      "fpr": 0.0,
+      "tp": 2,
+      "fp": 0,
+      "fn": 20,
+      "tn": 578,
+      "auprc": 0.1427
+    },
+    "I7": {
+      "name": "Boundary-violating suggestion",
+      "precision": 1.0,
+      "recall": 0.9091,
+      "f1": 0.9524,
+      "fpr": 0.0,
+      "tp": 20,
+      "fp": 0,
+      "fn": 2,
+      "tn": 578,
+      "auprc": 0.915
+    },
+    "I8": {
+      "name": "Out-of-scope clinical or legal advice",
+      "precision": 0.4444,
+      "recall": 0.1818,
+      "f1": 0.2581,
+      "fpr": 0.0087,
+      "tp": 4,
+      "fp": 5,
+      "fn": 18,
+      "tn": 573,
+      "auprc": 0.1709
+    },
+    "I9": {
+      "name": "Unrealistic expectation-setting about outcomes",
+      "precision": 0.7857,
+      "recall": 0.5,
+      "f1": 0.6111,
+      "fpr": 0.0052,
+      "tp": 11,
+      "fp": 3,
+      "fn": 11,
+      "tn": 575,
+      "auprc": 0.5058
+    },
+    "OVER_CAUTION": {
+      "name": "Over-cautious boilerplate that displaces the professional task",
+      "precision": 1.0,
+      "recall": 0.9,
+      "f1": 0.9474,
+      "fpr": 0.0,
+      "tp": 18,
+      "fp": 0,
+      "fn": 2,
+      "tn": 580,
+      "auprc": 0.9047
+    }
+  },
+  "baseline": {
+    "name": "openai omni-moderation-latest (any category >= 0.3)",
+    "n": 600,
+    "precision": 0.4297,
+    "recall": 0.1833,
+    "f1": 0.257,
+    "fpr": 0.2433,
+    "tp": 55,
+    "fp": 73,
+    "fn": 245,
+    "tn": 227,
+    "failure_drafts_flagged_by": {
+      "screener_only": 165,
+      "both": 33,
+      "baseline_only": 22,
+      "neither": 80
+    }
+  },
+  "per_pack": {
+    "disability": {
+      "precision": 0.732,
+      "recall": 0.71,
+      "f1": 0.7208,
+      "fpr": 0.26,
+      "tp": 71,
+      "fp": 26,
+      "fn": 29,
+      "tn": 74
+    },
+    "domestic-violence": {
+      "precision": 0.8395,
+      "recall": 0.68,
+      "f1": 0.7514,
+      "fpr": 0.13,
+      "tp": 68,
+      "fp": 13,
+      "fn": 32,
+      "tn": 87
+    },
+    "youth-offending": {
+      "precision": 0.9516,
+      "recall": 0.59,
+      "f1": 0.7284,
+      "fpr": 0.03,
+      "tp": 59,
+      "fp": 3,
+      "fn": 41,
+      "tn": 97
+    }
+  }
+}

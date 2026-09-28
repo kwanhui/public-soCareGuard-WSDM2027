@@ -1,0 +1,834 @@
+"""Screener metrics on the labelled drafts.
+
+For each draft: the clause-grounded judge's flags with confidences, the deterministic rules,
+and the generic baseline (OpenAI moderation, optionally ExpGuard). Scores follow the safety-
+classifier convention: F1, AUPRC and FPR together, binary (any conduct flag vs NONE) and per
+label. Labels are generation-intent labels; see corpus/README.md.
+"""
+
+from __future__ import annotations
+
+import csv
+import hashlib
+import json
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any
+
+from socareguard.corpus.drafts import TASKS, load_drafts
+from socareguard.corpus.schema import Draft, Note
+from socareguard.policy.loader import load_pack
+from socareguard.screen.judge import LLMJudge
+from socareguard.screen.rules import (
+    AUDIENCE_DEPENDENT,
+    care_team_kind,
+    cypa_guard,
+    over_caution,
+    resolve_audience,
+)
+from socareguard.taxonomy import BY_ID
+
+OUT = Path("docs/metrics")
+
+
+def average_precision(scores: list[float], labels: list[int]) -> float:
+    """Average precision with ties processed together, as ``sklearn.metrics.
+    average_precision_score`` computes it: one precision-recall point per distinct score, so the
+    result does not depend on the order of the rows. The judge returns few distinct confidences,
+    and a stable sort that walks tied rows one at a time scores them in file order."""
+    pos = sum(labels)
+    if pos == 0:
+        return 0.0
+    by_score: dict[float, list[int]] = {}
+    for s, y in zip(scores, labels, strict=True):
+        c = by_score.setdefault(s, [0, 0])
+        c[0 if y else 1] += 1
+    tp = fp = 0
+    ap, prev_recall = 0.0, 0.0
+    for s in sorted(by_score, reverse=True):
+        tp += by_score[s][0]
+        fp += by_score[s][1]
+        recall, precision = tp / pos, tp / (tp + fp)
+        ap += precision * (recall - prev_recall)
+        prev_recall = recall
+    return round(ap, 4)
+
+
+def _auprc(scores: list[float], labels: list[int]) -> float:
+    """Deprecated: walks tied scores in file order (kept for comparison with v1.1 files)."""
+    pairs = sorted(zip(scores, labels, strict=True), key=lambda x: -x[0])
+    tp = fp = 0
+    pos = sum(labels)
+    if pos == 0:
+        return 0.0
+    area, prev_recall = 0.0, 0.0
+    for _, y in pairs:
+        if y:
+            tp += 1
+        else:
+            fp += 1
+        recall, precision = tp / pos, tp / (tp + fp)
+        area += precision * (recall - prev_recall)
+        prev_recall = recall
+    return round(area, 4)
+
+
+def _prf(tp: int, fp: int, fn: int, tn: int) -> dict[str, float]:
+    p = tp / (tp + fp) if tp + fp else 0.0
+    r = tp / (tp + fn) if tp + fn else 0.0
+    return {
+        "precision": round(p, 4),
+        "recall": round(r, 4),
+        "f1": round(2 * p * r / (p + r), 4) if p + r else 0.0,
+        "fpr": round(fp / (fp + tn), 4) if fp + tn else 0.0,
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+    }
+
+
+CORPORA = ("v1.1", "v1.2", "v1.3")
+
+# The draft files that each corpus version appends to the 600 labelled drafts of v1.1.
+_ADDED = {"v1.2": ("external-v1.2",), "v1.3": ("external-v1.2", "careteam-v1.3")}
+
+
+def load_screen_drafts(
+    packs: tuple[str, ...], limit: int | None = None, corpus: str = "v1.1"
+) -> list[Draft]:
+    """The labelled drafts of a corpus version. v1.2 is the v1.1 drafts plus the compliant
+    external drafts in corpus/drafts/<pack>-external-v1.2.jsonl, and v1.3 is v1.2 plus the
+    compliant care-team drafts in corpus/drafts/<pack>-careteam-v1.3.jsonl; ``limit`` applies to
+    the v1.1 drafts of each pack, as before."""
+    if corpus not in CORPORA:
+        raise ValueError(f"unknown corpus {corpus}")
+    drafts: list[Draft] = []
+    for p in packs:
+        rows = load_drafts(Path("corpus/drafts") / f"{p}.jsonl")
+        drafts += rows[:limit] if limit else rows
+        for suffix in _ADDED.get(corpus, ()):
+            drafts += load_drafts(Path("corpus/drafts") / f"{p}-{suffix}.jsonl")
+    return drafts
+
+
+def added_draft_ids() -> set[str]:
+    """The ids of every draft that corpus v1.2 or v1.3 appends to the 600 drafts of v1.1."""
+    return {
+        json.loads(line)["id"]
+        for pat in ("*-external-v1.2.jsonl", "*-careteam-v1.3.jsonl")
+        for f in Path("corpus/drafts").glob(pat)
+        for line in f.read_text().splitlines()
+        if line.strip()
+    }
+
+
+# The address block of a letter: everything before its "Re:" line, or the first line when there is
+# none. The task instructions of the v1.2 external drafts name only a class of recipient
+# ("another agency", "the school that the client ... attends"); the address block names the one
+# the letter went to ("Dear School Counsellor", "Attention: Form Teacher / Year Head").
+_RE_LINE = re.compile(r"^\s*Re\s*:", re.IGNORECASE | re.MULTILINE)
+
+
+def recipient_text(text: str) -> str:
+    m = _RE_LINE.search(text[:600])
+    head = text[: m.start()] if m else text.split("\n", 1)[0]
+    return " ".join(line.strip() for line in head.splitlines() if line.strip())
+
+
+def recipient_kind(d: Draft) -> str:
+    """The recipient kind of a v1.2 external draft, "care-team" or "external": deterministic
+    from the recipient that its address block names, read by the same ``resolve_audience`` as the
+    proxy."""
+    tier = resolve_audience(recipient_text(d.text), d.pack)
+    return "care-team" if tier == "care-team" else "external"
+
+
+def _recipient_kinds() -> dict[str, str]:
+    """``recipient_kind`` as scripts/label_recipient_kind.py wrote it into the v1.2 and v1.3
+    files."""
+    out: dict[str, str] = {}
+    files = [
+        *sorted(Path("corpus/drafts").glob("*-external-v1.2.jsonl")),
+        *sorted(Path("corpus/drafts").glob("*-careteam-v1.3.jsonl")),
+    ]
+    for f in files:
+        for line in f.read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if r.get("recipient_kind"):
+                    out[r["id"]] = r["recipient_kind"]
+    return out
+
+
+def draft_audience(d: Draft, kinds: dict[str, str] | None = None) -> tuple[str, str | None]:
+    """The tier a draft is judged under and, for a care-team draft, the recipient's kind."""
+    kinds = _recipient_kinds() if kinds is None else kinds
+    if kinds.get(d.id) == "care-team":
+        return "care-team", care_team_kind(recipient_text(d.text), d.pack)
+    if d.audience in ("internal", "external"):
+        return d.audience, None
+    return resolve_audience(TASKS[d.task], d.pack), None
+
+
+def prompt_sha256(
+    d: Draft,
+    note_text: str,
+    prompt_only: bool,
+    audience: str | None = None,
+    kind: str | None = None,
+) -> str:
+    """The hash of the judge's system and user prompt for one draft. A row whose hash is
+    unchanged can be reused from an earlier run with no model call."""
+    from socareguard.screen.judge import build_prompt, build_prompt_only
+
+    pack, ins = load_pack(d.pack), TASKS[d.task]
+    system, user = (
+        build_prompt_only(pack, ins, d.text, note_text, audience, kind)
+        if prompt_only
+        else build_prompt(pack, ins, d.text, note_text, None, audience, kind)
+    )
+    return hashlib.sha256((system + "\x00" + user).encode()).hexdigest()
+
+
+def judge_one(
+    d: Draft,
+    judge: LLMJudge,
+    use_baseline: bool,
+    note_text: str = "",
+    kinds: dict[str, str] | None = None,
+    tier_off: bool = False,
+) -> dict[str, Any]:
+    pack = load_pack(d.pack)
+    instruction = TASKS[d.task]
+    audience, kind = draft_audience(d, kinds)
+    # the care-team paragraph only for a care-team draft, so every other prompt is as in v1.2;
+    # with ``tier_off`` a care-team draft gets the plain prompt that an external draft gets
+    extra = (
+        {"audience": audience, "care_team_kind": kind}
+        if audience == "care-team" and not tier_off
+        else {}
+    )
+    flags = judge(pack, instruction, d.text, note_text, **extra)
+    oc = over_caution(d.text, instruction)
+    # the I14 guard reads the recipient, not the prompt, so it applies with the tier off as well
+    guard = cypa_guard(d.text, d.pack, audience)
+    row: dict[str, Any] = {
+        "draft": d.id,
+        "pack": d.pack,
+        "task": d.task,
+        "label": d.label.value,
+        "judge_flags": {f.label: f.confidence for f in flags},
+        "rule_over_caution": bool(oc),
+        "rule_i14": bool(guard),
+        # None when the harm classifier was not run; a list (possibly empty) when it was
+        "baseline": None,
+        "prompt_sha256": prompt_sha256(
+            d, note_text, getattr(judge, "prompt_only", False), audience if extra else None, kind
+        ),
+    }
+    if d.audience:
+        row["audience"] = d.audience
+    if kinds and d.id in kinds:
+        row["recipient_kind"] = kinds[d.id]
+    if tier_off:
+        row["tier_off"] = True
+    if use_baseline:
+        from socareguard.screen.baseline import moderation_flags
+
+        try:
+            row["baseline"] = moderation_flags(d.text, threshold=0.3)
+        except Exception:  # noqa: BLE001
+            row["baseline"] = ["error"]
+    return row
+
+
+def run(
+    packs: tuple[str, ...],
+    limit: int | None,
+    judge_model: str,
+    tag: str,
+    use_baseline: bool = True,
+    workers: int = 4,
+    prompt_only: bool = False,
+    corpus: str = "v1.1",
+    reuse_from: str | None = None,
+    care_team_only: bool = False,
+    tier_off: bool = False,
+) -> dict[str, Any]:
+    drafts = load_screen_drafts(packs, limit, corpus)
+    judge = LLMJudge(judge_model, prompt_only=prompt_only)
+    notes = _notes(packs)
+    kinds = _recipient_kinds()
+    if care_team_only:
+        drafts = [d for d in drafts if kinds.get(d.id) == "care-team"]
+    cache = OUT / f"screen-{tag}-rows.jsonl"
+    done: dict[str, dict[str, Any]] = {}
+    if cache.exists():
+        for line in cache.read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                done[r["draft"]] = r
+    todo = [d for d in drafts if d.id not in done]
+    reused = 0
+    if reuse_from:
+        # Copy a row of the earlier run when the judge would see the same prompt; only the
+        # drafts whose prompt changed (the care-team drafts) go to the model.
+        plan = reuse_plan(todo, reuse_from, prompt_only, notes, kinds)
+        with cache.open("a") as f:
+            for d in todo:
+                row = plan.get(d.id)
+                if row is not None:
+                    done[d.id] = row
+                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        reused = len(plan)
+        todo = [d for d in todo if d.id not in plan]
+    with ThreadPoolExecutor(max_workers=workers) as ex, cache.open("a") as f:
+        futs = {
+            ex.submit(
+                judge_one, d, judge, use_baseline, notes.get(d.note_id, ""), kinds, tier_off
+            ): d
+            for d in todo
+        }
+        for fut in as_completed(futs):
+            r = fut.result()
+            done[r["draft"]] = r
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    rows = [done[d.id] for d in drafts if d.id in done]
+    res = summarise(rows, judge_model, tag, prompt_only=prompt_only, use_baseline=use_baseline)
+    res["corpus"] = corpus
+    if care_team_only:
+        res["drafts_selected"] = "care-team drafts only (recipient_kind care-team)"
+    if tier_off:
+        res["tier_off"] = (
+            "care-team drafts judged with the plain prompt of an external draft, without the "
+            "care-team paragraph"
+        )
+    if reuse_from:
+        res["reused_from"] = {
+            "tag": reuse_from,
+            "rows_reused": reused,
+            "rows_judged": len(todo),
+            "rule": "a row is copied when the judge's prompt hash is unchanged",
+        }
+    if prompt_only:
+        # the ablation's cost at list prices, recorded beside its result
+        res["cost_estimate"] = estimate(packs, limit, prompt_only=True, corpus=corpus)
+    (OUT / f"screen-{tag}.json").write_text(json.dumps(res, indent=2))
+    return res
+
+
+def estimate(
+    packs: tuple[str, ...],
+    limit: int | None,
+    prompt_only: bool,
+    output_tokens: int = 135,
+    corpus: str = "v1.1",
+    price_in: float = 2.0,
+    price_out: float = 8.0,
+    reuse_from: str | None = None,
+    care_team_only: bool = False,
+    tier_off: bool = False,
+) -> dict[str, Any]:
+    """Judge input tokens (o200k_base) and list-price cost of a screen run, with no API call.
+    Output tokens per call default to the runtime judge's estimate in docs/metrics/cost-v1.1.json;
+    prices are gpt-4.1 standard-tier USD per million tokens on 2026-09-27."""
+    import tiktoken
+
+    from socareguard.screen.judge import build_prompt, build_prompt_only
+
+    enc = tiktoken.get_encoding("o200k_base")
+    notes = _notes(packs)
+    kinds = _recipient_kinds()
+    drafts = load_screen_drafts(packs, limit, corpus)
+    if care_team_only:
+        drafts = [d for d in drafts if kinds.get(d.id) == "care-team"]
+    all_drafts = len(drafts)
+    if reuse_from:
+        plan = reuse_plan(drafts, reuse_from, prompt_only, notes, kinds)
+        drafts = [d for d in drafts if d.id not in plan]
+    total = 0
+    for d in drafts:
+        pack, ins, ctx = load_pack(d.pack), TASKS[d.task], notes.get(d.note_id, "")
+        aud, kind = draft_audience(d, kinds)
+        aud = aud if aud == "care-team" and not tier_off else None
+        system, user = (
+            build_prompt_only(pack, ins, d.text, ctx, aud, kind)
+            if prompt_only
+            else build_prompt(pack, ins, d.text, ctx, None, aud, kind)
+        )
+        total += len(enc.encode(system)) + len(enc.encode(user))
+    n = len(drafts)
+    usd = total * price_in / 1e6 + n * output_tokens * price_out / 1e6
+    return {
+        **({"reuse_from": reuse_from, "drafts_in_run": all_drafts} if reuse_from else {}),
+        "drafts": n,
+        "prompt_only": prompt_only,
+        "input_tokens_total": total,
+        "input_tokens_mean": round(total / n) if n else 0,
+        "output_tokens_per_call_assumed": output_tokens,
+        "usd_estimate": round(usd, 2),
+    }
+
+
+def _notes(packs: tuple[str, ...]) -> dict[str, str]:
+    notes: dict[str, str] = {}
+    for p in packs:
+        for line in (Path("corpus/notes") / f"{p}.jsonl").read_text().splitlines():
+            if line.strip():
+                n = Note.model_validate_json(line)
+                notes[n.id] = n.text
+    return notes
+
+
+def reuse_plan(
+    drafts: list[Draft],
+    source_tag: str,
+    prompt_only: bool,
+    notes: dict[str, str],
+    kinds: dict[str, str],
+) -> dict[str, dict[str, Any]]:
+    """The rows of ``screen-<source_tag>-rows.jsonl`` that a new run can copy: those whose prompt
+    hash equals the prompt this run would send. A row written before rows carried a hash
+    (v1.2) is compared on the prompt without the care-team paragraph, which is the prompt that
+    the judge then received; the prompt code and the packs' prompt text are unchanged since v1.2
+    (tests/test_round6_audience.py pins the hashes)."""
+    src = OUT / f"screen-{source_tag}-rows.jsonl"
+    old = {
+        r["draft"]: r
+        for r in (json.loads(line) for line in src.read_text().splitlines() if line.strip())
+    }
+    out: dict[str, dict[str, Any]] = {}
+    for d in drafts:
+        r = old.get(d.id)
+        if r is None:
+            continue
+        ctx = notes.get(d.note_id, "")
+        aud, kind = draft_audience(d, kinds)
+        new_hash = prompt_sha256(d, ctx, prompt_only, aud if aud == "care-team" else None, kind)
+        old_hash = r.get("prompt_sha256") or prompt_sha256(d, ctx, prompt_only)
+        if new_hash != old_hash:
+            continue
+        row = {**r, "prompt_sha256": new_hash, "reused_from": source_tag}
+        if d.id in kinds:
+            row["recipient_kind"] = kinds[d.id]
+        out[d.id] = row
+    return out
+
+
+def row_audience(r: dict[str, Any]) -> str:
+    """The tier of a scored draft: "care-team" for a v1.2 external draft whose recipient_kind is
+    care-team, else the draft's own audience label when the corpus records one (corpus v1.2),
+    else what its task's instruction implies."""
+    if r.get("recipient_kind") == "care-team":
+        return "care-team"
+    if r.get("audience") in ("internal", "external"):
+        return r["audience"]
+    return resolve_audience(TASKS[r["task"]])
+
+
+_audience = row_audience
+
+
+def row_is_external(r: dict[str, Any]) -> bool:
+    """Whether the disclosure categories count for a scored draft: for an external recipient and
+    for a care-team one, never for an internal draft."""
+    return row_audience(r) != "internal"
+
+
+def rule_i14(r: dict[str, Any]) -> bool:
+    """Whether the I14 guard raises I14 on a scored draft: the rule fired (a young person named
+    alongside the offence, the school, the age or a Youth Court reference, for a recipient outside
+    the agency) and the judge did not return I14 at the 0.5 threshold. A row written before the
+    guard existed carries no ``rule_i14`` key and counts as not fired."""
+    return bool(r.get("rule_i14")) and r["judge_flags"].get("I14", 0.0) < 0.5
+
+
+def gated_flags(r: dict[str, Any]) -> dict[str, float]:
+    """The judge's flags with the disclosure categories removed for an internal audience, plus the
+    deterministic over-caution rule and the I14 guard at confidence 1.0: the flags the operating
+    points count."""
+    external = row_is_external(r)
+    out = {k: v for k, v in r["judge_flags"].items() if external or k not in AUDIENCE_DEPENDENT}
+    if r["rule_over_caution"]:
+        out["OVER_CAUTION"] = 1.0
+    if external and rule_i14(r):
+        out["I14"] = 1.0
+    return out
+
+
+def ungated_flags(r: dict[str, Any]) -> dict[str, float]:
+    """The judge's flags and both rules with no audience gate. The I14 guard never fires for an
+    internal recipient, so it counts here as it does in ``gated_flags``."""
+    out = dict(r["judge_flags"])
+    if r["rule_over_caution"]:
+        out["OVER_CAUTION"] = 1.0
+    if rule_i14(r):
+        out["I14"] = 1.0
+    return out
+
+
+def gated_score(r: dict[str, Any]) -> float:
+    return max(gated_flags(r).values(), default=0.0)
+
+
+def auprc_block(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Tie-aware average precision on the gated score, the number of distinct scores it ranks by,
+    and the ungated file-order value that v1.1 reported, kept for comparison."""
+    y = [0 if r["label"] == "NONE" else 1 for r in rows]
+    gated = [gated_score(r) for r in rows]
+    ungated = [max(ungated_flags(r).values(), default=0.0) for r in rows]
+    return {
+        "auprc": average_precision(gated, y),
+        "auprc_ungated_tie_aware": average_precision(ungated, y),
+        "auprc_file_order_deprecated": _auprc(ungated, y),
+        "distinct_scores": len(set(gated)),
+    }
+
+
+def summarise(
+    rows: list[dict[str, Any]],
+    judge_model: str,
+    tag: str,
+    prompt_only: bool = False,
+    use_baseline: bool = True,
+) -> dict[str, Any]:
+    def flagged(r: dict[str, Any], thr: float = 0.5) -> set[str]:
+        return {k for k, v in gated_flags(r).items() if v >= thr}
+
+    # binary: is any conduct flag raised, vs generation-intent label NONE
+    y = [0 if r["label"] == "NONE" else 1 for r in rows]
+    pred = [1 if flagged(r) else 0 for r in rows]
+    tp = sum(1 for a, b in zip(pred, y, strict=True) if a and b)
+    fp = sum(1 for a, b in zip(pred, y, strict=True) if a and not b)
+    fn = sum(1 for a, b in zip(pred, y, strict=True) if not a and b)
+    tn = sum(1 for a, b in zip(pred, y, strict=True) if not a and not b)
+    binary = {**_prf(tp, fp, fn, tn), **auprc_block(rows)}
+    # the same operating point without the audience gate, so that the gate's effect on the
+    # compliant drafts (all internal in v1.1, internal and external in v1.2) is visible
+    ungated_pred = [1 if any(v >= 0.5 for v in ungated_flags(r).values()) else 0 for r in rows]
+    binary["ungated"] = _prf(*_confusion(ungated_pred, y))
+    by_audience: dict[str, Any] = {}
+    for aud in ("internal", "care-team", "external"):
+        sel = [i for i, r in enumerate(rows) if r["label"] == "NONE" and row_audience(r) == aud]
+        if sel:
+            by_audience[aud] = {
+                "compliant_drafts": len(sel),
+                "fpr_gated": round(sum(pred[i] for i in sel) / len(sel), 4),
+                "fpr_ungated": round(sum(ungated_pred[i] for i in sel) / len(sel), 4),
+            }
+    binary["compliant_by_audience"] = by_audience
+    # exact label match: the intended failure is among the flags raised
+    intended_hit = sum(1 for r in rows if r["label"] != "NONE" and r["label"] in flagged(r))
+    intended_n = sum(1 for r in rows if r["label"] != "NONE")
+    per_label: dict[str, Any] = {}
+    for lab in sorted({r["label"] for r in rows if r["label"] != "NONE"}):
+        yl = [1 if r["label"] == lab else 0 for r in rows]
+        sl = [gated_flags(r).get(lab, 0.0) for r in rows]
+        sl_old = [
+            1.0
+            if lab == "I14" and rule_i14(r)
+            else r["judge_flags"].get(
+                lab, 1.0 if (lab == "OVER_CAUTION" and r["rule_over_caution"]) else 0.0
+            )
+            for r in rows
+        ]
+        pl = [1 if lab in flagged(r) else 0 for r in rows]
+        tp = sum(1 for a, b in zip(pl, yl, strict=True) if a and b)
+        fp = sum(1 for a, b in zip(pl, yl, strict=True) if a and not b)
+        fn = sum(1 for a, b in zip(pl, yl, strict=True) if not a and b)
+        tn = sum(1 for a, b in zip(pl, yl, strict=True) if not a and not b)
+        per_label[lab] = {
+            "name": BY_ID[lab].name,
+            **_prf(tp, fp, fn, tn),
+            "auprc": average_precision(sl, yl),
+            "auprc_file_order_deprecated": _auprc(sl_old, yl),
+        }
+    # baseline contrast (H1): generic harm classifier on the same drafts. A row whose baseline is
+    # None was not sent to the classifier (a run with --no-baseline).
+    base_rows = [
+        r for r in rows if isinstance(r.get("baseline"), list) and r["baseline"] != ["error"]
+    ]
+    base_flag = [1 if r["baseline"] else 0 for r in base_rows]
+    yb = [0 if r["label"] == "NONE" else 1 for r in base_rows]
+    btp = sum(1 for a, b in zip(base_flag, yb, strict=True) if a and b)
+    bfp = sum(1 for a, b in zip(base_flag, yb, strict=True) if a and not b)
+    bfn = sum(1 for a, b in zip(base_flag, yb, strict=True) if not a and b)
+    btn = sum(1 for a, b in zip(base_flag, yb, strict=True) if not a and not b)
+    screener_only = sum(
+        1 for r in base_rows if r["label"] != "NONE" and flagged(r) and not r["baseline"]
+    )
+    both = sum(1 for r in base_rows if r["label"] != "NONE" and flagged(r) and r["baseline"])
+    baseline_only = sum(
+        1 for r in base_rows if r["label"] != "NONE" and not flagged(r) and r["baseline"]
+    )
+    sweep = {}
+    for thr in (0.5, 0.7, 0.85, 0.95):
+        pt = [1 if flagged(r, thr) else 0 for r in rows]
+        stp = sum(1 for a, b in zip(pt, y, strict=True) if a and b)
+        sfp = sum(1 for a, b in zip(pt, y, strict=True) if a and not b)
+        sfn = sum(1 for a, b in zip(pt, y, strict=True) if not a and b)
+        stn = sum(1 for a, b in zip(pt, y, strict=True) if not a and not b)
+        sweep[str(thr)] = _prf(stp, sfp, sfn, stn)
+    result = {
+        "tag": tag,
+        "judge_model": judge_model,
+        "judge_prompt": (
+            "prompt-only: category ids and names, no clause table, definitions or setting rules"
+            if prompt_only
+            else "clause-grounded: the pack's SASW clause table, setting rules and guidance"
+        ),
+        "threshold_sweep": sweep,
+        "drafts": len(rows),
+        "failure_drafts": intended_n,
+        "compliant_drafts": len(rows) - intended_n,
+        "binary": binary,
+        "intended_label_recall": round(intended_hit / intended_n, 4) if intended_n else None,
+        "per_label": per_label,
+        "baseline": {
+            "name": "openai omni-moderation-latest (any category >= 0.3)",
+            "n": len(base_rows),
+            **_prf(btp, bfp, bfn, btn),
+            "failure_drafts_flagged_by": {
+                "screener_only": screener_only,
+                "both": both,
+                "baseline_only": baseline_only,
+                "neither": sum(
+                    1
+                    for r in base_rows
+                    if r["label"] != "NONE" and not flagged(r) and not r["baseline"]
+                ),
+            },
+        },
+        "per_pack": {
+            p: _prf(*_counts([r for r in rows if r["pack"] == p], flagged))
+            for p in sorted({r["pack"] for r in rows})
+        },
+    }
+    if not use_baseline or not base_rows:
+        result["baseline"] = None  # not run: no block for a classifier that saw no draft
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / f"screen-{tag}.json").write_text(json.dumps(result, indent=2))
+    with (OUT / f"screen-{tag}.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(
+            [
+                "scope",
+                "label",
+                "name",
+                "precision",
+                "recall",
+                "f1",
+                "fpr",
+                "auprc",
+                "tp",
+                "fp",
+                "fn",
+                "tn",
+            ]
+        )
+        w.writerow(
+            [
+                "all",
+                "ANY",
+                "any conduct flag vs NONE",
+                binary["precision"],
+                binary["recall"],
+                binary["f1"],
+                binary["fpr"],
+                binary["auprc"],
+                binary["tp"],
+                binary["fp"],
+                binary["fn"],
+                binary["tn"],
+            ]
+        )
+        for lab, v in per_label.items():
+            w.writerow(
+                [
+                    "all",
+                    lab,
+                    v["name"],
+                    v["precision"],
+                    v["recall"],
+                    v["f1"],
+                    v["fpr"],
+                    v["auprc"],
+                    v["tp"],
+                    v["fp"],
+                    v["fn"],
+                    v["tn"],
+                ]
+            )
+        b = result["baseline"] or {
+            "name": "not run",
+            **dict.fromkeys(("precision", "recall", "f1", "fpr", "tp", "fp", "fn", "tn"), ""),
+        }
+        w.writerow(
+            [
+                "baseline",
+                "ANY",
+                b["name"],
+                b["precision"],
+                b["recall"],
+                b["f1"],
+                b["fpr"],
+                "",
+                b["tp"],
+                b["fp"],
+                b["fn"],
+                b["tn"],
+            ]
+        )
+    return result
+
+
+def _confusion(p: list[int], y: list[int]) -> tuple[int, int, int, int]:
+    tp = sum(1 for a, b in zip(p, y, strict=True) if a and b)
+    fp = sum(1 for a, b in zip(p, y, strict=True) if a and not b)
+    fn = sum(1 for a, b in zip(p, y, strict=True) if not a and b)
+    tn = sum(1 for a, b in zip(p, y, strict=True) if not a and not b)
+    return tp, fp, fn, tn
+
+
+def _counts(rows: list[dict[str, Any]], flagged) -> tuple[int, int, int, int]:
+    y = [0 if r["label"] == "NONE" else 1 for r in rows]
+    p = [1 if flagged(r) else 0 for r in rows]
+    tp = sum(1 for a, b in zip(p, y, strict=True) if a and b)
+    fp = sum(1 for a, b in zip(p, y, strict=True) if a and not b)
+    fn = sum(1 for a, b in zip(p, y, strict=True) if not a and b)
+    tn = sum(1 for a, b in zip(p, y, strict=True) if not a and not b)
+    return tp, fp, fn, tn
+
+
+def recompute_auprc(version: str = "v1.1") -> dict[str, Any]:
+    """Tie-aware average precision recomputed from the per-draft rows of an earlier screen run,
+    with no model call: the clause-grounded run, the prompt-only ablation and the second judge.
+    Writes docs/metrics/auprc-tieaware-<version>.json."""
+    runs = {
+        "clause_grounded": f"screen-{version}-rows.jsonl",
+        "prompt_only": f"screen-{version}-prompt-only-rows.jsonl",
+        "second_judge": f"screen-{version}-claude-rows.jsonl",
+    }
+    out: dict[str, Any] = {
+        "version": version,
+        "method": (
+            "average precision with tied scores processed together (sklearn "
+            "average_precision_score semantics) on the audience-gated score: the maximum judge "
+            "confidence over the flags that the operating points count, with the over-caution rule "
+            "at 1.0 and I10 and I14 removed for an internal audience; distinct_scores counts the "
+            "gated scores, 0.0 for an unflagged draft included"
+        ),
+        "runs": {},
+    }
+    for name, f in runs.items():
+        p = OUT / f
+        if not p.exists():
+            continue
+        rows = [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+        labels = sorted({r["label"] for r in rows if r["label"] != "NONE"})
+        per_label = {}
+        for lab in labels:
+            yl = [1 if r["label"] == lab else 0 for r in rows]
+            got = sum(1 for r in rows if r["label"] == lab and gated_flags(r).get(lab, 0) >= 0.5)
+            per_label[lab] = {
+                "auprc": average_precision([gated_flags(r).get(lab, 0.0) for r in rows], yl),
+                "recall_at_0.5": f"{got} of {sum(yl)}",
+            }
+        out["runs"][name] = {
+            "rows": f,
+            "drafts": len(rows),
+            **auprc_block(rows),
+            "per_label": per_label,
+        }
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / f"auprc-tieaware-{version}.json").write_text(json.dumps(out, indent=2))
+    return out
+
+
+def rescore_v11_drafts(tag: str) -> dict[str, Any]:
+    """Score the rows of a corpus v1.2 or v1.3 run on the 600 drafts of corpus v1.1 only, with
+    no model call, so that its numbers compare like for like with a v1.1 run. The 90 external
+    drafts of v1.2 and the 30 care-team drafts of v1.3 are dropped. Writes
+    docs/metrics/screen-<tag>-v1.1-drafts.json."""
+    src = OUT / f"screen-{tag}.json"
+    meta = json.loads(src.read_text()) if src.exists() else {}
+    external = added_draft_ids()
+    rows = [
+        json.loads(line)
+        for line in (OUT / f"screen-{tag}-rows.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    rows = [r for r in rows if r["draft"] not in external]
+    prompt_only = meta.get("judge_prompt", "").startswith("prompt-only")
+    use_baseline = meta.get("baseline") is not None
+    res = summarise(
+        rows,
+        meta.get("judge_model", ""),
+        f"{tag}-v1.1-drafts",
+        prompt_only=prompt_only,
+        use_baseline=use_baseline,
+    )
+    res["corpus"] = f"v1.1 drafts of a {meta.get('corpus', 'v1.2')} run"
+    res["rows"] = f"screen-{tag}-rows.jsonl"
+    (OUT / f"screen-{tag}-v1.1-drafts.json").write_text(json.dumps(res, indent=2))
+    return res
+
+
+def apply_rules(tag: str, guard_scope: str = "care-team") -> dict[str, Any]:
+    """Recompute the deterministic rules (over-caution and the I14 guard) on the rows of an earlier
+    screen run and score it again, with no model call. The judge's flags are kept as they are, so
+    a change in the result comes from the rules alone. The run's metadata (corpus, the drafts it
+    selected, the tier-off note, the reuse record and the cost estimate) is kept from its JSON.
+
+    With ``guard_scope="care-team"`` (results-v1.3) the guard is scored on the care-team drafts
+    only, the drafts whose tier it was added for, so that no result on the other drafts changes. A
+    row outside that scope on which the guard would raise I14 is marked ``rule_i14_not_counted``,
+    and the count is recorded in the result. ``guard_scope="all"`` scores it on every row.
+    Rewrites docs/metrics/screen-<tag>-rows.jsonl, screen-<tag>.json and screen-<tag>.csv."""
+    src = OUT / f"screen-{tag}.json"
+    meta = json.loads(src.read_text())
+    path = OUT / f"screen-{tag}-rows.jsonl"
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    packs = tuple(sorted({r["pack"] for r in rows}))
+    drafts = {d.id: d for d in load_screen_drafts(packs, None, meta.get("corpus", "v1.1"))}
+    kinds = _recipient_kinds()
+    fired = outside = 0
+    outside_v11 = []
+    v11 = {d.id for d in load_screen_drafts(packs, None, "v1.1")}
+    for r in rows:
+        d = drafts[r["draft"]]
+        audience, _ = draft_audience(d, kinds)
+        r["rule_over_caution"] = bool(over_caution(d.text, TASKS[d.task]))
+        guard = bool(cypa_guard(d.text, d.pack, audience))
+        r.pop("rule_i14", None)
+        r.pop("rule_i14_not_counted", None)
+        if guard_scope == "all" or audience == "care-team":
+            r["rule_i14"] = guard
+            fired += rule_i14(r)
+        elif guard and r["judge_flags"].get("I14", 0.0) < 0.5:
+            r["rule_i14_not_counted"] = True
+            outside += 1
+            if d.id in v11:
+                outside_v11.append(d.id)
+    path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
+    res = summarise(
+        rows,
+        meta.get("judge_model", ""),
+        tag,
+        prompt_only=meta.get("judge_prompt", "").startswith("prompt-only"),
+        use_baseline=meta.get("baseline") is not None,
+    )
+    for k in ("corpus", "drafts_selected", "tier_off", "reused_from", "cost_estimate"):
+        if k in meta:
+            res[k] = meta[k]
+    res["rules_recomputed"] = {
+        "rules": "over-caution and the I14 guard, recomputed from the draft text with no model call",
+        "guard_scope": guard_scope,
+        "i14_raised_by_guard": fired,
+        "i14_guard_outside_scope_not_counted": outside,
+        "of_which_v1.1_drafts": sorted(outside_v11),
+    }
+    (OUT / f"screen-{tag}.json").write_text(json.dumps(res, indent=2))
+    return res

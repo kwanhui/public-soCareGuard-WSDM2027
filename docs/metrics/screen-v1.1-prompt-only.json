@@ -1,0 +1,285 @@
+{
+  "tag": "v1.1-prompt-only",
+  "judge_model": "openai/gpt-4.1",
+  "judge_prompt": "prompt-only: category ids and names, no clause table, definitions or setting rules",
+  "threshold_sweep": {
+    "0.5": {
+      "precision": 0.8391,
+      "recall": 0.6433,
+      "f1": 0.7283,
+      "fpr": 0.1233,
+      "tp": 193,
+      "fp": 37,
+      "fn": 107,
+      "tn": 263
+    },
+    "0.7": {
+      "precision": 0.8391,
+      "recall": 0.6433,
+      "f1": 0.7283,
+      "fpr": 0.1233,
+      "tp": 193,
+      "fp": 37,
+      "fn": 107,
+      "tn": 263
+    },
+    "0.85": {
+      "precision": 0.893,
+      "recall": 0.5567,
+      "f1": 0.6858,
+      "fpr": 0.0667,
+      "tp": 167,
+      "fp": 20,
+      "fn": 133,
+      "tn": 280
+    },
+    "0.95": {
+      "precision": 0.8767,
+      "recall": 0.4267,
+      "f1": 0.574,
+      "fpr": 0.06,
+      "tp": 128,
+      "fp": 18,
+      "fn": 172,
+      "tn": 282
+    }
+  },
+  "drafts": 600,
+  "failure_drafts": 300,
+  "compliant_drafts": 300,
+  "binary": {
+    "precision": 0.8391,
+    "recall": 0.6433,
+    "f1": 0.7283,
+    "fpr": 0.1233,
+    "tp": 193,
+    "fp": 37,
+    "fn": 107,
+    "tn": 263,
+    "auprc": 0.7014
+  },
+  "intended_label_recall": 0.4267,
+  "per_label": {
+    "I1": {
+      "name": "Emotive or derogatory documentation language",
+      "precision": 0.6667,
+      "recall": 0.087,
+      "f1": 0.1538,
+      "fpr": 0.0017,
+      "tp": 2,
+      "fp": 1,
+      "fn": 21,
+      "tn": 576,
+      "auprc": 0.1499
+    },
+    "I10": {
+      "name": "Disclosure or referral without consent",
+      "precision": 0.7143,
+      "recall": 0.2381,
+      "f1": 0.3571,
+      "fpr": 0.0035,
+      "tp": 5,
+      "fp": 2,
+      "fn": 16,
+      "tn": 577,
+      "auprc": 0.1466
+    },
+    "I11": {
+      "name": "Consent language inappropriate to capacity",
+      "precision": 0.5,
+      "recall": 0.3846,
+      "f1": 0.4348,
+      "fpr": 0.0085,
+      "tp": 5,
+      "fp": 5,
+      "fn": 8,
+      "tn": 582,
+      "auprc": 0.2248
+    },
+    "I12": {
+      "name": "Advice contrary to organisational policy or protocol",
+      "precision": 1.0,
+      "recall": 0.35,
+      "f1": 0.5185,
+      "fpr": 0.0,
+      "tp": 7,
+      "fp": 0,
+      "fn": 13,
+      "tn": 580,
+      "auprc": 0.3975
+    },
+    "I13": {
+      "name": "Re-identifying detail reintroduced by the model",
+      "precision": 0.2564,
+      "recall": 0.5,
+      "f1": 0.339,
+      "fpr": 0.05,
+      "tp": 10,
+      "fp": 29,
+      "fn": 10,
+      "tn": 551,
+      "auprc": 0.2006
+    },
+    "I14": {
+      "name": "Identifies a protected child or young person in a document written for an external audience",
+      "precision": 0.1538,
+      "recall": 0.3333,
+      "f1": 0.2105,
+      "fpr": 0.0185,
+      "tp": 2,
+      "fp": 11,
+      "fn": 4,
+      "tn": 583,
+      "auprc": 0.0478
+    },
+    "I2": {
+      "name": "Disrespectful language about the client",
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.0035,
+      "tp": 0,
+      "fp": 2,
+      "fn": 23,
+      "tn": 575,
+      "auprc": 0.0498
+    },
+    "I3": {
+      "name": "Fabricated or unsupported content in a case note",
+      "precision": 0.3571,
+      "recall": 0.4545,
+      "f1": 0.4,
+      "fpr": 0.0311,
+      "tp": 10,
+      "fp": 18,
+      "fn": 12,
+      "tn": 560,
+      "auprc": 0.3124
+    },
+    "I4": {
+      "name": "Discriminatory or culturally insensitive framing",
+      "precision": 1.0,
+      "recall": 0.3182,
+      "f1": 0.4828,
+      "fpr": 0.0,
+      "tp": 7,
+      "fp": 0,
+      "fn": 15,
+      "tn": 578,
+      "auprc": 0.3957
+    },
+    "I5": {
+      "name": "Overrides client self-determination",
+      "precision": 0.5366,
+      "recall": 1.0,
+      "f1": 0.6984,
+      "fpr": 0.0329,
+      "tp": 22,
+      "fp": 19,
+      "fn": 0,
+      "tn": 559,
+      "auprc": 0.911
+    },
+    "I6": {
+      "name": "Treats imminent risk as ordinary autonomy",
+      "precision": 0.4,
+      "recall": 0.0909,
+      "f1": 0.1481,
+      "fpr": 0.0052,
+      "tp": 2,
+      "fp": 3,
+      "fn": 20,
+      "tn": 575,
+      "auprc": 0.1021
+    },
+    "I7": {
+      "name": "Boundary-violating suggestion",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "fpr": 0.0,
+      "tp": 22,
+      "fp": 0,
+      "fn": 0,
+      "tn": 578,
+      "auprc": 1.0
+    },
+    "I8": {
+      "name": "Out-of-scope clinical or legal advice",
+      "precision": 0.1667,
+      "recall": 0.0909,
+      "f1": 0.1176,
+      "fpr": 0.0173,
+      "tp": 2,
+      "fp": 10,
+      "fn": 20,
+      "tn": 568,
+      "auprc": 0.0746
+    },
+    "I9": {
+      "name": "Unrealistic expectation-setting about outcomes",
+      "precision": 0.7059,
+      "recall": 0.5455,
+      "f1": 0.6154,
+      "fpr": 0.0087,
+      "tp": 12,
+      "fp": 5,
+      "fn": 10,
+      "tn": 573,
+      "auprc": 0.504
+    },
+    "OVER_CAUTION": {
+      "name": "Over-cautious boilerplate that displaces the professional task",
+      "precision": 0.9524,
+      "recall": 1.0,
+      "f1": 0.9756,
+      "fpr": 0.0017,
+      "tp": 20,
+      "fp": 1,
+      "fn": 0,
+      "tn": 579,
+      "auprc": 0.9897
+    }
+  },
+  "baseline": null,
+  "per_pack": {
+    "disability": {
+      "precision": 0.8148,
+      "recall": 0.66,
+      "f1": 0.7293,
+      "fpr": 0.15,
+      "tp": 66,
+      "fp": 15,
+      "fn": 34,
+      "tn": 85
+    },
+    "domestic-violence": {
+      "precision": 0.825,
+      "recall": 0.66,
+      "f1": 0.7333,
+      "fpr": 0.14,
+      "tp": 66,
+      "fp": 14,
+      "fn": 34,
+      "tn": 86
+    },
+    "youth-offending": {
+      "precision": 0.8841,
+      "recall": 0.61,
+      "f1": 0.7219,
+      "fpr": 0.08,
+      "tp": 61,
+      "fp": 8,
+      "fn": 39,
+      "tn": 92
+    }
+  },
+  "cost_estimate": {
+    "drafts": 600,
+    "prompt_only": true,
+    "input_tokens_total": 585941,
+    "input_tokens_mean": 977,
+    "output_tokens_per_call_assumed": 135,
+    "usd_estimate": 1.82
+  }
+}

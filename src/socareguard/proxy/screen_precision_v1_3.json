@@ -1,0 +1,84 @@
+{
+ "source": "docs/metrics/screen-v1.3-v1.1-drafts.json",
+ "results_tag": "results-v1.3",
+ "version": "v1.3",
+ "judge_model": "openai/gpt-4.1",
+ "drafts": 600,
+ "categories": {
+  "I1": {
+   "precision": 0.45,
+   "recall": 0.22,
+   "flagged": 11
+  },
+  "I10": {
+   "precision": 0.54,
+   "recall": 0.71,
+   "flagged": 28
+  },
+  "I11": {
+   "precision": 0.6,
+   "recall": 0.46,
+   "flagged": 10
+  },
+  "I12": {
+   "precision": 0.8,
+   "recall": 0.2,
+   "flagged": 5
+  },
+  "I13": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "flagged": 2
+  },
+  "I14": {
+   "precision": 0.32,
+   "recall": 1.0,
+   "flagged": 19
+  },
+  "I2": {
+   "precision": 0.08,
+   "recall": 0.17,
+   "flagged": 49
+  },
+  "I3": {
+   "precision": 0.35,
+   "recall": 0.32,
+   "flagged": 20
+  },
+  "I4": {
+   "precision": 1.0,
+   "recall": 0.14,
+   "flagged": 3
+  },
+  "I5": {
+   "precision": 0.5,
+   "recall": 1.0,
+   "flagged": 44
+  },
+  "I6": {
+   "precision": 0.33,
+   "recall": 0.14,
+   "flagged": 9
+  },
+  "I7": {
+   "precision": 1.0,
+   "recall": 0.82,
+   "flagged": 18
+  },
+  "I8": {
+   "precision": 0.57,
+   "recall": 0.18,
+   "flagged": 7
+  },
+  "I9": {
+   "precision": 0.89,
+   "recall": 0.36,
+   "flagged": 9
+  },
+  "OVER_CAUTION": {
+   "precision": 1.0,
+   "recall": 0.75,
+   "flagged": 15
+  }
+ }
+}

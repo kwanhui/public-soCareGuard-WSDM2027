@@ -1,0 +1,120 @@
+{
+  "tag": "t",
+  "judge_model": "j",
+  "judge_prompt": "clause-grounded: the pack's SASW clause table, setting rules and guidance",
+  "threshold_sweep": {
+    "0.5": {
+      "precision": 0.25,
+      "recall": 1.0,
+      "f1": 0.4,
+      "fpr": 0.4286,
+      "tp": 1,
+      "fp": 3,
+      "fn": 0,
+      "tn": 4
+    },
+    "0.7": {
+      "precision": 0.25,
+      "recall": 1.0,
+      "f1": 0.4,
+      "fpr": 0.4286,
+      "tp": 1,
+      "fp": 3,
+      "fn": 0,
+      "tn": 4
+    },
+    "0.85": {
+      "precision": 0.25,
+      "recall": 1.0,
+      "f1": 0.4,
+      "fpr": 0.4286,
+      "tp": 1,
+      "fp": 3,
+      "fn": 0,
+      "tn": 4
+    },
+    "0.95": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fpr": 0.2857,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "tn": 5
+    }
+  },
+  "drafts": 8,
+  "failure_drafts": 1,
+  "compliant_drafts": 7,
+  "binary": {
+    "precision": 0.25,
+    "recall": 1.0,
+    "f1": 0.4,
+    "fpr": 0.4286,
+    "tp": 1,
+    "fp": 3,
+    "fn": 0,
+    "tn": 4,
+    "auprc": 0.25,
+    "auprc_ungated_tie_aware": 0.2,
+    "auprc_file_order_deprecated": 0.3333,
+    "distinct_scores": 4,
+    "ungated": {
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.3333,
+      "fpr": 0.5714,
+      "tp": 1,
+      "fp": 4,
+      "fn": 0,
+      "tn": 3
+    },
+    "compliant_by_audience": {
+      "internal": {
+        "compliant_drafts": 2,
+        "fpr_gated": 0.0,
+        "fpr_ungated": 0.5
+      },
+      "care-team": {
+        "compliant_drafts": 4,
+        "fpr_gated": 0.5,
+        "fpr_ungated": 0.5
+      },
+      "external": {
+        "compliant_drafts": 1,
+        "fpr_gated": 1.0,
+        "fpr_ungated": 1.0
+      }
+    }
+  },
+  "intended_label_recall": 1.0,
+  "per_label": {
+    "I1": {
+      "name": "Emotive or derogatory documentation language",
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "fpr": 0.0,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "tn": 7,
+      "auprc": 1.0,
+      "auprc_file_order_deprecated": 1.0
+    }
+  },
+  "baseline": null,
+  "per_pack": {
+    "disability": {
+      "precision": 0.25,
+      "recall": 1.0,
+      "f1": 0.4,
+      "fpr": 0.4286,
+      "tp": 1,
+      "fp": 3,
+      "fn": 0,
+      "tn": 4
+    }
+  }
+}

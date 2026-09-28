@@ -1,0 +1,12 @@
+# Justified hits for scripts/check_prose.py, one `path:pattern:substring` per
+# line. `*` as the pattern allows every pattern on a matching line.
+#
+# demo/scenarios.md quotes the recorded model reply of UC2 verbatim. The reply is the
+# evidence the conduct screen flags (I1), so its wording, dashes included, stays as the model wrote it.
+demo/scenarios.md:dash-as-punctuation:**Case Summary – Neo Li Ting (FSC-2026-0837)**  # verbatim model reply (UC2)
+demo/scenarios.md:dash-as-punctuation:about returning—particularly  # verbatim model reply (UC2)
+demo/scenarios.md:dash-as-punctuation:mere reluctance—it is  # verbatim model reply (UC2)
+demo/scenarios.md:not-only-but:not only to her but directly  # verbatim model reply (UC2)
+# The pack status field is a telegraphic list of states, not two clauses.
+policy-packs/:semicolon-splice:judge-executable; clause grounding unchanged  # status field of each pack
+docs/terminology.md:semicolon-splice:headings and buttons use the plain term only  # the rules line is a list of three rules

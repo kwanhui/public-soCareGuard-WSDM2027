@@ -1,0 +1,216 @@
+{
+  "version": "v1.1",
+  "method": "average precision with tied scores processed together (sklearn average_precision_score semantics) on the audience-gated score: the maximum judge confidence over the flags that the operating points count, with the over-caution rule at 1.0 and I10 and I14 removed for an internal audience; distinct_scores counts the gated scores, 0.0 for an unflagged draft included",
+  "runs": {
+    "clause_grounded": {
+      "rows": "screen-v1.1-rows.jsonl",
+      "drafts": 600,
+      "auprc": 0.7984,
+      "auprc_ungated_tie_aware": 0.7188,
+      "auprc_file_order_deprecated": 0.7687,
+      "distinct_scores": 9,
+      "per_label": {
+        "I1": {
+          "auprc": 0.1609,
+          "recall_at_0.5": "6 of 23"
+        },
+        "I10": {
+          "auprc": 0.3724,
+          "recall_at_0.5": "15 of 21"
+        },
+        "I11": {
+          "auprc": 0.4512,
+          "recall_at_0.5": "6 of 13"
+        },
+        "I12": {
+          "auprc": 0.1783,
+          "recall_at_0.5": "3 of 20"
+        },
+        "I13": {
+          "auprc": 0.0483,
+          "recall_at_0.5": "1 of 20"
+        },
+        "I14": {
+          "auprc": 0.2733,
+          "recall_at_0.5": "6 of 6"
+        },
+        "I2": {
+          "auprc": 0.0474,
+          "recall_at_0.5": "2 of 23"
+        },
+        "I3": {
+          "auprc": 0.2824,
+          "recall_at_0.5": "9 of 22"
+        },
+        "I4": {
+          "auprc": 0.168,
+          "recall_at_0.5": "3 of 22"
+        },
+        "I5": {
+          "auprc": 0.931,
+          "recall_at_0.5": "22 of 22"
+        },
+        "I6": {
+          "auprc": 0.1242,
+          "recall_at_0.5": "2 of 22"
+        },
+        "I7": {
+          "auprc": 0.9124,
+          "recall_at_0.5": "20 of 22"
+        },
+        "I8": {
+          "auprc": 0.1209,
+          "recall_at_0.5": "4 of 22"
+        },
+        "I9": {
+          "auprc": 0.4659,
+          "recall_at_0.5": "11 of 22"
+        },
+        "OVER_CAUTION": {
+          "auprc": 0.9033,
+          "recall_at_0.5": "18 of 20"
+        }
+      }
+    },
+    "prompt_only": {
+      "rows": "screen-v1.1-prompt-only-rows.jsonl",
+      "drafts": 600,
+      "auprc": 0.7267,
+      "auprc_ungated_tie_aware": 0.6581,
+      "auprc_file_order_deprecated": 0.7012,
+      "distinct_scores": 9,
+      "per_label": {
+        "I1": {
+          "auprc": 0.1075,
+          "recall_at_0.5": "2 of 23"
+        },
+        "I10": {
+          "auprc": 0.2137,
+          "recall_at_0.5": "5 of 21"
+        },
+        "I11": {
+          "auprc": 0.2093,
+          "recall_at_0.5": "5 of 13"
+        },
+        "I12": {
+          "auprc": 0.3717,
+          "recall_at_0.5": "7 of 20"
+        },
+        "I13": {
+          "auprc": 0.1548,
+          "recall_at_0.5": "10 of 20"
+        },
+        "I14": {
+          "auprc": 0.0673,
+          "recall_at_0.5": "2 of 6"
+        },
+        "I2": {
+          "auprc": 0.0383,
+          "recall_at_0.5": "0 of 23"
+        },
+        "I3": {
+          "auprc": 0.2722,
+          "recall_at_0.5": "10 of 22"
+        },
+        "I4": {
+          "auprc": 0.3432,
+          "recall_at_0.5": "7 of 22"
+        },
+        "I5": {
+          "auprc": 0.9048,
+          "recall_at_0.5": "22 of 22"
+        },
+        "I6": {
+          "auprc": 0.0864,
+          "recall_at_0.5": "2 of 22"
+        },
+        "I7": {
+          "auprc": 1.0,
+          "recall_at_0.5": "22 of 22"
+        },
+        "I8": {
+          "auprc": 0.0561,
+          "recall_at_0.5": "2 of 22"
+        },
+        "I9": {
+          "auprc": 0.4533,
+          "recall_at_0.5": "12 of 22"
+        },
+        "OVER_CAUTION": {
+          "auprc": 0.9571,
+          "recall_at_0.5": "20 of 20"
+        }
+      }
+    },
+    "second_judge": {
+      "rows": "screen-v1.1-claude-rows.jsonl",
+      "drafts": 180,
+      "auprc": 0.8035,
+      "auprc_ungated_tie_aware": 0.8035,
+      "auprc_file_order_deprecated": 0.8517,
+      "distinct_scores": 17,
+      "per_label": {
+        "I1": {
+          "auprc": 0.0444,
+          "recall_at_0.5": "0 of 8"
+        },
+        "I10": {
+          "auprc": 0.5099,
+          "recall_at_0.5": "5 of 6"
+        },
+        "I11": {
+          "auprc": 0.0222,
+          "recall_at_0.5": "0 of 4"
+        },
+        "I12": {
+          "auprc": 0.4333,
+          "recall_at_0.5": "3 of 6"
+        },
+        "I13": {
+          "auprc": 0.1944,
+          "recall_at_0.5": "1 of 6"
+        },
+        "I14": {
+          "auprc": 0.45,
+          "recall_at_0.5": "2 of 2"
+        },
+        "I2": {
+          "auprc": 0.1014,
+          "recall_at_0.5": "1 of 8"
+        },
+        "I3": {
+          "auprc": 0.4147,
+          "recall_at_0.5": "7 of 7"
+        },
+        "I4": {
+          "auprc": 0.3135,
+          "recall_at_0.5": "2 of 7"
+        },
+        "I5": {
+          "auprc": 1.0,
+          "recall_at_0.5": "6 of 6"
+        },
+        "I6": {
+          "auprc": 0.0333,
+          "recall_at_0.5": "0 of 6"
+        },
+        "I7": {
+          "auprc": 1.0,
+          "recall_at_0.5": "6 of 6"
+        },
+        "I8": {
+          "auprc": 0.0333,
+          "recall_at_0.5": "0 of 6"
+        },
+        "I9": {
+          "auprc": 0.8389,
+          "recall_at_0.5": "5 of 6"
+        },
+        "OVER_CAUTION": {
+          "auprc": 1.0,
+          "recall_at_0.5": "6 of 6"
+        }
+      }
+    }
+  }
+}
