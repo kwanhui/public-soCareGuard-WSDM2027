@@ -169,7 +169,8 @@ def test_panel_page_carries_the_review_round_wording(tmp_path, monkeypatch):
         "measured precision on synthetic drafts",
         "Give the session id to your supervisor.",
         "Released earlier by",
-        "(typed in)",
-        "(checked by a person)",
+        '"typed in"',
+        '"checked by a person"',
+        "`${base} (${how})`",
     ):
         assert s in js, s

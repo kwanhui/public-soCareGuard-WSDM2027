@@ -1,7 +1,8 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const TYPE_LABEL = {DIRECT: "identifier", QUASI: "detail that identifies someone when combined", ATTRIBUTE: "sensitive detail", KEPT: "kept as typed (no rule in this pack)", evidence: "flagged text"};
+  const KEPT_TITLE = "A detail that the policy packs leave as written, such as a public body or the recipient named in the instruction line, or one that this policy pack has no rule for";
+  const TYPE_LABEL = {DIRECT: "identifier", QUASI: "detail that identifies someone when combined", ATTRIBUTE: "sensitive detail", KEPT: "kept as typed", evidence: "flagged text"};
   // The key above the columns; its first line names the technical term once, in parentheses.
   const LEGEND_LABEL = {DIRECT: "identifier, replaced by a stand-in", QUASI: "details that identify someone when combined (quasi-identifiers), generalised", ATTRIBUTE: "sensitive detail, generalised"};
   // One word per decision for the practitioner (docs/terminology.md). "annotate" stays the code's name.
@@ -143,10 +144,13 @@
   const utc = (ts) => new Date(ts * 1000).toISOString().replace("T", " ").slice(0, 19) + " UTC";
   // The record marks a staff id as checked only when the request carried a configured key; an
   // unchecked id carries the ledger's "(self-asserted)" suffix, which the panel shows as "typed in".
+  // A name that already ends in parentheses ("admin (sandbox login)") takes the qualifier inside
+  // them: "admin (sandbox login, typed in)", never two pairs in a row.
   function actorLabel(actor, attested) {
     const base = String(actor || "unattributed").replace(/\s*\(self-asserted[^)]*\)\s*$/, "");
     const att = attested != null ? !!attested : !/\(self-asserted/.test(actor || "");
-    return `${base} ${att ? "(checked by a person)" : "(typed in)"}`;
+    const how = att ? "checked by a person" : "typed in";
+    return /\)$/.test(base) ? `${base.slice(0, -1)}, ${how})` : `${base} (${how})`;
   }
   function unrestoredWords(leak) {
     const all = [].concat(leak.unrestored || [], leak.partial || []);
@@ -271,7 +275,7 @@
     const counts = {DIRECT: 0, QUASI: 0, ATTRIBUTE: 0, KEPT: 0};
     shown.forEach((r) => { counts[cls(r)] = (counts[cls(r)] || 0) + 1; });
     $("legend").innerHTML = ["DIRECT", "QUASI", "ATTRIBUTE"].map((t) => `<span class="key"><mark class="${t}">&nbsp;&nbsp;&nbsp;</mark> ${LEGEND_LABEL[t]}: ${counts[t] || 0}</span>`).join("") +
-      (counts.KEPT ? `<span class="key"><mark class="KEPT">&nbsp;&nbsp;&nbsp;</mark> ${TYPE_LABEL.KEPT}: ${counts.KEPT}</span>` : "") +
+      (counts.KEPT ? `<span class="key" id="legend-kept" title="${KEPT_TITLE}"><mark class="KEPT">&nbsp;&nbsp;&nbsp;</mark> ${TYPE_LABEL.KEPT}: ${counts.KEPT}</span>` : "") +
       (sg.withheld ? `<span class="key"><mark class="evidence">text</mark> flagged text: withheld with the draft</span>` :
         `<span class="key"><mark class="evidence">text</mark> flagged text: ${located} of ${sg.flags.length} flag${sg.flags.length === 1 ? "" : "s"} located${located < sg.flags.length ? " (the flag card below quotes the full text)" : ""}${(run.applied || []).length ? `, ${run.applied.length} rewritten` : ""}</span>`) +
       (restoredN ? `<span class="key" id="legend-restored"><mark class="restored">text</mark> restored from the record: ${restoredN}</span>` : "") +
@@ -470,7 +474,7 @@
     $("rules-tag").textContent = `${fired.length} rule${fired.length === 1 ? "" : "s"} fired`;
     $("rules").innerHTML = (fired.length ? `<p>Generalised by the <strong>${esc(sg.pack)}</strong> pack (rule id · what you typed → what left):</p><ul>` +
       fired.map((r) => `<li><code>${esc(r.rule || "default")}</code> · <mark class="${r.type}">${esc(r.original)}</mark> → <em>${esc(r.outbound || "(removed)")}</em></li>`).join("") + "</ul>" : "<p>No generalisation rule fired on this note.</p>") +
-      (kept.length ? `<p>Sensitive details detected but <strong>kept as typed</strong> because this pack has no rule for them: ${kept.map((r) => `<mark class="KEPT">${esc(r.original)}</mark>`).join(", ")}. Switch pack or add a rule to the YAML.</p>` : "") +
+      (kept.length ? `<p>Details detected but <strong>kept as typed</strong> (a public body, the recipient named in the instruction line, or a detail that this policy pack has no rule for): ${kept.map((r) => `<mark class="KEPT">${esc(r.original)}</mark>`).join(", ")}. If one of them should be generalised, switch pack or add a rule to the YAML.</p>` : "") +
       `<p>${sur.length} identifier${sur.length === 1 ? "" : "s"} replaced by stand-ins of the same shape (same script and format, a different person). <a href="/v1/packs/${esc(sg.pack)}" target="_blank" rel="noopener">Open the pack</a>.</p>`;
   }
 
@@ -560,7 +564,7 @@
       $("release-status").textContent = `Released and recorded (row ${data.ledger_row.row_sha256.slice(0, 12)}…).`;
       const prior = data.prior_releases || [];
       $("release-prior").hidden = !prior.length;
-      $("release-prior").textContent = prior.map((x) => { const a = actorLabel(x.actor); const i = a.lastIndexOf(" ("); return `Released earlier by ${a.slice(0, i)} (${x.ts ? utc(x.ts) : "time not recorded"}, ${a.slice(i + 2, -1)}).`; }).join(" ");
+      $("release-prior").textContent = prior.map((x) => `Released earlier by ${actorLabel(x.actor, x.actor_attested)}, ${x.ts ? utc(x.ts) : "time not recorded"}.`).join(" ");
       current.released = {by: data.ledger_row.actor, flags: data.flags || []};
       const head = $("decision").querySelector(".seg.head");
       if (head) head.innerHTML += ` · released to ${esc(data.ledger_row.actor)}`;
