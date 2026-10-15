@@ -50,8 +50,8 @@ distinct from entity redaction, the Singapore quasi-identifier model, and the au
 ## Install
 
 ```bash
-git clone https://github.com/kwanhui/public-SoCareGuard-WSDM2027.git
-cd public-SoCareGuard-WSDM2027
+git clone https://github.com/kwanhui/public-soCareGuard-WSDM2027.git
+cd public-soCareGuard-WSDM2027
 uv python install 3.12 && uv venv --python 3.12 .venv && source .venv/bin/activate
 make install            # package + dev tools
 make install-detect     # Presidio, spaCy (en_core_web_lg), GLiNER and GLiNER2-PII, for the sweep and the detectors
