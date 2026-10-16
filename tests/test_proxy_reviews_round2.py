@@ -263,12 +263,9 @@ def test_check_prose_warns_on_a_splice_and_not_on_a_list(tmp_path):
 # ---------- WSDM-N3: drafts in the snapshot, not in the image ----------
 
 
-@pytest.mark.skipif(not (ROOT / "scripts").exists(), reason="not shipped in the public snapshot")
 def test_snapshot_allowlist_carries_the_drafts_and_the_image_does_not():
-    sh = (ROOT / "scripts/make_public_snapshot.sh").read_text()
-    allow = sh[sh.index("allowlist=(") : sh.index(")", sh.index("allowlist=("))]
-    assert "corpus/drafts" in allow.split()
-    assert "scripts" not in allow.split()
+    # This repository is the released snapshot, so it carries the labelled drafts itself.
+    assert sorted((ROOT / "corpus/drafts").glob("*.jsonl"))
     assert "corpus/drafts" in (ROOT / ".dockerignore").read_text().split()
     readme = (ROOT / "README.md").read_text()
     assert "the synthetic notes and drafts with their labels" in " ".join(readme.split())

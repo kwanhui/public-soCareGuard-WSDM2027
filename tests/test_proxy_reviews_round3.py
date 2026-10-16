@@ -231,13 +231,10 @@ def test_override_without_a_request_row_points_at_the_latest_request(tmp_path, m
 
 
 def _snapshot_gitignore() -> str:
-    sh = (ROOT / "scripts/make_public_snapshot.sh").read_text()
-    m = re.search(r"<<'GITIGNORE'\n(.*?)\nGITIGNORE\n", sh, re.DOTALL)
-    assert m, "the snapshot script does not write a .gitignore heredoc"
-    return m.group(1)
+    # This repository is the released snapshot, so its own .gitignore is the one under test.
+    return (ROOT / ".gitignore").read_text().rstrip("\n")
 
 
-@pytest.mark.skipif(not (ROOT / "scripts").exists(), reason="not shipped in the public snapshot")
 def test_snapshot_gitignore_covers_runtime_state_and_keys(tmp_path):
     body = _snapshot_gitignore()
     for line in (
@@ -429,6 +426,8 @@ def test_leftovers_are_gone():
         if rel == "README.md":
             assert text.count(naming) == 1
             text = text.replace(naming, "")
+            # the paper's own title, quoted where the README names the paper
+            text = text.replace("A Privacy and Professional-Ethics Guardrail Proxy", "")
         for m in re.finditer(r"[Ee]thics", text):
             assert text[max(0, m.start() - 40) : m.end()].endswith("Code of Professional Ethics"), (
                 rel
