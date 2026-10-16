@@ -1,9 +1,9 @@
-"""Round-5 reviewers' notes (2026-09-28) with the Presidio and GLiNER2 hits recorded on them.
+"""Notes written in review round 5 (2026-09-28), with the Presidio and GLiNER2 hits recorded on them.
 
 Recorded by running both NER backends on each message as the proxy sends it (the instruction and
 the note joined by a blank line). ``use(monkeypatch, name)`` replays the recorded hits, so a test
 sees the spans the reviewer's run saw without loading the models. The disability case manager's
-notes and the meta-reviewer's note are verbatim from the round-5 evidence. Where a report elides
+notes and the meta-reviewer's note are verbatim from the round-5 review. Where a report elides
 part of a note (the gang note, the employer letter, the age-band note), the elided identifiers are
 invented to the same shape. The DPO's URL note is rebuilt from the outbound text and its spans.
 One note is a control: an internal note that refers to the young person by initials."""

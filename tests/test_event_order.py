@@ -1,4 +1,4 @@
-"""Round 1, WSDM reviewer F5 (2026-09-28): the event stream listed re-identification before the
+"""Round 1, review finding F5 (2026-09-28): the event stream listed re-identification before the
 screen, although the screen reads the pseudonymised reply. The stream now follows the code path:
 receive, screen, reidentify, leakcheck, action, with contiguous sequence numbers."""
 

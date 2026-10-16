@@ -6,7 +6,7 @@ relative's naming convention but never makes a surname shared. A titled surname 
 household members share is restored to the shared surname and marked, whereas a surrogate that
 stands for two different people is never restored.
 
-The reviewers' notes run with the NER hits recorded on them (tests/recorded_round5.py and
+The notes from the review rounds run with the NER hits recorded on them (tests/recorded_round5.py and
 tests/recorded_round6.py)."""
 
 import re
@@ -86,7 +86,7 @@ def test_households_relation_word_leaves_own_convention_alone():
     assert kin["Kai"].origin == "chinese" and kin["Kai"].key is None
 
 
-# The reviewers' notes
+# Notes from the review rounds
 
 
 def test_fsc_same_surname_as_the_client_stays_true(monkeypatch, tmp_path):

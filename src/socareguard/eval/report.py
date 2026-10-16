@@ -1206,7 +1206,7 @@ def render(version: str = CURRENT) -> str:
             f"| Per draft | | | | {cost['per_draft_usd']:.4f} |",
             "",
             f"That is approximately USD {cost['per_1000_drafts_usd']:.2f} per 1,000 drafts. A regeneration repeats the drafting and judge calls.",
-            f"Drafting tokens are the means of the `usage` field over {dr['source'].split(' live')[0]} live (not replayed) request rows in the ledger of the review-round dev server of 2026-09-27. The reviewers' notes were short, and the four Use Case payloads count 76 to 276 tokens.",
+            f"Drafting tokens are the means of the `usage` field over {dr['source'].split(' live')[0]} live (not replayed) request rows in the ledger of the review-round dev server of 2026-09-27. The notes typed in the review rounds were short, and the four Use Case payloads count 76 to 276 tokens.",
             "The judge's usage is not recorded. Its input is counted by building the judge prompt for the four recorded Use Case scenarios and tokenising it with o200k_base,",
             "and its output is estimated from the flags per request in the same ledger and the size of the judge flags in saved completion responses.",
             "The judge prompt carries the pack's clause table, so the judge accounts for most of the cost. "

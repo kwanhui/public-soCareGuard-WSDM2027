@@ -258,7 +258,7 @@ def test_employer_is_a_reversible_surrogate_for_an_internal_audience(monkeypatch
     note = rec.use(monkeypatch, "coach_handover")
     g = _guard(tmp_path)
     msgs = [{"role": "user", "content": note["text"]}]
-    # the coach set the audience to internal with the header (coach-6-internal-handover.json)
+    # the coach set the audience to internal with the header (round-3 note COACH-6)
     for audience in ("internal",):
         session = f"handover-{audience}"
         res = g.run(

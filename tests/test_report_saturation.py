@@ -1,4 +1,4 @@
-"""WSDM final-defensibility-read.md item 1: the judge-confidence saturation figure quoted in the
+"""Final defensibility check, item 1: the judge-confidence saturation figure quoted in the
 paper (177 of 288 flags at or above 0.95, on the 600 v1.1 drafts) traces to a computed row in
 docs/metrics.md, not to a hand-counted number with no file behind it.
 

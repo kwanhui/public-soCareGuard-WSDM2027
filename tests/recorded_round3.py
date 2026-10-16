@@ -1,4 +1,4 @@
-"""Round-3 reviewers' notes (2026-09-28) with the Presidio and GLiNER2 hits recorded on them.
+"""Notes written in review round 3 (2026-09-28), with the Presidio and GLiNER2 hits recorded on them.
 
 Recorded by running both NER backends on each message, as the proxy sends it (the instruction and
 the note joined by a blank line). ``use(monkeypatch, name)`` replays the recorded hits, so a test

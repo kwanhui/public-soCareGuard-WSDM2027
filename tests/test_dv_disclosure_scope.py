@@ -1,4 +1,4 @@
-"""Round-1 WSDM reviewer F1 (2026-09-28): the DV disclosure rule turned a negated assessment and a
+"""Round-1 review finding F1 (2026-09-28): the DV disclosure rule turned a negated assessment and a
 neighbour's report into client disclosures and replaced the whole assessment sentence. Each
 sub-clause is now generalised on its own, with its polarity."""
 

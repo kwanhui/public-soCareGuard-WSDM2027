@@ -1,9 +1,9 @@
-"""Round-4 reviewers' notes (2026-09-28) with the Presidio and GLiNER2 hits recorded on them.
+"""Notes written in review round 4 (2026-09-28), with the Presidio and GLiNER2 hits recorded on them.
 
 Recorded by running both NER backends on each message as the proxy sends it (the instruction and
 the note joined by a blank line). ``use(monkeypatch, name)`` replays the recorded hits, so a test
-sees the spans the reviewer's run saw without loading the models. The notes are quoted in the
-round-4 reports, and three of them (the helper's work permit, the transfer summary and the Hokkien
+sees the spans the reviewer's run saw without loading the models. The notes are quoted from the
+round-4 review, and three of them (the helper's work permit, the transfer summary and the Hokkien
 note) are reconstructions from the outbound text and the panel's replacement table."""
 
 from __future__ import annotations

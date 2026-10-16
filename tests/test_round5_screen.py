@@ -9,8 +9,8 @@ from socareguard.screen import rules
 from socareguard.screen.judge import FakeJudge
 from socareguard.screen.screener import Screener
 
-# The meta-reviewer's reply (wsdm-7-own-note.json) and the youth advocate's released letter
-# (youth-3-withheld-released.json), from their first line to the salutation.
+# The meta-reviewer's reply (round-5 note WSDM-7) and the youth advocate's released letter
+# (round-5 note YOUTH-3), from their first line to the salutation.
 META_LETTER = (
     "[Your Organization’s Letterhead]  \n27 September 2026  \n\nSchool Counsellor  \n"
     "[School Name]  \n[School Address]  \n\nDear School Counsellor,  \n\nI am writing in my "
@@ -70,7 +70,7 @@ def test_an_invented_nric_still_regenerates_with_a_reason():
 
 
 # YOUTH-N1: initials in place of a name defeated I14 although the school could tell who was meant.
-# The advocate's letter as the drafting model wrote it (youth-7-initials-school-letter.json).
+# The advocate's letter as the drafting model wrote it (round-5 note YOUTH-7).
 INITIALS_LETTER = (
     "I am writing to inform you about the status of a probation client currently enrolled at your "
     "school, identified here as J.W., aged between 15 and 17 years, currently in Secondary 3.  \n\n"

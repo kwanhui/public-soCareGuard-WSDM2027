@@ -1,4 +1,4 @@
-"""Round-1 WSDM reviewer F4 (2026-09-28): the capacity rule replaced a deputyship sentence and the plan
+"""Round-1 review finding F4 (2026-09-28): the capacity rule replaced a deputyship sentence and the plan
 with the same predicate, so the deputyship never-leak rule never fired and the draft lost the deputy."""
 
 from pathlib import Path

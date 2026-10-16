@@ -3,7 +3,7 @@
 The supervisor gate (keys, and the sandbox login with its production statement), the queue of
 withheld drafts, the period table with its counts and filters, the chain block, the empty state,
 the read-only review token and its guard (another browser's session opens pseudonymised only),
-and the selector table of the reviewer brief."""
+and the selector table check, which skips here because the table is not part of this repository."""
 
 import re
 import time
@@ -497,7 +497,7 @@ def test_the_panel_keeps_tokens_and_has_the_review_mode(tmp_path, monkeypatch):
     assert '"X-SoCareGuard-Review-Token"' in js and "readOnly(session, full)" in js
 
 
-# ---------- the selector table of the reviewer brief ----------
+# ---------- the selector table ----------
 
 
 class _Doc(HTMLParser):
@@ -579,7 +579,7 @@ _SCRIPTED = {
 }
 
 
-@pytest.mark.skipif(not BRIEF.exists(), reason="the reviewer brief is not shipped in the public snapshot")
+@pytest.mark.skipif(not BRIEF.exists(), reason="the selector table is not part of this repository")
 def test_every_selector_in_the_brief_resolves(tmp_path, monkeypatch):
     brief = BRIEF.read_text()
     base, _, round6 = brief.partition("### Round 6 additions")

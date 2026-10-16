@@ -1,4 +1,4 @@
-"""Round-2 reviewers' notes (2026-09-28) with the Presidio and GLiNER2 hits recorded on them.
+"""Notes written in review round 2 (2026-09-28), with the Presidio and GLiNER2 hits recorded on them.
 
 The sandbox runs both NER backends; the unit tests do not load them. ``use(monkeypatch, name)``
 replays the recorded hits for that note, so a test sees the spans the reviewer's run saw. Messages
