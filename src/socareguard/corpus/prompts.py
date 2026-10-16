@@ -1,7 +1,8 @@
 """Generation prompts for practitioner case notes.
 
 The social-work register, vocabulary and style notes are ported from the ``SOCIAL_WORK``
-discipline pack in PersCase (public-llmCaseGen-WSDM2027, lib/disciplines/social-work.ts), re-targeted from a
+discipline pack in PersCase (https://github.com/kwanhui/public-llmCaseGen-WSDM2027,
+lib/disciplines/social-work.ts), re-targeted from a
 teaching case to a first-person practitioner case note with typed placeholders.
 """
 
