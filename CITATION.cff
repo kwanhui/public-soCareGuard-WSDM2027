@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+message: "If you use SoCareGuard, please cite the paper below."
+title: "SoCareGuard"
+abstract: "An on-premise, OpenAI-compatible guardrail proxy that pseudonymises Singapore PDPA identifiers in prompts sent to commercial LLMs and screens the replies against a social-work professional-conduct taxonomy."
+type: software
+license: MIT
+repository-code: "https://github.com/kwanhui/public-soCareGuard-WSDM2027"
+url: "https://huggingface.co/spaces/kwanhui/socareguard"
+authors:
+  - given-names: "Kwan Hui"
+    family-names: "Lim"
+    affiliation: "Singapore University of Social Sciences"
+  - given-names: "Terence Tuck Sheng"
+    family-names: "Yow"
+    affiliation: "Singapore University of Social Sciences"
+  - given-names: "You Jin"
+    family-names: "Chung"
+    affiliation: "Singapore University of Social Sciences"
+  - given-names: "Whee Peng"
+    family-names: "Chan"
+    affiliation: "Singapore University of Social Sciences"
+  - given-names: "Andrew Z H"
+    family-names: "Yee"
+    affiliation: "Nanyang Technological University"
+preferred-citation:
+  type: conference-paper
+  status: submitted
+  title: "SoCareGuard: A Privacy and Professional-Ethics Guardrail Proxy for Commercial LLMs in Social Service Practice"
+  authors:
+    - given-names: "Kwan Hui"
+      family-names: "Lim"
+    - given-names: "Terence Tuck Sheng"
+      family-names: "Yow"
+    - given-names: "You Jin"
+      family-names: "Chung"
+    - given-names: "Whee Peng"
+      family-names: "Chan"
+    - given-names: "Andrew Z H"
+      family-names: "Yee"
+  conference:
+    name: "WSDM 2027 Demonstrations"
+  year: 2026
+  notes: "Submitted to the WSDM 2027 Demonstrations track."
+  url: "https://github.com/kwanhui/public-soCareGuard-WSDM2027"

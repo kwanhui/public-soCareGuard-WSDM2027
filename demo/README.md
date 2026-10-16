@@ -29,7 +29,8 @@ on the drafts corpus instead.
 
 Model replies are recorded live through the proxy (`source: recorded`, model and timestamp in
 the file). `python3 -m socareguard.scenarios run --proxy` replays them through the guard with the
-live judge. All assertions pass at tag `results-v1.2`, the results the paper reports.
+live judge. All assertions passed at tag `results-v1.2`, and the paper reports the results at tag
+`results-v1.3`.
 
 ## Hosted demo
 
@@ -38,7 +39,7 @@ Docker SDK and with the provider keys held as Space secrets. The Space is a labe
 synthetic-data sandbox with a per-address rate limit (`SOCAREGUARD_MAX_REQUESTS_PER_HOUR`), and
 `docker compose up` provides the on-premise path for reproducing the demo.
 
-We recorded the final cut of the demo video on 2026-09-07 (2:32, captions only, no audio, with
-live model replies). The video was produced with separate recording tooling that is not part of
-this repository, and a link to it will be added here.
+The demo video is at https://youtu.be/vYSguiKSW-g (captions only, no audio, with live model
+replies). It was produced with separate recording tooling that is not part of this repository.
+"Run your own copy" in the top-level README describes how to host the same demo yourself.
 

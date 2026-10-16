@@ -14,6 +14,16 @@ short_description: Privacy and conduct guardrail proxy for social service LLMs
 
 > **Status:** public snapshot of the system demonstrated in the WSDM 2027 submission. Pinned versions in `requirements-lock.txt`.
 
+**Paper.** SoCareGuard: A Privacy and Professional-Ethics Guardrail Proxy for Commercial LLMs in Social Service Practice. Kwan Hui Lim, Terence Tuck Sheng Yow, You Jin Chung, Whee Peng Chan and
+Andrew Z H Yee. Submitted to the WSDM 2027 Demonstrations track.
+
+- Hosted demo (synthetic data only): https://huggingface.co/spaces/kwanhui/socareguard, with the
+  app at https://kwanhui-socareguard.hf.space (supervisor sign-in `admin` / `demo1234`, for
+  demonstration only)
+- Demo video: https://youtu.be/vYSguiKSW-g
+- How to cite: [CITATION.cff](CITATION.cff), or the BibTeX entry under [Citation](#citation)
+- How to host your own copy: [Run your own copy](#run-your-own-copy)
+
 An on-premise, OpenAI-compatible guardrail proxy that lets Singapore social service
 agencies use commercial LLMs for drafting without sending client material across the
 boundary in the clear, and that screens what comes back against a conduct taxonomy for
@@ -43,20 +53,107 @@ comparison and is wired as an optional comparator (see Conduct screen). The cont
 work is the inbound conduct screen, the generalisation of sensitive attributes as an operation
 distinct from entity redaction, the Singapore quasi-identifier model, and the audit ledger.
 
-## Companion Paper
+## Run your own copy
 
-- SoCareGuard: a privacy and professional-conduct guardrail proxy for commercial LLMs in social service practice. WSDM 2027 Demonstrations (under review).
+This section describes how to run the system that the hosted demo shows, on your own machine, in
+Docker, or as your own Hugging Face Space. The detectors run on CPU, and no GPU is needed. The
+steps were tested on Linux with Python 3.12.
 
-## Install
+### On your own machine
+
+You need Python 3.11 or 3.12, [uv](https://docs.astral.sh/uv/) and about 6 GB of free disk space
+for the CPU build of PyTorch and the detector models.
 
 ```bash
 git clone https://github.com/kwanhui/public-soCareGuard-WSDM2027.git
 cd public-soCareGuard-WSDM2027
 uv python install 3.12 && uv venv --python 3.12 .venv && source .venv/bin/activate
+uv pip install --index-url https://download.pytorch.org/whl/cpu torch   # CPU-only PyTorch, as in the Dockerfile
 make install            # package + dev tools
 make install-detect     # Presidio, spaCy (en_core_web_lg), GLiNER and GLiNER2-PII, for the sweep and the detectors
-cp .env.example .env    # then add OPENAI_API_KEY and ANTHROPIC_API_KEY
+cp .env.example .env    # provider keys, empty by default (see below)
+python3 -m socareguard.proxy --port 8080
 ```
+
+The proxy and the panel are served by the same process. Open http://127.0.0.1:8080/ for the
+panel and http://127.0.0.1:8080/supervisor for the supervisor view, and check that the server is
+up with `curl -s http://127.0.0.1:8080/healthz`. While no `SOCAREGUARD_API_KEYS` or
+`SOCAREGUARD_SUPERVISOR_KEYS` is set, the supervisor view accepts the demonstration sign-in
+`admin` / `demo1234`. The first guarded request loads the detector models, which are downloaded
+once from the Hugging Face Hub and can take a few minutes. Set `SOCAREGUARD_SANDBOX=1` in `.env`
+to run with the synthetic-data banner and the 24-hour retention of the hosted demo.
+
+The keys in `.env` decide what runs.
+
+| Keys in `.env` | What works |
+|---|---|
+| none | the four scenarios with their recorded model replies (replay). Detection, generalisation, stand-ins, the vault, restoration, the leak check and the record run live. The conduct screen is off, so no flags are raised. A request without a recorded reply fails with HTTP 503 |
+| `OPENAI_API_KEY` | everything in the hosted demo: the default drafting model (`openai/gpt-4.1-mini`), the screen's model (`openai/gpt-4.1`) and the moderation baseline |
+| `ANTHROPIC_API_KEY` as well | the Claude drafting model offered in the panel (`anthropic/claude-sonnet-5`) and the cross-provider runs of the evaluation |
+
+To replay a scenario without a key, load it in the panel and tick "Replay this scenario's recorded
+model reply". From the command line, the request carries `replay_scenario` with the scenario id:
+
+```bash
+python3 - <<'EOF'
+import json, urllib.request
+rows = [json.loads(l) for l in open("demo/sample-inputs/scenarios/uc1-youth-offending.jsonl") if l.strip()]
+head, turn = rows[0], next(r for r in rows if r["kind"] == "user_turn")
+body = {"messages": [{"role": "user", "content": turn["instruction"] + "\n\n" + turn["note"]}],
+        "replay_scenario": head["id"]}
+req = urllib.request.Request("http://127.0.0.1:8080/v1/chat/completions", json.dumps(body).encode(),
+                             {"Content-Type": "application/json", "X-SoCareGuard-Pack": head["pack"]})
+sg = json.load(urllib.request.urlopen(req))["socareguard"]
+print(sg["decision"], "replayed:", sg["replayed"], [e["kind"] for e in sg["events"]])
+EOF
+```
+
+The other scenario ids are the file names in `demo/sample-inputs/scenarios/`.
+
+### With Docker
+
+```bash
+cp .env.example .env    # add the provider keys, or leave them empty for replay only
+docker compose up --build
+```
+
+The compose file builds the same image as the hosted demo, serves it on http://127.0.0.1:8080
+and keeps the vault, its key and the record on a named volume. It switches the sandbox banner and
+the rate limit off and keeps identity mappings for 30 days. "Deploying for an agency" under
+Operating the proxy lists the settings that a real deployment needs.
+
+### As your own Hugging Face Space
+
+The `Dockerfile` and the front matter at the top of this README are what a Hugging Face Space
+with the Docker SDK reads (port 7860). The image warms the detector models at build time and sets
+`SOCAREGUARD_SANDBOX=1`, `SOCAREGUARD_MAX_REQUESTS_PER_HOUR=20`, `SOCAREGUARD_TRUST_PROXY=1` and
+`SOCAREGUARD_RETENTION_HOURS=24`. The free CPU hardware is enough.
+
+1. Create a Space at https://huggingface.co/new-space with the Docker SDK and the blank
+   template, or duplicate the hosted demo from its page (the three-dot menu, then "Duplicate this
+   Space"), which copies the same files and lets you skip step 3.
+2. Under the Space's Settings, in "Variables and secrets", add `OPENAI_API_KEY` as a secret, and
+   `ANTHROPIC_API_KEY` if you want the Claude drafting model. Without either, the Space runs the
+   replays only. Add `SOCAREGUARD_SUPERVISOR_KEYS` as a secret to replace the shared
+   `admin` / `demo1234` sign-in with your own supervisor keys, and `HF_TOKEN` only if you have
+   access to the ExpGuard weights.
+3. Push the code. Hugging Face refuses binary files that are not stored with Git LFS or Xet, so
+   leave out the screenshots and the labelled drafts, which the app does not read:
+
+   ```bash
+   git checkout --orphan space
+   git rm -r -q --cached demo/screenshots corpus/drafts
+   git commit -q -m "Deploy SoCareGuard"
+   git push --force https://huggingface.co/spaces/<your-user>/<your-space> space:main
+   git checkout -f main
+   ```
+
+   Use a Hugging Face access token with write permission as the password when git asks.
+4. The Space builds the image (about ten minutes) and starts. The app is then at
+   `https://<your-user>-<your-space>.hf.space`, and `/healthz` there answers when it is up.
+
+The keys stay in the Space's secrets and are never written into the image. Only synthetic notes
+belong in a public Space, as the banner says.
 
 ## Run the proxy
 
@@ -310,10 +407,10 @@ section of `docs/metrics.md` gives the breakdown.
 
 | Step | Deliverable | Status |
 |---|---|---|
-| 1 | Corpus with three-layer gold annotation; four scenario scripts; policy packs v0 | done, tag `corpus-v1` |
-| 2 | Proxy core: detectors, generalisation, vault, ledger, metrics | done, tag `proxy-v1` |
-| 3 | Conduct screen: clause-grounded judge, rules, baseline; policy packs v1 | done, tag `screen-v1` (reported results at `results-v1.3`) |
-| 4 | Transparency panel, `docker compose`, hosted synthetic-only sandbox, video | done, tag `demo-v1` |
+| 1 | Corpus with three-layer gold annotation; four scenario scripts; policy packs v0 | done |
+| 2 | Proxy core: detectors, generalisation, vault, ledger, metrics | done |
+| 3 | Conduct screen: clause-grounded judge, rules, baseline; policy packs v1 | done (reported results at tag `results-v1.3`) |
+| 4 | Transparency panel, `docker compose`, hosted synthetic-only sandbox, video | done |
 | 5 | Paper | submission due 2026-10-15, under review after that date |
 
 ## Development
@@ -390,7 +487,18 @@ the OpenAI `error` envelope, and a body that is not valid JSON or fails validati
 
 ## Citation
 
-To be added on acceptance.
+If you use SoCareGuard, please cite the paper. The entry below gives its submission status, and
+[CITATION.cff](CITATION.cff) carries the same record.
+
+```bibtex
+@misc{Lim2026SoCareGuard,
+  title  = {SoCareGuard: A Privacy and Professional-Ethics Guardrail Proxy for Commercial LLMs in Social Service Practice},
+  author = {Lim, Kwan Hui and Yow, Terence Tuck Sheng and Chung, You Jin and Chan, Whee Peng and Yee, Andrew Z H},
+  year   = {2026},
+  note   = {Submitted to the WSDM 2027 Demonstrations track},
+  url    = {https://github.com/kwanhui/public-soCareGuard-WSDM2027}
+}
+```
 
 ## License
 
