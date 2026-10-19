@@ -15,7 +15,8 @@
 - The sign-in redirects to `/supervisor?signin=1`. Arriving there without a sign-in shows a message
   that the browser did not keep the cookie, with a link to open the supervisor view in a new tab.
   In a frame, the sign-in page and the supervisor view show that link, and a review link opens in
-  the same frame, where the cookie is kept.
+  the same frame, where the cookie is kept. The queue hint then says that the review page opens in this
+  frame, not in a new tab.
 
 ## Unreleased (round 6, 2026-09-28)
 

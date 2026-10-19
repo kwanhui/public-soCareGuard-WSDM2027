@@ -3,7 +3,10 @@
   // line with the new-tab link, since some browsers block the sign-in cookie in a frame.
   let framed = false;
   try { framed = window.top !== window.self; } catch (e) { framed = true; }
-  if (framed) document.querySelectorAll(".framed-only").forEach((el) => { el.hidden = false; });
+  if (framed) {
+    document.querySelectorAll(".framed-only").forEach((el) => { el.hidden = false; });
+    document.querySelectorAll(".unframed-only").forEach((el) => { el.hidden = true; });
+  }
   // The sign-in redirects to /supervisor?signin=1; once signed in, the flag is dropped from the address.
   if (document.getElementById("sup-who") && /[?&]signin=1/.test(window.location.search)) {
     const u = new URL(window.location.href);
