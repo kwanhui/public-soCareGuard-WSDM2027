@@ -27,7 +27,7 @@ import uuid
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, quote
+from urllib.parse import parse_qs, quote, urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -63,6 +63,18 @@ SUPERVISOR_KEYS = {
 SANDBOX = os.environ.get("SOCAREGUARD_SANDBOX", "0") == "1"
 # honour X-Forwarded-For, X-Forwarded-Proto and X-Forwarded-Host (only behind a proxy you control)
 TRUST_PROXY = os.environ.get("SOCAREGUARD_TRUST_PROXY", "0") == "1"
+# The supervisor cookie. With Secure on (https, forwarded https, or SOCAREGUARD_COOKIE_SECURE=1)
+# it is SameSite=None and Partitioned, so the sign-in holds when the app is shown in another
+# site's frame (the Hugging Face Space page frames the app from hf.space). Over plain http
+# (local runs) it is SameSite=Lax without Secure. "1" forces Secure on, "0" off, "auto" decides.
+COOKIE_SECURE = os.environ.get("SOCAREGUARD_COOKIE_SECURE", "auto").strip().lower()
+# Origins, besides the app's own, from which a cookie-authenticated request that changes state is
+# accepted (comma-separated, e.g. https://agency.example). The app's own origin needs no entry.
+ALLOWED_ORIGINS = {
+    o.strip().rstrip("/").lower()
+    for o in os.environ.get("SOCAREGUARD_ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+}
 RETENTION_HOURS = float(
     os.environ.get("SOCAREGUARD_RETENTION_HOURS", "24" if SANDBOX else "0")
 )  # 0 = keep until purged by DELETE /v1/sessions/{id}
@@ -322,6 +334,96 @@ def _base_url(request: Request) -> str:
     return str(url).rstrip("/")
 
 
+def _cookie_secure(request: Request) -> bool:
+    """Whether the supervisor cookie is marked Secure. Behind the Space's proxy the app may see
+    plain http, so the forwarded scheme counts as well as the configuration."""
+    if COOKIE_SECURE in ("1", "true", "yes", "on"):
+        return True
+    if COOKIE_SECURE in ("0", "false", "no", "off"):
+        return False
+    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    return proto == "https" or request.url.scheme == "https"
+
+
+def _set_supervisor_cookie(
+    resp: Response, request: Request, value: str, clear: bool = False
+) -> None:
+    """Set (or clear) the supervisor cookie, with the same attributes both times. Secure:
+    SameSite=None and Partitioned (CHIPS), so it is kept in a cross-site frame. Plain http (local
+    runs): SameSite=Lax, since a browser refuses SameSite=None without Secure. Starlette sets
+    Partitioned only on Python 3.14 and later, so the attribute is appended to the header here."""
+    secure = _cookie_secure(request)
+    resp.set_cookie(
+        demo_login.COOKIE,
+        value,
+        max_age=0 if clear else None,
+        expires=0 if clear else None,
+        path="/",
+        httponly=True,
+        secure=secure,
+        samesite="none" if secure else "lax",
+    )
+    if secure:
+        name, header = next(
+            (k, v)
+            for k, v in reversed(resp.raw_headers)
+            if k == b"set-cookie" and v.startswith(demo_login.COOKIE.encode() + b"=")
+        )
+        i = resp.raw_headers.index((name, header))
+        resp.raw_headers[i] = (name, header + b"; Partitioned")
+
+
+def _norm_origin(scheme: str, netloc: str) -> str:
+    netloc = netloc.lower()
+    if (scheme == "https" and netloc.endswith(":443")) or (
+        scheme == "http" and netloc.endswith(":80")
+    ):
+        netloc = netloc.rsplit(":", 1)[0]
+    return netloc
+
+
+def _same_origin(request: Request) -> bool:
+    """False when the request names a source (Origin, else Referer) that is neither this app's
+    host (the Host or X-Forwarded-Host header) nor in SOCAREGUARD_ALLOWED_ORIGINS. With neither
+    header, a browser's Sec-Fetch-Site of cross-site or same-site is refused too; a request with
+    no such header at all (a script, curl, a test client) passes."""
+    source = request.headers.get("origin") or request.headers.get("referer")
+    if not source:
+        return request.headers.get("sec-fetch-site", "").lower() not in ("cross-site", "same-site")
+    if source.strip().lower() == "null":
+        return False
+    parts = urlsplit(source.strip())
+    scheme = parts.scheme.lower()
+    if not scheme or not parts.netloc:
+        return False
+    if f"{scheme}://{parts.netloc.lower()}".rstrip("/") in ALLOWED_ORIGINS:
+        return True
+    own = {
+        h.strip()
+        for h in (
+            request.headers.get("host", ""),
+            request.headers.get("x-forwarded-host", "").split(",")[0],
+        )
+        if h.strip()
+    }
+    netloc = _norm_origin(scheme, parts.netloc)
+    return any(netloc in (_norm_origin("https", h), _norm_origin("http", h)) for h in own)
+
+
+def _csrf_guarded(request: Request) -> bool:
+    """The requests that the origin check applies to: the sign-in and sign-out forms, and every
+    request that changes state and carries the supervisor cookie without an Authorization
+    header. The release of a withheld draft is a GET that writes a ledger row, so it counts."""
+    path, method = request.url.path, request.method.upper()
+    if method == "POST" and path in ("/supervisor/login", "/supervisor/logout"):
+        return True
+    if demo_login.COOKIE not in request.cookies or request.headers.get("authorization"):
+        return False
+    if method not in ("GET", "HEAD", "OPTIONS"):
+        return True
+    return path.startswith("/v1/sessions/") and path.endswith("/withheld")
+
+
 def _require_key(request: Request) -> None:
     if not API_KEYS:
         return
@@ -540,6 +642,17 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=_HERE / "static"), name="static")
     templates = Jinja2Templates(directory=_HERE / "templates")
     scenarios = load_scenarios()
+
+    @app.middleware("http")
+    async def _origin_guard(request: Request, call_next):
+        """The supervisor cookie is SameSite=None so that it holds in the Space's frame, which
+        drops the protection SameSite=Strict gave against cross-site requests. This check puts it
+        back for the requests that ``_csrf_guarded`` names."""
+        if _csrf_guarded(request) and not _same_origin(request):
+            return _openai_error(
+                403, "cross-origin request refused: the origin is not this app", "bad_origin"
+            )
+        return await call_next(request)
 
     @app.exception_handler(HTTPException)
     async def _http_error(_request: Request, exc: HTTPException):
@@ -1024,7 +1137,9 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             raise HTTPException(400, f"filter not understood: {e}") from e
         return summary, raw
 
-    def login_page(request: Request, status: int = 200, error: str = "") -> HTMLResponse:
+    def login_page(
+        request: Request, status: int = 200, error: str = "", cookie_lost: bool = False
+    ) -> HTMLResponse:
         return templates.TemplateResponse(
             request,
             "supervisor.html",
@@ -1033,6 +1148,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "keyed": _keys_configured(),
                 "sandbox": SANDBOX,
                 "error": error,
+                "cookie_lost": cookie_lost,
                 "review_minutes": int(REVIEW_TTL_S // 60),
             },
             status_code=status,
@@ -1045,7 +1161,10 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         (a supervisor key when keys are configured, the sandbox login otherwise)."""
         who = supervisor_identity(request)
         if who is None:
-            return login_page(request, 403 if _bearer(request) else 200)
+            # A sign-in redirects here with ?signin=1. Arriving without a sign-in after one means
+            # that the browser did not keep the cookie (a frame whose cookies are blocked).
+            lost = request.query_params.get("signin") == "1"
+            return login_page(request, 403 if _bearer(request) else 200, cookie_lost=lost)
         try:
             summary, raw = summary_for(request)
             error = ""
@@ -1118,16 +1237,18 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         resp: Response = (
             JSONResponse({"ok": True, "actor": actor, "attested": attested})
             if is_json
-            else RedirectResponse("/supervisor", status_code=303)
+            else RedirectResponse("/supervisor?signin=1", status_code=303)
         )
-        resp.set_cookie(demo_login.COOKIE, cookie, httponly=True, samesite="strict", path="/")
+        _set_supervisor_cookie(resp, request, cookie)
         return resp
 
     @app.post("/supervisor/logout")
     def supervisor_logout(request: Request):
         app.state.logins.end(request.cookies.get(demo_login.COOKIE))
         resp = RedirectResponse("/supervisor", status_code=303)
-        resp.delete_cookie(demo_login.COOKIE, path="/")
+        # Cleared with the attributes it was set with; a Partitioned cookie is only replaced by
+        # a Partitioned one.
+        _set_supervisor_cookie(resp, request, "", clear=True)
         return resp
 
     @app.get("/v1/supervisor/summary")

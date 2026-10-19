@@ -16,6 +16,8 @@
   <section class="sup-block" id="sup-signin">
     <h1>Sign in</h1>
     {% if error %}<p class="error" id="login-error" role="alert">{{ error }}</p>{% endif %}
+    {% if cookie_lost %}<p class="error" id="cookie-lost" role="alert">The sign-in was accepted, but this browser did not keep the sign-in cookie, so the form is shown again. Browsers often block cookies when the page is shown inside another site's frame, as on the Hugging Face Space page. <a href="/supervisor" target="_blank" rel="noopener" id="cookie-lost-link">Open the supervisor view in a new tab</a> and sign in there, or allow cookies for this site.</p>{% endif %}
+    <p class="summary framed-only" id="framed-note" hidden>This page is shown inside another site's frame, where some browsers block the sign-in cookie. If the sign-in does not hold here: <a href="/supervisor" target="_blank" rel="noopener" id="newtab-link">Open the supervisor view in a new tab</a></p>
     {% if keyed %}
     <form id="sup-login" method="post" action="/supervisor/login">
       <p class="summary">This deployment requires a supervisor key (SOCAREGUARD_SUPERVISOR_KEYS).</p>
@@ -37,6 +39,7 @@
 {% else %}
   <div class="sup-who" id="sup-who"><span>Signed in as {{ actor }}{% if attested %} with a supervisor key{% else %}, typed in{% endif %}.</span>
     <form method="post" action="/supervisor/logout" class="inline-form"><button type="submit" class="secondary small" id="logout">Sign out</button></form></div>
+  <p class="summary framed-only" id="framed-note" hidden>This view is shown inside another site's frame. Review pages open in this frame so that the sign-in goes with them. For more room: <a href="/supervisor" target="_blank" rel="noopener" id="newtab-link">Open the supervisor view in a new tab</a> (you sign in again there).</p>
   {% if error %}<p class="error" id="filter-error" role="alert">{{ error }}</p>{% endif %}
 
   <section class="sup-block chain {{ 'ok' if s.chain.ok else 'bad' }}" id="chain" aria-labelledby="chain-h">

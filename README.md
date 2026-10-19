@@ -215,6 +215,18 @@ or single sign-on, a supervisor role that the deployment checks, session expiry 
 any production deployment. The login is off whenever `SOCAREGUARD_SUPERVISOR_KEYS` or `SOCAREGUARD_API_KEYS` is
 set.
 
+The sign-in sets an HTTP-only cookie. Over https (the request's scheme or `X-Forwarded-Proto`, or
+`SOCAREGUARD_COOKIE_SECURE=1`) it is `SameSite=None; Secure; Partitioned`, so the sign-in holds
+when the app is shown in another site's frame, as on the Hugging Face Space page. Over plain http
+(a local run) it is `SameSite=Lax` without `Secure`. Since `SameSite=None` lets a browser send the
+cookie on requests from other sites, the proxy refuses the sign-in and sign-out forms, and every
+request that changes state with the cookie and no `Authorization` header (a review token, a
+release, an override, a purge), when its `Origin` (or else `Referer`) is neither the app's own
+host (`Host` or `X-Forwarded-Host`) nor listed in `SOCAREGUARD_ALLOWED_ORIGINS`. A browser that
+still blocks cookies in a frame (Safari without partitioned cookies, strict privacy modes) shows a
+message after the sign-in, and the framed sign-in page links to the supervisor view in a new tab,
+where the sign-in works as on the direct address.
+
 Every sandbox visitor shares that login, so the view that it opens is limited. The queue and the
 period table list the action rows of every session, but a review link into a session that another
 browser created returns only the content with stand-ins, that is, what left the premises, what the
@@ -437,6 +449,8 @@ Environment variables read at start-up (all optional):
 | `SOCAREGUARD_SANDBOX` | `0` | banner, self-asserted actors, 24-hour retention |
 | `SOCAREGUARD_MAX_REQUESTS_PER_HOUR` | `0` (unlimited, and the Space image sets 20) | per-address rate limit |
 | `SOCAREGUARD_TRUST_PROXY` | `0` | honour `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host`, so the rate limit sees the client address and the panel's integration snippet shows the public `https` URL (set only behind a reverse proxy you control) |
+| `SOCAREGUARD_COOKIE_SECURE` | `auto` | `auto` marks the supervisor cookie `Secure` (with `SameSite=None` and `Partitioned`) when the request or `X-Forwarded-Proto` is https, `1` always, `0` never (then `SameSite=Lax`) |
+| `SOCAREGUARD_ALLOWED_ORIGINS` | unset | comma-separated origins, besides the app's own, from which a request that changes state with the supervisor cookie is accepted |
 | `SOCAREGUARD_RETENTION_HOURS` | `24` in sandbox, else `0` (`docker-compose.yml` sets `720`) | purge vault mappings older than this. `0` keeps them until `DELETE /v1/sessions/{id}`, and the proxy then logs a WARNING at start-up |
 | `SOCAREGUARD_MAX_SESSIONS` | `500` | sessions kept in the session index. Beyond it the oldest session is closed and its mappings purged |
 | `SOCAREGUARD_VAULT`, `SOCAREGUARD_LEDGER`, `SOCAREGUARD_VAULT_KEY` | `vault/socareguard.sqlite`, `vault/ledger.jsonl`, key file beside the vault (`vault/socareguard.key`) | where state lives. `SOCAREGUARD_VAULT_KEY` takes a path to a key file or the key itself (base64). The proxy refuses to mint a new key over an existing vault unless `SOCAREGUARD_VAULT_NEW_KEY=1` |

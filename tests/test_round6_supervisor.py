@@ -190,7 +190,7 @@ def test_the_sandbox_login_is_required_refused_when_wrong_and_recorded(tmp_path,
     assert wrong.status_code == 401 and "wrong" in wrong.text
     assert client.get("/v1/supervisor/summary").status_code == 403
     ok = _login(client)
-    assert ok.status_code == 303 and ok.headers["location"] == "/supervisor"
+    assert ok.status_code == 303 and ok.headers["location"] == "/supervisor?signin=1"
     body = client.get("/v1/supervisor/summary").json()
     assert (body["actor"], body["actor_attested"]) == ("admin (sandbox login)", False)
     tok = _review(client, sg["session"])

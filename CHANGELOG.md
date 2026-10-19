@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-20: supervisor sign-in inside the Space page's frame
+
+- The Hugging Face Space page shows the app in a frame from another site, where the browser
+  dropped the `SameSite=Strict` supervisor cookie and the sign-in form came back with no message.
+  Over https the cookie is now `SameSite=None; Secure; Partitioned`, and over plain http
+  `SameSite=Lax`. Sign-out clears it with the same attributes. `SOCAREGUARD_COOKIE_SECURE`
+  (`auto`, `1`, `0`) overrides the choice.
+- An origin check replaces the protection that `SameSite=Strict` gave: the sign-in and sign-out
+  forms, and every request that changes state with the cookie and no `Authorization` header
+  (including the release of a withheld draft, a GET that writes a ledger row), are refused with 403
+  when their `Origin` (or else `Referer`) is another site. `SOCAREGUARD_ALLOWED_ORIGINS` lists
+  further origins to accept.
+- The sign-in redirects to `/supervisor?signin=1`. Arriving there without a sign-in shows a message
+  that the browser did not keep the cookie, with a link to open the supervisor view in a new tab.
+  In a frame, the sign-in page and the supervisor view show that link, and a review link opens in
+  the same frame, where the cookie is kept.
+
 ## Unreleased (round 6, 2026-09-28)
 
 ### Supervisor view
