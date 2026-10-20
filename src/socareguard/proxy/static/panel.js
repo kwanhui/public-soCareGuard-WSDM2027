@@ -384,7 +384,7 @@
     $("events-tag").textContent = `${sg.events.length} event${sg.events.length === 1 ? "" : "s"}`;
   }
 
-  // The screen's verdict in a recorded run of the scenario (UC3), shown beside a replay as a
+  // The screen's verdict in a recorded run of the scenario (UC2, UC3), shown beside a replay as a
   // labelled reference. It is a record of that run, never this run's result.
   function renderRecordedRef(run) {
     const box = $("recorded-ref");
@@ -392,11 +392,16 @@
     if (!ref || !(ref.flags || []).length) { box.hidden = true; box.innerHTML = ""; return; }
     const now = new Set(run.sg.flags.map((f) => f.label));
     const missing = ref.flags.filter((f) => !now.has(f.label)).map((f) => f.label);
+    const inRef = new Set(ref.flags.map((f) => f.label));
+    const added = [...new Set(run.sg.flags.map((f) => f.label).filter((l) => !inRef.has(l)))];
+    const diffs = [];
+    if (missing.length) diffs.push(`this run did not raise ${missing.join(" or ")}`);
+    if (added.length) diffs.push(`this run also raised ${added.join(" and ")}`);
     box.hidden = false;
     box.innerHTML = `<span class="cap">For reference: the recorded run of ${esc(ref.recorded_on)}</span>` +
       `<p>${esc(ref.what)} The screen's decision there was ${esc(DECISION_WORD[ref.decision] || ref.decision)}, with these flags:</p><ul>` +
       ref.flags.map((f) => `<li><span class="badge">${esc(f.label)}</span> ${esc(plainOf(f))}, SASW Code clause ${esc(f.clause)}, the screen's own confidence ${Number(f.confidence).toFixed(2)}. Flagged text: “${esc(String(f.evidence).replace(/[.]\s*$/, ""))}”${f.rewrite ? `. Suggested rewrite: “${esc(String(f.rewrite).replace(/[.]\s*$/, ""))}”` : ""}.</li>`).join("") +
-      `</ul><p class="hint">This is a record of that run, not the result of this request. The screen runs live here and its flags can differ between runs${missing.length ? `: this run did not raise ${esc(missing.join(" or "))}` : ""}.</p>`;
+      `</ul><p class="hint">This is a record of that run, not the result of this request. The screen runs live here and its flags can differ between runs${diffs.length ? `: ${esc(diffs.join(", and "))}` : ""}.</p>`;
   }
 
   // Copy to the clipboard; without clipboard access, select the text for Ctrl+C.

@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-20 (night): Use Case 2 states its recorded verdict; the screen is unchanged
+
+- A link check on the Space ran Use Case 2 twice: one run raised I1 and was annotated, as in the
+  paper and the demonstration video, and the other raised I1 and I6 and escalated, withholding the
+  draft. Fifteen local replays through the Space's code path (the chat route with
+  `replay_scenario`, the recorded note, the live guard and the openai/gpt-4.1 judge at
+  temperature 0) sent the judge a prompt that was the same byte for byte in every run, and the
+  note that the judge read equals the note that left the premises in this request and in the
+  2026-09-28 take. I1 came back in fifteen, I5 in seven and I6 in two (confidence 0.80 and 0.70),
+  and the two runs with I6 escalated under the pack's rule for I6. No hint from the closure rule
+  was sent. The judge is called as in the evaluation (`eval/run_screen.py` uses the same
+  `LLMJudge`, temperature 0 and no seed), and the 0.5 threshold and the decision rule are applied
+  as evaluated. The I6 flag is therefore the judge's own variation on the same input, not a
+  difference in what it read, and the judge, its prompt, the taxonomy, the packs, the thresholds
+  and the decision rules are unchanged.
+- Ten more local replays after this change, with the same prompt, raised I1 in ten, I5 in two and
+  I6 in none, so I6 came back in two of twenty-five replays in all.
+- Use Case 2 says that the screen flagged I1 under A.7.c in the recorded demonstration of
+  2026-09-28 and was annotated, and that live runs can also raise I5 and, in a few runs, I6, which
+  escalates. A replay shows the I1 card of that run (transcribed from the video) as a labelled
+  reference, as Use Case 3 does.
+- The reference beside a replay names the flags that this run raised and the recorded run did
+  not ("this run also raised I5 and I6"), as well as those it did not raise.
+
 ## 2026-10-20 (evening): the same supervisor path on the Space page and the direct address
 
 - "Review and release" (and "Open read-only") now opens the review page in place of the

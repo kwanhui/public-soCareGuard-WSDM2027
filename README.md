@@ -332,8 +332,9 @@ anthropic/claude-sonnet-5, recorded 2026-10-20), chosen under "Recorded reply fr
 reply is screened against the pseudonymised note that its model was given when it was recorded,
 so the screen reads the source of the reply as it was, and What left the premises still shows this
 request's own outbound text. Since the screen runs live, its flags on a replay can differ from the
-recorded run, and Use Case 3 shows the verdict of the recorded demonstration (2026-09-28) beside the
-live one as a reference. Links in the footer open the chain check of the record (`/ledger/check`)
+recorded run, and Use Cases 2 and 3 show the verdict of the recorded demonstration (2026-09-28)
+beside the live one as a reference. In Use Case 2, for example, the recorded run raised I1 only and
+was annotated, while some live runs also raise I5, and a few raise I6, which escalates. Links in the footer open the chain check of the record (`/ledger/check`)
 and the policy pack as its YAML file (`/packs/{id}`), each with a link back to the panel, while
 `/v1/ledger/verify`, `/v1/packs` and `/v1/packs/{id}` still return JSON. The identity map that the panel
 fetches decodes the practitioner's own note and never the withheld reply. The words that the panel
