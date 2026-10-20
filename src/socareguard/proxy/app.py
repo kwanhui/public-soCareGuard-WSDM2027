@@ -11,8 +11,9 @@ recipients and the ledger row, which the transparency panel renders.
 for a release, and one period of escalations, releases, overrides, accepted rewrites and opened
 reviews. With ``SOCAREGUARD_SUPERVISOR_KEYS`` set it needs a supervisor key. Without keys it
 offers the sandbox login of ``socareguard.proxy.demo_login``, which is for demonstration only.
-Under that shared login, a review link into a session that another browser created opens the
-pseudonymised columns only (what left, what came back, the flags and the ledger rows).
+Under that shared login, the review page opens the pseudonymised columns only (what left, what
+came back, the flags and the ledger rows), since it sends the review token without the session's
+own token.
 """
 
 from __future__ import annotations
@@ -496,7 +497,7 @@ def _keys_configured() -> bool:
     return bool(API_KEYS or SUPERVISOR_KEYS)
 
 
-# The event kinds a review token opens on another browser's session. The detection event carries
+# The event kinds a review token opens without the session's own token or a key. The detection event carries
 # the typed text and is left out. The generalisation event keeps its rule ids only, and the leak
 # check keeps its counts and the stand-ins the model reformatted, without the echoed originals.
 _REVIEW_EVENTS = {

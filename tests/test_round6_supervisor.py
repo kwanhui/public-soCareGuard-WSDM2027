@@ -484,15 +484,14 @@ def test_rows_since_reads_one_period(tmp_path):
 # ---------- the panel ----------
 
 
-def test_the_panel_keeps_tokens_and_has_the_review_mode(tmp_path, monkeypatch):
+def test_the_panel_has_the_review_mode(tmp_path, monkeypatch):
+    # Since 2026-10-20 the panel no longer keeps session tokens in sessionStorage: the review page
+    # sends the review token only, so it shows the same stand-in view in every tab and frame.
     client, _ = _app(tmp_path, monkeypatch)
     html = client.get("/").text
     assert 'id="supervisor-link"' in html and 'href="/supervisor"' in html
     js = (STATIC / "panel.js").read_text()
-    assert (
-        "sessionStorage.setItem(TOKENS_KEY" in js
-        and "keepToken(sg.session, sg.session_token)" in js
-    )
+    assert "sessionStorage" not in js and "keepToken" not in js
     assert '"X-SoCareGuard-Review-Token"' in js and "readOnly(session, full)" in js
 
 
@@ -572,7 +571,6 @@ def _table_selectors(section_text):
 _SCRIPTED = {
     "form.flag-override": ("panel.js", '<form class="flag-override'),
     "button.accept": ("panel.js", 'class="btn-card accept"'),
-    "a.review-link": ("supervisor.js", 'a.className = "review-link"'),
     "#escalate-session": ("panel.js", 'id="escalate-session"'),
     "#copy-session": ("panel.js", 'id="copy-session"'),
 }
@@ -581,7 +579,9 @@ _SCRIPTED = {
 # Selectors of the round-6 brief that a later change removed on purpose. On 2026-10-20 the release
 # left the practitioner's panel (only a signed-in supervisor releases, from the review page), and
 # the two practitioner hints of the release form went with it.
-_REMOVED = {"#release-practitioner-hint", "#release-id-hint"}
+# The same day the review page began to open in place of the supervisor view on both addresses
+# (the Space page's frame and the direct app), so the new-tab review link went too.
+_REMOVED = {"#release-practitioner-hint", "#release-id-hint", "a.review-link"}
 
 
 @pytest.mark.skipif(not BRIEF.exists(), reason="the selector table is not part of this repository")

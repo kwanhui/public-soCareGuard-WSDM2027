@@ -170,10 +170,11 @@ def test_the_review_page_script_shows_the_release_form_to_a_supervisor():
     assert 'el.closest("#release")' in body
     assert '$("release-actor").readOnly = true' in body
     assert '$("released-note").hidden = data.view !== "pseudonymised"' in js
-    # the session token is sent only when this browser holds it
-    assert 'if (current.sg.session_token) extra["X-SoCareGuard-Session-Token"]' in js
+    # since 2026-10-20 the release from the review page sends no session token, so the released
+    # draft keeps its stand-ins in every tab and in the Space page's frame
+    assert 'extra["X-SoCareGuard-Session-Token"]' not in js
     html = (TEMPLATES / "panel.html").read_text()
-    assert "The practitioner's panel shows the restored draft." in html
+    assert "Under the shared sandbox login a review never restores the names." in html
     sup = (TEMPLATES / "supervisor.html").read_text()
     assert "Review and release" in sup
     assert "from the release form on the practitioner's panel or through" not in sup

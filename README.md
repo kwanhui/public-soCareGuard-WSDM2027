@@ -229,16 +229,24 @@ request that changes state with the cookie and no `Authorization` header (a revi
 release, an override, a purge), when its `Origin` (or else `Referer`) is neither the app's own
 host (`Host` or `X-Forwarded-Host`) nor listed in `SOCAREGUARD_ALLOWED_ORIGINS`. A browser that
 still blocks cookies in a frame (Safari without partitioned cookies, strict privacy modes) shows a
-message after the sign-in, and the framed sign-in page links to the supervisor view in a new tab,
-where the sign-in works as on the direct address.
+message after the sign-in with a link that opens the supervisor view in a new tab, where the
+sign-in works as on the direct address. The message shows only when the cookie was dropped.
+
+The supervisor path is the same on the Space page (https://huggingface.co/spaces/kwanhui/socareguard,
+where the app sits in a frame) and on the direct address (https://kwanhui-socareguard.hf.space).
+"Review and release" opens the review page in place of the supervisor view, in the same tab, and
+the review page links back to the view. A new tab is not used, since a tab opened out of the frame
+is a top-level page where the cookie that the frame holds is absent.
 
 Every sandbox visitor shares that login, so the view that it opens is limited. The queue and the
-period table list the action rows of every session, but a review link into a session that another
-browser created returns only the content with stand-ins, that is, what left the premises, what the
-model replied, the flags quoted with stand-ins, and the rows of the record. The restored draft and
-the identity map open only for a session that this browser created (the panel keeps each session token in
-`sessionStorage`) or under a supervisor key. A release from such a review therefore shows the
-released draft with stand-ins. `GET /v1/ledger` without a session still lists the
+period table list the action rows of every session, and a review under that login shows only the
+content with stand-ins, that is, what left the premises, what the model replied, the flags quoted
+with stand-ins, and the rows of the record. This holds whichever tab or browser created the
+session: the review page sends the review token and the sign-in cookie, never the practitioner's
+session token. The restored draft and the identity map open on a review only under a supervisor
+key, and a release from the review page under the sandbox login shows the released draft with
+stand-ins. (A client that holds the session's own token can still read its own session through
+the API, as before.) `GET /v1/ledger` without a session still lists the
 rows of all sessions only when API keys are configured and the call carries one.
 
 Each ledger row records the transfer-basis statement that the deployer sets through

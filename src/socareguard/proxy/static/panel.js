@@ -181,18 +181,6 @@
     return p ? `measured precision on synthetic drafts ${p.precision.toFixed(2)} (${window.PRECISION.version})` : "";
   }
 
-  // ---------- session tokens kept for this browser tab ----------
-  // Each result's session token is kept in sessionStorage as {session id: token}, so a supervisor
-  // review link opened in this browser shows the full view of the sessions this browser created.
-  const TOKENS_KEY = "socareguard.sessionTokens";
-  function readTokens() {
-    try { return JSON.parse(sessionStorage.getItem(TOKENS_KEY) || "{}") || {}; } catch (e) { return {}; }
-  }
-  function keepToken(session, token) {
-    if (!session || !token) return;
-    try { const t = readTokens(); t[session] = token; sessionStorage.setItem(TOKENS_KEY, JSON.stringify(t)); } catch (e) { /* storage off: the review opens with stand-ins only */ }
-  }
-
   // ---------- requests ----------
   function authHeaders(extra) {
     const h = {"Content-Type": "application/json"};
@@ -217,7 +205,6 @@
     const data = await r.json();
     if (!r.ok) throw new Error((data.error && data.error.message) || data.detail || r.statusText);
     const sg = data.socareguard;
-    keepToken(sg.session, sg.session_token);
     const panel = await (await fetch(`/v1/sessions/${sg.session}/panel`, {headers: authHeaders({"X-SoCareGuard-Session-Token": sg.session_token})})).json();
     return {data, sg, panel, instruction, typed: instruction + "\n\n" + note, overrides: {}};
   }
@@ -590,11 +577,9 @@
     }
     const btn = ev.target.querySelector("button[type=submit]"); btn.disabled = true;
     try {
-      // The supervisor's sign-in (the cookie, or a supervisor key) is what the server checks; the
-      // session token is sent only when this browser has it, for the restored view of the draft.
-      const extra = {"X-SoCareGuard-Actor": $("release-actor").value.trim()};
-      if (current.sg.session_token) extra["X-SoCareGuard-Session-Token"] = current.sg.session_token;
-      const h = authHeaders(extra);
+      // The supervisor's sign-in (the cookie, or a supervisor key) is what the server checks. No
+      // session token goes with it, so under the sandbox login the released draft keeps its stand-ins.
+      const h = authHeaders({"X-SoCareGuard-Actor": $("release-actor").value.trim()});
       const r = await fetch(`/v1/sessions/${current.sg.session}/withheld?reason=${encodeURIComponent($("release-reason").value)}`, {headers: h});
       const data = await r.json();
       if (!r.ok) throw new Error((data.error && data.error.message) || data.detail || r.statusText);
@@ -631,10 +616,11 @@
     }
     return t;
   }
+  // The review page sends the review token only, never the practitioner's session token, so it
+  // shows the same view in every tab and in the Space page's frame: stand-ins only under the
+  // sandbox login, the restored view only under a supervisor key (the server decides).
   async function openReview(session, review) {
-    const own = readTokens()[session];
     const headers = {"X-SoCareGuard-Review-Token": review};
-    if (own) headers["X-SoCareGuard-Session-Token"] = own;
     const get = async (url) => {
       const r = await fetch(url, {headers});
       const d = await r.json();
@@ -648,7 +634,7 @@
     const full = s.view === "full";
     const replacements = full ? p.replacements : (p.marks || []).map((m) => Object.assign({original: ""}, m));
     const row = s.ledger_row || {};
-    const sg = {session, session_token: own || "", pack: s.pack, pack_defaulted: false, actor: row.actor, decision: s.decision, withheld: s.withheld,
+    const sg = {session, session_token: "", pack: s.pack, pack_defaulted: false, actor: row.actor, decision: s.decision, withheld: s.withheld,
       flags: s.flags, events: s.events, ledger_row: row, ledger_row_sha256: row.row_sha256, replayed: !!row.replayed_reply};
     const send = s.events.find((e) => e.kind === "send") || {};
     const extraRows = (l.rows || []).filter((r) => r.row_sha256 !== row.row_sha256 && r.decision !== "escalate" && REVIEW_ROW_LABELS[r.decision])
@@ -663,9 +649,10 @@
   function readOnly(session, full) {
     const note = $("review-note");
     note.hidden = false;
-    note.textContent = full
-      ? `Read-only review of session ${session}. Nothing on this page can be changed. What you typed is rebuilt from what left the premises and the identity map.`
-      : `Read-only review of session ${session}, with stand-ins only. This browser did not create the session, so what was typed and the restored draft are not shown.`;
+    note.innerHTML = (full
+      ? `Read-only review of session ${esc(session)}. Nothing on this page can be changed. What was typed is rebuilt from what left the premises and the identity map.`
+      : `Read-only review of session ${esc(session)}, with stand-ins only: what left the premises, what the model replied, the flags and the rows of the record. Under the shared sandbox login a review never shows what was typed or the restored draft.`) +
+      ` <a href="/supervisor" id="review-back">Back to the supervisor view</a>`;
     document.querySelector("section.compose").hidden = true;
     if (!full) {
       ["col-typed", "col-seen"].forEach((c) => { $(c).innerHTML = ""; $(c).closest("article").hidden = true; });

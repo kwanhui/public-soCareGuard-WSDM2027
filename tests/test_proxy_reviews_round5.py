@@ -181,10 +181,17 @@ def test_readme_pdpc_wording():
     assert "processes the pseudonymised payload as a data intermediary" not in readme
 
 
+def _flat_text(text: str) -> str:
+    return " ".join(text.split())
+
+
 def test_readme_states_the_supervisor_view_scope():
     # Round 6 replaced the per-session statement with the supervisor view and its sandbox rule.
     readme = _text("README.md")
-    assert "a review link into a session that another browser created returns only the" in readme
+    # Since 2026-10-20 a review under the sandbox login shows stand-ins whichever browser created
+    # the session.
+    assert "a review under that login shows only the" in _flat_text(readme)
+    assert "whichever tab or browser created the" in _flat_text(readme)
     assert "`GET /v1/ledger` without a session still lists the rows of all sessions" in readme
 
 

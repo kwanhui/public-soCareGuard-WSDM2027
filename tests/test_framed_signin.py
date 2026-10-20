@@ -8,7 +8,7 @@ site. A sign-in that the browser did not keep shows a message instead of the bar
 
 from fastapi.testclient import TestClient
 
-from tests.test_round6_supervisor import ROOT, _app, _login, _send
+from tests.test_round6_supervisor import _app, _login, _send
 
 HOST = "kwanhui-socareguard.hf.space"
 SAME = {"Origin": f"https://{HOST}", "X-Forwarded-Proto": "https", "Host": HOST}
@@ -158,22 +158,9 @@ def test_a_sign_in_that_did_not_stick_shows_a_message(tmp_path, monkeypatch):
     assert "Open the supervisor view in a new tab" in page.text
     plain = client.get("/supervisor")
     assert 'id="cookie-lost"' not in plain.text
-    # The framed line is in both pages, hidden until the script finds the page framed.
-    assert 'class="summary framed-only" id="framed-note" hidden' in plain.text
+    # The fallback shows only when the cookie was dropped; no page carries a line for the frame.
+    assert "framed-only" not in plain.text and 'id="framed-note"' not in plain.text
     _login(client)
     signed = client.get("/supervisor")
-    assert 'id="sup-who"' in signed.text and 'id="framed-note" hidden' in signed.text
-    assert "Open the supervisor view in a new tab" in signed.text
-
-
-def test_the_queue_hint_names_the_frame_when_framed(tmp_path, monkeypatch):
-    client, _ = _app(tmp_path, monkeypatch)
-    _login(client)
-    page = client.get("/supervisor").text
-    hint = page[page.index('id="queue-hint"') :]
-    hint = hint[: hint.index("</p>")]
-    # Unframed the page says "in a new tab"; the script swaps in "in this frame" when framed.
-    assert '<span class="unframed-only">in a new tab</span>' in hint
-    assert '<span class="framed-only" hidden>in this frame</span>' in hint
-    js = (ROOT / "src/socareguard/proxy/static/supervisor.js").read_text()
-    assert '".unframed-only"' in js and "el.hidden = true" in js
+    assert 'id="sup-who"' in signed.text and "framed-only" not in signed.text
+    assert "Open the supervisor view in a new tab" not in signed.text

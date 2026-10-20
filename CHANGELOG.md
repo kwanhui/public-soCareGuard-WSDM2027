@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-10-20 (evening): the same supervisor path on the Space page and the direct address
+
+- "Review and release" (and "Open read-only") now opens the review page in place of the
+  supervisor view, in the same tab, on both addresses. Before, it opened in the same frame on the
+  Space page and in a new tab on the direct address. A tab opened out of the Space page's frame
+  would not carry the sign-in cookie, so the same tab is the behaviour that works on both. The
+  review page links back to the supervisor view.
+- The review page sends the review token and the sign-in cookie, never the practitioner's session
+  token, so under the sandbox login it shows the stand-in columns whichever tab or frame created
+  the session, as the paper describes the supervisor's review. Before, a review opened in the frame
+  that had created the session showed the restored draft, and one opened on the direct address
+  showed stand-ins only. The panel no longer keeps session tokens in `sessionStorage`, and a
+  release from the review page under the sandbox login returns the draft with stand-ins. The API
+  is unchanged: a client with the session's own token still reads its own session.
+- The sign-in page and the supervisor view no longer carry a line that only a framed page showed.
+  The message with the new-tab link stays as the fallback for a browser that drops the cookie in
+  the frame, and it shows only when the cookie was dropped.
+- The queue hint and the review notes name no browser or frame: "the review page opens in place
+  of this view", and "a review opens with stand-ins only" under the sandbox login.
+
 ## 2026-10-20 (later): the sandbox against the paper's account
 
 - The screen's model is a provider outside the premises, and it read the practitioner's
