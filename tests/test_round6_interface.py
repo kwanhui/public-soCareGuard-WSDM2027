@@ -384,6 +384,9 @@ def test_the_release_needs_the_sign_in_and_the_confirmation(server):
         )
         page.goto(server + tok["url"])
         page.wait_for_selector("#release:not([hidden])")
+        # the practitioner's pointer to the supervisor view is not repeated on the review page
+        assert page.locator("#escalate-next").count() == 0
+        assert page.locator("#escalate-session").is_visible()
         assert page.locator("#release-actor").input_value() == "admin (sandbox login)"
         page.fill("#release-reason", "Reviewed with the practitioner")
         page.click("#release-form button[type=submit]")

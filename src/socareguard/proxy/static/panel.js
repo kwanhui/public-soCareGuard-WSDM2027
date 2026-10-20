@@ -44,6 +44,7 @@
   let runs = {};           // {internal, external} for the recipient check
   let loadedScenario = null;
   let compareWith = null;  // the internal instruction of a two-recipient scenario
+  let reviewMode = false;  // a supervisor's read-only review page, where the release form is
 
   // ---------- scenario chips ----------
   // The pack hint says where the selector's value came from, so a pack set by a scenario never
@@ -235,7 +236,9 @@
         $("status").textContent = "Run 1 of 2 (for the case file): detecting, replacing, calling the model provider, screening… usually 5 to 20 seconds each on this sandbox.";
         runs.internal = await guarded(compareWith, note, {audience: "internal"});
       }
-      $("status").textContent = (compareWith && !extraInstruction ? "Run 2 of 2 (for the external recipient): " : "") + "Detecting, replacing, calling the model provider, screening… usually 5 to 20 seconds on this sandbox.";
+      $("status").textContent = (compareWith && !extraInstruction ? "Run 2 of 2 (for the external recipient): " : "") + (replay
+        ? "Detecting, replacing, replaying the recorded reply, screening… usually 3 to 9 seconds on this sandbox, and longer for the first request after it wakes."
+        : "Detecting, replacing, calling the model provider, screening… usually 5 to 20 seconds on this sandbox.");
       const prior = extraInstruction && current ? current : null;
       const ext = await guarded(instruction, note, {replay, session: runs.internal ? runs.internal.sg.session : (prior ? prior.sg.session : null), audience: runs.internal ? "external" : null});
       if (prior) { runs = {list: [{key: "first", label: "First draft", run: prior}, {key: "revised", label: "Revised draft (shown below)", run: ext}], head: "Regenerated in the same session (same stand-ins) with the flags as instructions."}; ext.regenerated = true; }
@@ -376,7 +379,7 @@
       note.hidden = false;
       note.innerHTML = `<p><strong>Sent to a supervisor.</strong> ${sg.withheld ? "The draft is kept on this server and is not shown here until a supervisor releases it." : "This flag cannot be kept with a reason here."} The escalation is in the record below.</p>` +
         `<div class="sessionid" id="escalate-session"><span>Session id</span><code id="esc-session">${esc(sg.session)}</code><button type="button" class="secondary small" id="copy-session">Copy</button><span id="copy-status" class="status" role="status"></span></div>` +
-        (sg.withheld ? `<p id="escalate-next">Only a signed-in supervisor can release it. Your supervisor signs in at the <a href="/supervisor" id="escalate-supervisor-link">supervisor view</a>, opens this session from the queue under "Needs your release", reviews it and releases it with a reason. There is no release on this panel.</p>` : "");
+        (sg.withheld && !reviewMode ? `<p id="escalate-next">Only a signed-in supervisor can release it. Your supervisor signs in at the <a href="/supervisor" id="escalate-supervisor-link">supervisor view</a>, opens this session from the queue under "Needs your release", reviews it and releases it with a reason. There is no release on this panel.</p>` : "");
       $("copy-session").addEventListener("click", async () => { $("copy-status").textContent = await copyText(sg.session, $("esc-session")); });
       // The release form is shown only on a supervisor's review page (readOnly), after sign-in.
       $("release").hidden = true; $("released").hidden = true; $("release-status").textContent = ""; $("release-prior").hidden = true;
@@ -653,6 +656,7 @@
     const run = {data: {choices: [{message: {content: full ? (s.reply || "") : ""}}]}, sg, panel: {replacements}, instruction: "",
       typed: full ? rebuildTyped(send.outbound_text || "", replacements) : "", overrides: {}, extraRows};
     runs = {};
+    reviewMode = true;
     show(run);
     readOnly(session, full);
   }

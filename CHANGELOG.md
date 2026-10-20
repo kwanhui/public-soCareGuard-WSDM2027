@@ -33,6 +33,10 @@
   pack" link to them. `/v1/packs`, `/v1/packs/{id}` and `/v1/ledger/verify` are unchanged.
 - "Use this from your own application" adds a curl line for `/v1/packs` and one for a replay with
   `replay_scenario`.
+- The review page no longer repeats the practitioner's line that there is no release on the panel,
+  since the review page is where the release is. While a replay runs, the status line says that
+  the recorded reply is replayed (usually 3 to 9 seconds on the Space, longer for the first request
+  after it wakes) and no longer that the model provider is called.
 
 ## 2026-10-20: supervisor sign-in inside the Space page's frame
 
