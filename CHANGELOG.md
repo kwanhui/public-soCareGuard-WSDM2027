@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-20 (late night): 40 requests per hour per address and a USD 5 daily spend ceiling
+
+- The hosted sandbox now allows 40 chat requests per hour from each address, up from 20
+  (`SOCAREGUARD_MAX_REQUESTS_PER_HOUR=40` in the `Dockerfile`). A refusal names the limit and
+  carries the code `rate_limit_exceeded`.
+- New setting `SOCAREGUARD_DAILY_SPEND_USD`: a ceiling on the estimated model spend of the whole
+  process per UTC day. Unset or 0 means no ceiling. The `Dockerfile` sets 5 and
+  `docker-compose.yml` sets 0 for an agency server. Each chat request is counted at the per-call
+  costs under "Cost" in `docs/metrics.md`: the openai/gpt-4.1 judge (USD 0.0057) on every request,
+  replay included, and the drafting call (USD 0.0004) when the reply is live. A request is charged
+  before it runs, so concurrent requests cannot together pass the ceiling, and the charge stays if
+  the request fails. The tally is kept in memory and a restart starts it again from zero.
+- Past the ceiling, `/v1/chat/completions` returns HTTP 429 with the code
+  `daily_budget_exhausted` and a message that the sandbox's daily model budget is used up for
+  everyone, that this is not a per-person limit, and that it resets at 00:00 UTC (08:00 Singapore
+  time). The panel shows it as its own notice. A request refused for the budget does not count
+  against the address's hourly limit. Supervisor review and release, the record, the chain check
+  and the policy pack pages make no model call and keep working.
+- `/healthz` also reports `max_requests_per_hour` and `daily_spend` (ceiling, estimate so far,
+  their ratio and the next reset), or `null` when there is no ceiling.
+- The judge, its prompt, the taxonomy, the packs, the thresholds and the decision rules are
+  unchanged.
+
 ## 2026-10-20 (night): Use Case 2 states its recorded verdict; the screen is unchanged
 
 - A link check on the Space ran Use Case 2 twice: one run raised I1 and was annotated, as in the

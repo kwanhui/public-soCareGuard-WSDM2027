@@ -121,16 +121,16 @@ docker compose up --build
 ```
 
 The compose file builds the same image as the hosted demo, serves it on http://127.0.0.1:8080
-and keeps the vault, its key and the record on a named volume. It switches the sandbox banner and
-the rate limit off and keeps identity mappings for 30 days. "Deploying for an agency" under
-Operating the proxy lists the settings that a real deployment needs.
+and keeps the vault, its key and the record on a named volume. It switches the sandbox banner,
+the rate limit and the daily spend ceiling off and keeps identity mappings for 30 days.
+"Deploying for an agency" under Operating the proxy lists the settings that a real deployment needs.
 
 ### As your own Hugging Face Space
 
 The `Dockerfile` and the front matter at the top of this README are what a Hugging Face Space
 with the Docker SDK reads (port 7860). The image warms the detector models at build time and sets
-`SOCAREGUARD_SANDBOX=1`, `SOCAREGUARD_MAX_REQUESTS_PER_HOUR=20`, `SOCAREGUARD_TRUST_PROXY=1` and
-`SOCAREGUARD_RETENTION_HOURS=24`. The free CPU hardware is enough.
+`SOCAREGUARD_SANDBOX=1`, `SOCAREGUARD_MAX_REQUESTS_PER_HOUR=40`, `SOCAREGUARD_DAILY_SPEND_USD=5`,
+`SOCAREGUARD_TRUST_PROXY=1` and `SOCAREGUARD_RETENTION_HOURS=24`. The free CPU hardware is enough.
 
 1. Create a Space at https://huggingface.co/new-space with the Docker SDK and the blank
    template, or duplicate the hosted demo from its page (the three-dot menu, then "Duplicate this
@@ -339,8 +339,13 @@ and the policy pack as its YAML file (`/packs/{id}`), each with a link back to t
 `/v1/ledger/verify`, `/v1/packs` and `/v1/packs/{id}` still return JSON. The identity map that the panel
 fetches decodes the practitioner's own note and never the withheld reply. The words that the panel
 uses are listed in `docs/terminology.md`.
-`SOCAREGUARD_SANDBOX=1` shows the synthetic-data banner, and `SOCAREGUARD_MAX_REQUESTS_PER_HOUR`
-sets a per-address rate limit.
+`SOCAREGUARD_SANDBOX=1` shows the synthetic-data banner, `SOCAREGUARD_MAX_REQUESTS_PER_HOUR`
+sets a per-address rate limit, and `SOCAREGUARD_DAILY_SPEND_USD` sets a ceiling on the estimated
+model spend of the whole sandbox per UTC day. The hosted Space allows 40 requests per hour from
+each address and USD 5 of model calls per day for all visitors together. When the day's budget is
+used up, a new request is refused with HTTP 429 and the code `daily_budget_exhausted`, and the
+panel says that the limit is shared and resets at 00:00 UTC (08:00 Singapore time). Supervisor
+review and release, the record and the policy pack pages make no model call and keep working.
 
 On an agency server, `docker compose up` starts one container with its state on a named volume
 and its keys read from `.env`. For a hosted sandbox, the `Dockerfile` targets a Hugging Face Space
@@ -474,7 +479,8 @@ Environment variables read at start-up (all optional):
 | `SOCAREGUARD_SUPERVISOR_KEYS` | unset | keys allowed to release a withheld draft (`GET /v1/sessions/{id}/withheld`) and to open the supervisor view (`/supervisor`). When set, the sandbox login is off |
 | `SOCAREGUARD_TRANSFER_BASIS` | a statement that the basis is still to be asserted | the transfer-basis statement written to every request row |
 | `SOCAREGUARD_SANDBOX` | `0` | banner, self-asserted actors, 24-hour retention |
-| `SOCAREGUARD_MAX_REQUESTS_PER_HOUR` | `0` (unlimited, and the Space image sets 20) | per-address rate limit |
+| `SOCAREGUARD_MAX_REQUESTS_PER_HOUR` | `0` (unlimited, and the Space image sets 40) | per-address rate limit |
+| `SOCAREGUARD_DAILY_SPEND_USD` | `0` (no ceiling, and the Space image sets 5) | ceiling on the estimated model spend of the process per UTC day. Each request is counted at the per-call costs under "Cost" in `docs/metrics.md` (the judge, USD 0.0057, on every request, and the drafting call, USD 0.0004, when the reply is live rather than replayed). Past the ceiling, `/v1/chat/completions` returns HTTP 429 with the code `daily_budget_exhausted` until 00:00 UTC. The tally is kept in memory, so a restart resets it. `/healthz` reports the ceiling, the estimate so far and their ratio |
 | `SOCAREGUARD_TRUST_PROXY` | `0` | honour `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host`, so the rate limit sees the client address and the panel's integration snippet shows the public `https` URL (set only behind a reverse proxy you control) |
 | `SOCAREGUARD_COOKIE_SECURE` | `auto` | `auto` marks the supervisor cookie `Secure` (with `SameSite=None` and `Partitioned`) when the request or `X-Forwarded-Proto` is https, `1` always, `0` never (then `SameSite=Lax`) |
 | `SOCAREGUARD_ALLOWED_ORIGINS` | unset | comma-separated origins, besides the app's own, from which a request that changes state with the supervisor cookie is accepted |
@@ -523,7 +529,8 @@ token),
 `DELETE /v1/sessions/{id}` (purge, ledgered), `GET /v1/ledger?session=`, `GET /supervisor`,
 `GET /v1/supervisor/summary` and `POST /v1/sessions/{id}/review-token` (supervisor key, or the
 sandbox login when no key is configured),
-`GET /v1/ledger/verify?expected_rows=`, `GET /healthz` (also the container healthcheck). Errors use
+`GET /v1/ledger/verify?expected_rows=`, `GET /healthz` (also the container healthcheck, with the
+rate limit and the day's estimated spend against its ceiling). Errors use
 the OpenAI `error` envelope, and a body that is not valid JSON or fails validation returns HTTP 400.
 
 ## Citation

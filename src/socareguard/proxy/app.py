@@ -80,6 +80,14 @@ RETENTION_HOURS = float(
     os.environ.get("SOCAREGUARD_RETENTION_HOURS", "24" if SANDBOX else "0")
 )  # 0 = keep until purged by DELETE /v1/sessions/{id}
 MAX_PER_HOUR = int(os.environ.get("SOCAREGUARD_MAX_REQUESTS_PER_HOUR", "0"))  # 0 = unlimited
+# A ceiling on the estimated model spend of the whole process per UTC day, in USD. Unset or 0
+# means no ceiling. The estimate counts each request's calls at the per-call costs in
+# docs/metrics.md ("Cost", docs/metrics/cost-v1.1.json): the conduct judge on every request,
+# replay included, and the drafting call when the reply is live. The tally is kept in memory, so
+# a restart starts the day's count again from zero.
+DAILY_SPEND_USD = float(os.environ.get("SOCAREGUARD_DAILY_SPEND_USD", "0") or 0)
+JUDGE_CALL_USD = 0.0057  # openai/gpt-4.1, 2334 input and 135 output tokens at list price
+DRAFT_CALL_USD = 0.0004  # openai/gpt-4.1-mini, 169 input and 197 output tokens at list price
 MAX_SESSIONS = int(os.environ.get("SOCAREGUARD_MAX_SESSIONS", "500"))
 BAD_JSON = "the request body is not valid JSON"
 _HERE = Path(__file__).resolve().parent
@@ -216,6 +224,75 @@ class RateLimiter:
                 return False
             q.append(now)
             return True
+
+
+class SpendMeter:
+    """Estimated model spend of this process for the current UTC day, against a ceiling. A
+    request is charged before it runs, so concurrent requests cannot together pass the ceiling,
+    and the charge is kept if the request then fails, since a provider call may already have
+    been made."""
+
+    def __init__(self, ceiling_usd: float):
+        self.ceiling = ceiling_usd
+        self.day = ""
+        self.spent = 0.0
+        self.lock = threading.Lock()
+
+    @staticmethod
+    def _today() -> str:
+        return time.strftime("%Y-%m-%d", time.gmtime())
+
+    def _roll(self) -> None:
+        today = self._today()
+        if today != self.day:
+            self.day, self.spent = today, 0.0
+
+    def has_room(self, cost: float) -> bool:
+        if self.ceiling <= 0:
+            return True
+        with self.lock:
+            self._roll()
+            return self.spent + cost <= self.ceiling + 1e-9
+
+    def charge(self, cost: float) -> bool:
+        """Add ``cost`` to today's tally and return True, or return False and add nothing when it
+        would take the tally past the ceiling."""
+        with self.lock:
+            self._roll()
+            if self.ceiling > 0 and self.spent + cost > self.ceiling + 1e-9:
+                return False
+            self.spent += cost
+            return True
+
+    @staticmethod
+    def resets_at() -> str:
+        """The next 00:00 UTC, as an ISO 8601 timestamp."""
+        t = time.gmtime(time.time() + 86400)
+        return time.strftime("%Y-%m-%dT00:00:00Z", t)
+
+    def report(self) -> dict[str, Any] | None:
+        if self.ceiling <= 0:
+            return None
+        with self.lock:
+            self._roll()
+            spent = self.spent
+        return {
+            "ceiling_usd": self.ceiling,
+            "spent_usd_estimate": round(spent, 4),
+            "ratio": round(min(spent / self.ceiling, 1.0), 4),
+            "resets_at": self.resets_at(),
+        }
+
+
+def _spend_message(ceiling: float) -> str:
+    left = 86400 - int(time.time()) % 86400
+    h, m = divmod(left // 60, 60)
+    return (
+        f"The sandbox's daily model budget (USD {ceiling:g}) is used up for everyone today. "
+        "This is a shared limit, not a per-person one. It resets at 00:00 UTC (08:00 Singapore "
+        f"time), in {h} h {m:02d} min. Supervisor review and release, the record and the policy "
+        "packs still work in the meantime"
+    )
 
 
 class ChatRequest(BaseModel):
@@ -538,6 +615,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     # SQLite file, so a restart keeps every open session readable and releasable.
     app.state.sessions = SessionStore(app.state.guard.vault, MAX_SESSIONS)
     app.state.limiter = RateLimiter(MAX_PER_HOUR)
+    app.state.spend = SpendMeter(DAILY_SPEND_USD)
     app.state.logins = demo_login.Logins()
     app.state.last_sweep = 0.0
     if RETENTION_HOURS <= 0:
@@ -754,7 +832,13 @@ def create_app(guard: Guard | None = None) -> FastAPI:
 
     @app.get("/healthz")
     def healthz():
-        return {"ok": True, "packs": available_packs(), "sandbox": SANDBOX}
+        return {
+            "ok": True,
+            "packs": available_packs(),
+            "sandbox": SANDBOX,
+            "max_requests_per_hour": MAX_PER_HOUR,
+            "daily_spend": app.state.spend.report(),
+        }
 
     @app.get("/v1/models")
     def models(request: Request):
@@ -807,10 +891,20 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             raise HTTPException(
                 400, "X-SoCareGuard-Audience must be internal, care-team, external or auto"
             )
+        # The calls this request would pay for: the judge (when the screen is on) and, unless the
+        # reply is replayed, the drafting call. Checked before the per-address limit, so a
+        # request refused for the shared budget does not use up one of the address's requests.
+        cost = (JUDGE_CALL_USD if app.state.guard.screener is not None else 0.0) + (
+            0.0 if req.replay_scenario else DRAFT_CALL_USD
+        )
+        if not app.state.spend.has_room(cost):
+            return _openai_error(429, _spend_message(DAILY_SPEND_USD), "daily_budget_exhausted")
         if not app.state.limiter.allow(_client_ip(request)):
-            raise HTTPException(
+            return _openai_error(
                 429,
-                "rate limit: this sandbox allows a fixed number of requests per hour per address",
+                f"rate limit: this sandbox allows {MAX_PER_HOUR} requests per hour from each "
+                "address. Try again later in the hour",
+                "rate_limit_exceeded",
             )
         if req.stream:
             raise HTTPException(400, "streaming is not supported by the guardrail proxy")
@@ -840,6 +934,8 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             if v is not None
         }
         actor = _actor(request) + ("" if _attested(request) else " (self-asserted)")
+        if not app.state.spend.charge(cost):
+            return _openai_error(429, _spend_message(DAILY_SPEND_USD), "daily_budget_exhausted")
         sweep()
         t0 = time.time()
         try:

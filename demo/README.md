@@ -36,7 +36,9 @@ live judge. All assertions passed at tag `results-v1.2`, and the paper reports t
 
 The hosted demo runs at https://huggingface.co/spaces/kwanhui/socareguard, a Space with the
 Docker SDK and with the provider keys held as Space secrets. The Space is a labelled
-synthetic-data sandbox with a per-address rate limit (`SOCAREGUARD_MAX_REQUESTS_PER_HOUR`), and
+synthetic-data sandbox with a per-address rate limit of 40 requests per hour
+(`SOCAREGUARD_MAX_REQUESTS_PER_HOUR`) and a shared daily model budget of USD 5
+(`SOCAREGUARD_DAILY_SPEND_USD`, reset at 00:00 UTC), and
 `docker compose up` provides the on-premise path for reproducing the demo.
 
 The demo video is at https://youtu.be/vYSguiKSW-g (captions only, no audio, with live model

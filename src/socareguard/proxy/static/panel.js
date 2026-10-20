@@ -203,7 +203,11 @@
     if (aud && aud !== "auto") headers["X-SoCareGuard-Audience"] = aud;
     const r = await fetch("/v1/chat/completions", {method: "POST", headers, body: JSON.stringify(body)});
     const data = await r.json();
-    if (!r.ok) throw new Error((data.error && data.error.message) || data.detail || r.statusText);
+    if (!r.ok) {
+      const e = new Error((data.error && data.error.message) || data.detail || r.statusText);
+      e.code = data.error && data.error.code;
+      throw e;
+    }
     const sg = data.socareguard;
     const panel = await (await fetch(`/v1/sessions/${sg.session}/panel`, {headers: authHeaders({"X-SoCareGuard-Session-Token": sg.session_token})})).json();
     return {data, sg, panel, instruction, typed: instruction + "\n\n" + note, overrides: {}};
@@ -241,7 +245,13 @@
       $("status").textContent = "";
       const err = $("error");
       err.hidden = false;
-      err.innerHTML = `<strong>The request did not complete.</strong> ${esc(e.message)}<br><span class="muted">Nothing was drafted. Adjust the note or try again. The previous result has been cleared.</span>`;
+      if (e.code === "daily_budget_exhausted") {
+        err.innerHTML = `<strong>Shared daily limit reached.</strong> ${esc(e.message)}.<br><span class="muted">Nothing was drafted or sent to a model. This applies to every visitor until the reset, so trying again before then will not help.</span>`;
+      } else if (e.code === "rate_limit_exceeded") {
+        err.innerHTML = `<strong>Too many requests from this address this hour.</strong> ${esc(e.message)}.<br><span class="muted">Nothing was drafted. The previous result has been cleared.</span>`;
+      } else {
+        err.innerHTML = `<strong>The request did not complete.</strong> ${esc(e.message)}<br><span class="muted">Nothing was drafted. Adjust the note or try again. The previous result has been cleared.</span>`;
+      }
     } finally { $("send").disabled = false; }
   }
 
