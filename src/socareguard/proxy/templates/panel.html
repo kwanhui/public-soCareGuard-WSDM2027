@@ -21,7 +21,9 @@
         <span class="chiplabel muted">or type your own note below</span>
       </div>
       <p id="scenario-summary" class="summary" hidden></p>
-      <p id="replay-row" class="summary" hidden><label class="inline"><input type="checkbox" id="replay"> Replay this scenario's recorded model reply instead of calling the model provider (the guard, the screen and the record still run live, and the result then matches the paper's account).</label></p>
+      <p id="replay-row" class="summary" hidden><label class="inline"><input type="checkbox" id="replay"> Replay this scenario's recorded model reply instead of calling the model provider. The guard, the screen and the record still run live, so the screen's flags can differ from the recorded run.</label>
+        <label class="inline" id="replay-model-field">Recorded reply from <select id="replay-model" aria-describedby="replay-model-hint"></select></label>
+        <span class="fieldhint" id="replay-model-hint">Each recorded reply was written by the model named here on the date shown, through this proxy. In a replay the screen reads the reply against the note that its model was given.</span></p>
       <div class="row">
         <label>Policy pack
           <select name="pack" id="pack" aria-describedby="pack-hint">{% for p in packs %}<option value="{{ p }}"{% if p == default_pack %} selected{% endif %}>{{ p }}</option>{% endfor %}</select>
@@ -71,6 +73,9 @@ reply = client.chat.completions.create(
     messages=[{"role": "user", "content": "Summarise this note...\n\n&lt;case note&gt;"}],
     extra_headers={"X-SoCareGuard-Pack": "<span id="snippet-pack">{{ default_pack }}</span>", "X-SoCareGuard-Actor": "<span id="snippet-actor">sw-042</span>"},
 )</pre>
+      <p>The same with curl, and two calls that the panel uses: the list of policy packs, and a replay of a shipped scenario's recorded reply (no model provider call; the guard and the screen run live).</p>
+<pre>curl {{ base_url }}/v1/packs
+curl {{ base_url }}/v1/chat/completions -H "Content-Type: application/json" -H "X-SoCareGuard-Pack: disability" -d '{"replay_scenario": "uc4-over-caution-override", "replay_model": "openai/gpt-4.1-mini", "messages": [{"role": "user", "content": "&lt;the scenario instruction and note&gt;"}]}'</pre>
       <p>The reply carries a <code>socareguard</code> object with the decision, the flags (evidence and rewrite already restored), the event stream, every recipient of what left the premises, the session token that opens the session's identity map, and the row of the record. <code>X-SoCareGuard-Audience: internal|external</code> sets the recipient instead of reading it from the instruction. A request without <code>X-SoCareGuard-Pack</code> runs the deployment's default pack, and its response carries the header <code>X-SoCareGuard-Pack-Defaulted: true</code>. <code>GET /v1/ledger?session=…</code> lists the rows of the record. <code>GET /v1/ledger/verify</code> recomputes its chain. <code>DELETE /v1/sessions/…</code> purges a session's identity map and records that it did.</p>
     </details>
   </section>
@@ -100,14 +105,13 @@ reply = client.chat.completions.create(
       <article><h2>What you see</h2><pre id="col-seen" tabindex="0"></pre><p class="hint">The reply with stand-ins restored on this server. Flagged text is underlined in red.</p><p class="hint" id="seen-legend">A generalised phrase that cannot come back keeps its colour (hover for what the record says). A withheld or generalised phrase that the model repeated exactly is restored from the record and underlined in dots. An orange mark is part of a stand-in that the model reformatted, so it was not restored.</p></article>
     </div>
     <p class="closing" id="closing" hidden>No flag. Wording that the note itself uses may be echoed without a flag. The record below shows what left and to whom.</p>
+    <div class="recorded-ref" id="recorded-ref" hidden></div>
     <div class="flags" id="flags"></div>
     <div class="escalate-note" id="escalate-note" role="alert" hidden></div>
     <div class="release" id="release" hidden>
       <form id="release-form">
         <p class="cap">Supervisor release</p>
-        <p class="summary" id="release-practitioner-hint">Practitioner: give your supervisor the session id above, or redraft the note for a recipient inside the agency.</p>
         <p class="summary" id="release-signed-in" hidden></p>
-        <p class="summary" id="release-id-hint">In the sandbox the supervisor id is typed in and not checked. With SOCAREGUARD_SUPERVISOR_KEYS set, a supervisor key is required.{% if auth_required %} This deployment checks the supervisor key.{% endif %}</p>
         <p class="summary">The reason goes into the record as typed, so do not put client details in it. A reason with an NRIC, phone number or case reference is refused.</p>
         <label>Supervisor id<input id="release-actor" placeholder="e.g. sup-007" required></label>
         <label>Reason for the release<textarea id="release-reason" rows="2" required placeholder="Why the draft is being released"></textarea></label>
@@ -136,7 +140,7 @@ reply = client.chat.completions.create(
   </section>
 </main>
 <footer>
-  <span><a href="/v1/ledger/verify">check the record's chain</a> · <a href="/v1/packs/{{ default_pack }}">view a policy pack</a> · <a href="/supervisor" id="supervisor-link">supervisor view</a></span>
+  <span><a href="/ledger/check" id="chain-link">check the record's chain</a> · <a href="/packs/{{ default_pack }}" id="pack-link">view a policy pack</a> · <a href="/supervisor" id="supervisor-link">supervisor view</a></span>
   <details class="about" id="about-tool"><summary>About this tool</summary><p>Built on LiteLLM, Presidio, GLiNER2-PII and a screen grounded in the clauses of the SASW Code. The policy layer, the generalisation rules, the recipient check and the record are the contribution.</p></details>
 </footer>
 <script>window.SCENARIOS = {{ scenarios_json | safe }}; window.TAXONOMY = {{ taxonomy_json | safe }}; window.PRECISION = {{ precision_json | safe }}; window.SOCAREGUARD_AUTH = {{ 'true' if auth_required else 'false' }}; window.SOCAREGUARD_SUPERVISOR = {{ supervisor_json | safe }};</script>

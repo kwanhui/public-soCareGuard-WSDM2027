@@ -108,7 +108,10 @@ print(sg["decision"], "replayed:", sg["replayed"], [e["kind"] for e in sg["event
 EOF
 ```
 
-The other scenario ids are the file names in `demo/sample-inputs/scenarios/`.
+The other scenario ids are the file names in `demo/sample-inputs/scenarios/`. A scenario that keeps
+more than one recording (Use Case 4) takes `"replay_model"` as well, for example
+`"anthropic/claude-sonnet-5"`. Without it the first recording is replayed. A replay calls no
+model provider, so the record names the model that wrote the recorded reply.
 
 ### With Docker
 
@@ -202,7 +205,9 @@ who is signed in (the sandbox login or a supervisor key) sees the release form a
 review page of a withheld draft, and releases it there with a reason and a confirmation step. The
 sign-in stands in for the practitioner's session token, the `withheld_released` row names the
 supervisor (`admin (sandbox login)`, typed in, in the sandbox), and the draft leaves the queue. A
-review link without a sign-in, or a practitioner's API key, releases nothing.
+review link without a sign-in, a practitioner's session token or API key, or a typed-in supervisor
+id releases nothing, so the practitioner's panel has no release form: it shows the session id and
+points to the supervisor view.
 
 With `SOCAREGUARD_SUPERVISOR_KEYS` set, the view and the summary require a supervisor key
 (`Authorization: Bearer <key>`, or the key typed into the sign-in form), and the record marks the
@@ -233,7 +238,7 @@ browser created returns only the content with stand-ins, that is, what left the 
 model replied, the flags quoted with stand-ins, and the rows of the record. The restored draft and
 the identity map open only for a session that this browser created (the panel keeps each session token in
 `sessionStorage`) or under a supervisor key. A release from such a review therefore shows the
-released draft with stand-ins, and the practitioner's panel shows the restored draft. `GET /v1/ledger` without a session still lists the
+released draft with stand-ins. `GET /v1/ledger` without a session still lists the
 rows of all sessions only when API keys are configured and the call carries one.
 
 Each ledger row records the transfer-basis statement that the deployer sets through
@@ -300,7 +305,8 @@ unrestored surrogate.
 ## Demo surface
 
 `python3 -m socareguard.proxy` also serves the transparency panel at `/`. A result opens with a
-banner that states the decision in one sentence (pass, flagged, regenerate or escalate), gives one
+banner that names the decision (Pass, Flagged (annotate), Regenerate or Escalate, the four decisions
+of the pack's default actions) and states it in one sentence, gives one
 next step, and offers one button for it: copy the draft, go to the first flag, regenerate, or copy
 the session id for a supervisor. The details (the policy pack, the counts, the privacy check, the
 harm classifier shown for contrast, the actor) sit under "More about this result". The panel then
@@ -308,9 +314,20 @@ shows what you typed, what left the premises and what you see side by side, with
 (surrogates) and generalised details highlighted. What the model replied, with stand-ins, opens
 with one click. Each flag is a card that leads with a plain-words headline, puts the clause, the
 screen's own confidence and the measured precision on one line under it, and offers the rewrite
-or keeping the passage with a reason that goes into the record. A release asks the supervisor to
-confirm before it is sent. The record, the pack rules that fired and the event stream are
-collapsed, each with a count. Each scenario loads with one click. The identity map that the panel
+or keeping the passage with a reason that goes into the record. A withheld draft shows the session
+id and points to the supervisor view, where a signed-in supervisor releases it from the review
+page after a confirmation step. The record, the pack rules that fired and the event stream are
+collapsed, each with a count. Each scenario loads with one click and replays a reply recorded
+through the proxy, while detection, the screen, the harm classifier and the record run live. Use
+Case 4 keeps a recording from each provider (openai/gpt-4.1-mini, recorded 2026-09-07, and
+anthropic/claude-sonnet-5, recorded 2026-10-20), chosen under "Recorded reply from". A replayed
+reply is screened against the pseudonymised note that its model was given when it was recorded,
+so the screen reads the source of the reply as it was, and What left the premises still shows this
+request's own outbound text. Since the screen runs live, its flags on a replay can differ from the
+recorded run, and Use Case 3 shows the verdict of the recorded demonstration (2026-09-28) beside the
+live one as a reference. Links in the footer open the chain check of the record (`/ledger/check`)
+and the policy pack as its YAML file (`/packs/{id}`), each with a link back to the panel, while
+`/v1/ledger/verify`, `/v1/packs` and `/v1/packs/{id}` still return JSON. The identity map that the panel
 fetches decodes the practitioner's own note and never the withheld reply. The words that the panel
 uses are listed in `docs/terminology.md`.
 `SOCAREGUARD_SANDBOX=1` shows the synthetic-data banner, and `SOCAREGUARD_MAX_REQUESTS_PER_HOUR`
@@ -326,7 +343,8 @@ tooling that is not part of this repository.
 ## Conduct screen
 
 The reply is screened before local re-identification, so the judge provider does not see an
-original identifier either. Flags come from three sources.
+original identifier either. The judge also reads the practitioner's instruction as it left, with
+stand-ins (before 2026-10-20 it read the instruction as typed, so a name there reached it). Flags come from three sources.
 
 The first is a clause-grounded judge (`socareguard/screen/judge.py`), an LLM prompted with the
 pack's inbound categories, each quoting its SASW clause, together with the pack's setting rules.
@@ -351,8 +369,8 @@ request access and set `HF_TOKEN`.
 
 The decision is the highest default action among the flags in the pack (`pass`, `annotate`,
 `regenerate`, or `escalate`). Escalations cannot be overridden by the practitioner. A supervisor
-releases a withheld draft with a reason. Supervisor identity is self-asserted in the sandbox, and
-with SOCAREGUARD_SUPERVISOR_KEYS set a supervisor key is required. A second release of the same
+releases a withheld draft with a reason after signing in: with the sandbox login where no key is
+set, and with a supervisor key when SOCAREGUARD_SUPERVISOR_KEYS is set. A second release of the same
 draft is recorded with a link to the earlier release row. Any other decision can be overridden with a
 reason, which the ledger records. The policy packs are at v1. Every pack lists
 the cross-cutting categories, the youth pack adds I14, and the disability and youth packs add I11.

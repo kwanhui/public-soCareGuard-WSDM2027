@@ -165,6 +165,8 @@ class Guard:
         context: str = "",
         source_text: str = "",
         audience: str | None = None,
+        judge_instruction: str | None = None,
+        screen_context: str | None = None,
     ):
         pack = load_pack(pack_id)
         r = restore(reply_raw, self.vault, session)
@@ -181,7 +183,8 @@ class Guard:
         )
         flags, decision, events = [], "pass", []
         if self.screener is not None:
-            # Screen the pseudonymised reply: the judge provider never sees an original identifier.
+            # Screen the pseudonymised reply: the judge provider never sees an original identifier,
+            # so it reads the instruction as it left (with stand-ins), not as it was typed.
             # The screen event comes first in the stream because the screen reads the reply as
             # received, before re-identification; it takes the leak check's invented identifiers
             # (I13), which are found on the restored text and reported in the leakcheck event.
@@ -191,8 +194,9 @@ class Guard:
                 seq,
                 instruction=instruction,
                 leaks=lk.invented,
-                context=context,
+                context=context if screen_context is None else screen_context,
                 audience=audience,
+                judge_instruction=judge_instruction,
             )
         # A surrogate left in the re-identified draft gets its own card, so the annotate decision
         # it causes is never silent.
@@ -226,6 +230,7 @@ class Guard:
         reply_fixture: str | None = None,
         seed: int | None = None,
         provider_kwargs: dict | None = None,
+        reply_fixture_note: str | None = None,
         actor: str | None = None,
         audience: str | None = None,
         audience_header: str | None = None,
@@ -283,7 +288,18 @@ class Guard:
             context=payload,
             source_text="\n".join(str(m.get("content") or "") for m in messages),
             audience=resolved_audience,
+            judge_instruction=_instruction(out_msgs),
+            # A replayed reply is screened against the pseudonymised note that its model was given
+            # when it was recorded, so that the judge reads the source of the reply as it was;
+            # this request's outbound text is still computed live, shown and recorded.
+            screen_context=(
+                reply_fixture_note if reply_fixture is not None and reply_fixture_note else None
+            ),
         )
+        if reply_fixture is not None and reply_fixture_note:
+            for e in in_events:
+                if e.kind == "screen":
+                    e.note_source = "recorded"
         events += in_events
         seq += len(in_events)
         events.append(Action(seq=seq, decision=decision, reason=_reason(lk, flags, decision)))

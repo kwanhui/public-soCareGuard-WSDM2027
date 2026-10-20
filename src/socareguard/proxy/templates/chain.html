@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoCareGuard chain check</title>
+<link rel="stylesheet" href="/static/panel.css">
+</head>
+<body class="supervisor">
+<header>
+  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">chain check of the record</span></div>
+  {% if sandbox %}<div class="banner"><p>Synthetic-data sandbox. Do not enter real client information.</p></div>{% endif %}
+</header>
+<main>
+  <p class="summary"><a href="/" class="back-link" id="back-to-panel">Back to the panel</a></p>
+  <section class="sup-block chain {{ 'ok' if r.ok else 'bad' }}" id="chain" aria-labelledby="chain-h">
+    <h1 id="chain-h">Chain check of the record</h1>
+    <p id="chain-status" class="chain-status">{{ r.message }}</p>
+    <dl class="chain-fields">
+      <dt>Rows in the record</dt><dd id="chain-rows">{{ r.rows }}</dd>
+      <dt>Record fingerprint (head hash)</dt><dd id="chain-head"><code>{{ r.head_sha256 or 'no rows yet' }}</code></dd>
+      <dt>First row whose hash or link does not match</dt><dd id="chain-bad">{{ 'none' if r.first_bad_row is none else r.first_bad_row }}</dd>
+      <dt>First gap in the row numbers</dt><dd id="chain-gap">{{ 'none' if r.first_seq_gap is none else r.first_seq_gap }}</dd>
+    </dl>
+    <p class="hint">The check recomputes the hash of every row of the record and its link to the row before, so an edited, removed or reordered row shows here. It is {{ r.scope }}.</p>
+    <p class="summary">For an application, the same check is at <a href="/v1/ledger/verify" id="chain-json">/v1/ledger/verify</a> as JSON.</p>
+  </section>
+  <p class="summary"><a href="/" class="back-link">Back to the panel</a></p>
+</main>
+<footer>
+  <span><a href="/">panel</a> · <a href="/packs/{{ default_pack }}">view a policy pack</a> · <a href="/supervisor">supervisor view</a></span>
+</footer>
+</body>
+</html>

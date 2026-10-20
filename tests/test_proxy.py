@@ -271,7 +271,7 @@ def test_sandbox_banner_states_the_taxonomy_is_a_draft(tmp_path, monkeypatch):
     assert "not yet been reviewed by social-work practitioners" in page
 
 
-def test_sandbox_release_of_a_withheld_draft_needs_the_session_token(tmp_path, monkeypatch):
+def test_sandbox_release_of_a_withheld_draft_needs_a_supervisor_sign_in(tmp_path, monkeypatch):
     from socareguard.proxy import app as appmod
     from socareguard.scenarios.events import Flag, Screen
 
@@ -300,13 +300,21 @@ def test_sandbox_release_of_a_withheld_draft_needs_the_session_token(tmp_path, m
     ).json()["socareguard"]
     assert sg["withheld"]
     url = f"/v1/sessions/{sg['session']}/withheld?reason=safeguarding%20review"
+    # A typed-in supervisor role, with or without the practitioner's session token, releases
+    # nothing: the draft stays withheld until a supervisor signs in.
     role = {"X-SoCareGuard-Role": "supervisor"}
     assert client.get(url, headers=role).status_code == 403
-    wrong = {**role, "X-SoCareGuard-Session-Token": "not-the-token"}
-    assert client.get(url, headers=wrong).status_code == 403
     tok = {**role, "X-SoCareGuard-Session-Token": sg["session_token"]}
-    r = client.get(url, headers=tok)
+    refused = client.get(url, headers=tok)
+    assert refused.status_code == 403 and "/supervisor" in refused.json()["error"]["message"]
+    assert not any(r.get("decision") == "withheld_released" for r in g.ledger.rows())
+    signed = client.post(
+        "/supervisor/login",
+        data={"username": "admin", "password": "demo1234"},
+        follow_redirects=False,
+    )
+    assert signed.status_code == 303
+    r = client.get(url, headers={"X-SoCareGuard-Session-Token": sg["session_token"]})
     assert r.status_code == 200 and r.json()["ledger_row"]["decision"] == "withheld_released"
-    assert "self-asserted" in r.json()["ledger_row"]["actor"]
-    no_role = {"X-SoCareGuard-Session-Token": sg["session_token"]}
-    assert client.get(url, headers=no_role).status_code == 403
+    assert r.json()["ledger_row"]["actor"] == "admin (sandbox login)"
+    assert r.json()["view"] == "full"

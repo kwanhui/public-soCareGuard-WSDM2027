@@ -44,7 +44,13 @@ BANNER = {
         "Go to the first flag",
     ),
     "regenerate": ("Regenerate with the flags as instructions.", "Regenerate"),
-    "escalate": ("Give the session id to your supervisor.", "Copy the session id"),
+    "escalate": (
+        (
+            "Give the session id to your supervisor, who signs in at the supervisor view to review "
+            "and release it."
+        ),
+        "Copy the session id",
+    ),
 }
 
 
@@ -339,9 +345,16 @@ def test_the_banner_shows_one_filled_button_per_state(server, state):
             page.wait_for_function(
                 "() => document.activeElement && document.activeElement.id === 'flag-0'"
             )
+        # the banner names the paper's decision
+        label = {"pass": "Pass", "annotate": "Flagged (annotate)", "regenerate": "Regenerate"}
+        title = page.locator("#decision-title").inner_text()
+        assert title.startswith(label.get(state, "Escalate") + "."), title
         if state == "escalate":
             assert page.locator("#escalate-note").get_attribute("role") == "alert"
             assert page.locator("#escalate-session #esc-session").is_visible()
+            # no release on the practitioner's panel: it points to the supervisor view
+            assert page.locator("#release").is_hidden()
+            assert page.locator("#escalate-supervisor-link").get_attribute("href") == "/supervisor"
         if shots:
             Path(shots).mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(Path(shots) / f"banner-{state}.png"), full_page=True)
@@ -349,18 +362,33 @@ def test_the_banner_shows_one_filled_button_per_state(server, state):
 
 
 @needs_playwright
-def test_the_release_needs_the_confirmation(server):
+def test_the_release_needs_the_sign_in_and_the_confirmation(server):
+    """The practitioner's panel has no release. A supervisor signs in, opens the review page of
+    the withheld draft and releases it there, after the confirmation step."""
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1280, "height": 900})
         _send(page, server, "escalate")
-        page.fill("#release-actor", "sup-007")
+        assert page.locator("#release").is_hidden()
+        session = page.locator("#esc-session").inner_text()
+        page.goto(server + "/supervisor")
+        page.fill("#login-user", "admin")
+        page.fill("#login-password", "demo1234")
+        page.click("#login-submit")
+        page.wait_for_selector("#queue-table")
+        tok = page.evaluate(
+            "id => fetch(`/v1/sessions/${id}/review-token`, {method: 'POST'}).then(r => r.json())",
+            session,
+        )
+        page.goto(server + tok["url"])
+        page.wait_for_selector("#release:not([hidden])")
+        assert page.locator("#release-actor").input_value() == "admin (sandbox login)"
         page.fill("#release-reason", "Reviewed with the practitioner")
         page.click("#release-form button[type=submit]")
         page.wait_for_selector("#release-confirm:not([hidden])")
-        assert page.locator("#release-confirm-who").inner_text() == "sup-007"
+        assert page.locator("#release-confirm-who").inner_text() == "admin (sandbox login)"
         assert page.locator("#release-status").inner_text() == ""
         assert page.locator("#released").is_hidden()
         page.click("#release-confirm-no")
@@ -372,8 +400,6 @@ def test_the_release_needs_the_confirmation(server):
             "() => document.getElementById('release-status').textContent.startsWith('Released')"
         )
         assert page.locator("#released").is_visible()
-        assert page.locator("#decision-action").inner_text() == "Copy the released draft"
-        assert _visible_primary(page) == ["decision-action|Copy the released draft"]
         browser.close()
 
 
@@ -412,11 +438,6 @@ def test_axe_finds_no_contrast_or_target_size_failure(server, tmp_path):
                 page.evaluate(
                     "() => document.querySelectorAll('#result details').forEach(d => d.open = true)"
                 )
-                if state == "escalate":
-                    page.fill("#release-actor", "sup-007")
-                    page.fill("#release-reason", "Reviewed with the practitioner")
-                    page.click("#release-form button[type=submit]")
-                    page.wait_for_selector("#release-confirm:not([hidden])")
                 runs.append(_axe(page, f"{state}@{width}"))
                 overflow = page.evaluate(
                     "() => document.documentElement.scrollWidth - window.innerWidth"

@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-10-20 (later): the sandbox against the paper's account
+
+- The screen's model is a provider outside the premises, and it read the practitioner's
+  instruction as typed, so a client's name in the instruction line reached it. It now reads the
+  instruction as it left, with stand-ins, as it already read the note and the draft.
+- A replayed reply is screened against the pseudonymised note that its model was given when it
+  was recorded (the scenario's `send` event), not against this request's outbound text, which can
+  differ after a later change to the outbound rules. What left the premises still shows this
+  request's own text, and the screen event says `note_source: recorded`. Use Case 3 was the case
+  in point: its reply was recorded when the instruction line still left as "an employer
+  supervisor" and the age as "29". On the live screen, eight runs on the code of the morning's
+  release raised I10 in none, and sixteen runs after this change raised it in ten (I3, for the
+  added word "moderate", in nine; one run raised no flag). At the release used for the
+  demonstration video (space-2026-09-28-2), eight runs raised I10 in eight.
+- Use Case 3 says that the screen flagged I10 in the recorded demonstration of 2026-09-28 and that
+  its flags can differ between runs, and a replay shows the two cards of that run (I10 and I3,
+  transcribed from the video) as a labelled reference beside the live result.
+- Use Case 4 keeps a reply from each provider. The anthropic/claude-sonnet-5 reply was recorded on
+  2026-10-20 with one live call through the guard; it does not mention the self-harm history, and
+  the scenario card says so. The panel lists each recording with its model and date under
+  "Recorded reply from", and a request takes `replay_model` to choose one. A replay names the
+  recording's model in the record, since no provider is called.
+- Only a signed-in supervisor releases a withheld draft. The practitioner's panel has no release
+  form: it shows the session id and points to the supervisor view, where the review page carries
+  the release. A typed-in supervisor id with the practitioner's session token no longer releases
+  anything in the sandbox. Where keys are set, a supervisor key still does.
+- The banner opens with the decision's name (Pass, Flagged (annotate), Regenerate, Escalate), and
+  a flag card's pill names its default action.
+- `/packs/{id}` shows a policy pack as its YAML file and `/ledger/check` shows the chain check of
+  the record, each with a link back to the panel and to its JSON route. The footer and "Open the
+  pack" link to them. `/v1/packs`, `/v1/packs/{id}` and `/v1/ledger/verify` are unchanged.
+- "Use this from your own application" adds a curl line for `/v1/packs` and one for a replay with
+  `replay_scenario`.
+
 ## 2026-10-20: supervisor sign-in inside the Space page's frame
 
 - The Hugging Face Space page shows the app in a frame from another site, where the browser

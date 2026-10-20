@@ -5,29 +5,35 @@
   const TYPE_LABEL = {DIRECT: "identifier", QUASI: "detail that identifies someone when combined", ATTRIBUTE: "sensitive detail", KEPT: "kept as typed", evidence: "flagged text"};
   // The key above the columns; its first line names the technical term once, in parentheses.
   const LEGEND_LABEL = {DIRECT: "identifier, replaced by a stand-in", QUASI: "details that identify someone when combined (quasi-identifiers), generalised", ATTRIBUTE: "sensitive detail, generalised"};
-  // One word per decision for the practitioner (docs/terminology.md). "annotate" stays the code's name.
-  const DECISION_WORD = {pass: "pass", annotate: "flagged", regenerate: "regenerate", escalate: "escalate"};
+  // One label per decision (docs/terminology.md). The four decisions are the paper's pass,
+  // annotate, regenerate and escalate; "flagged" is the panel's word for the second, and its label
+  // names the decision in parentheses.
+  const DECISION_LABEL = {pass: "Pass", annotate: "Flagged (annotate)", regenerate: "Regenerate", escalate: "Escalate"};
+  const DECISION_WORD = Object.fromEntries(Object.entries(DECISION_LABEL).map(([k, v]) => [k, v.toLowerCase()]));
   const DECISIONS = {
-    pass: "Pass: the screen raised no flag, so the draft in What you see is ready to use.",
-    annotate: "Flagged: the draft can be used once each flag is dealt with. Use the rewrite, or keep the passage with a reason that goes into the record.",
-    regenerate: "Regenerate: the screen asks for a new draft. Regenerate it, or keep each flagged passage with a reason.",
-    escalate: "Escalate: the draft is withheld from this screen until a supervisor releases it with a reason. It cannot be kept with a reason here.",
+    pass: `${DECISION_LABEL.pass}: the screen raised no flag, so the draft in What you see is ready to use.`,
+    annotate: `${DECISION_LABEL.annotate}: the draft can be used once each flag is dealt with. Use the rewrite, or keep the passage with a reason that goes into the record.`,
+    regenerate: `${DECISION_LABEL.regenerate}: the screen asks for a new draft. Regenerate it, or keep each flagged passage with a reason.`,
+    escalate: `${DECISION_LABEL.escalate}: the draft is withheld from this screen until a supervisor signs in, reviews it and releases it with a reason. It cannot be kept with a reason here.`,
   };
   // The result banner: one line saying what to do next and one filled button per decision.
   const BANNER = {
     pass: {next: "Nothing to flag. Copy the draft.", action: "Copy the draft"},
     annotate: {next: "Read each flag, then use the rewrite or keep the passage with a reason.", action: "Go to the first flag"},
     regenerate: {next: "Regenerate with the flags as instructions.", action: "Regenerate"},
-    escalate: {next: "Give the session id to your supervisor.", action: "Copy the session id"},
+    escalate: {next: "Give the session id to your supervisor, who signs in at the supervisor view to review and release it.", action: "Copy the session id"},
   };
+  // The banner's title opens with the decision's label, so the decision is named as in the paper.
   function bannerTitle(sg) {
     const n = sg.flags.length, flags = `${n} flag${n === 1 ? "" : "s"}`;
-    if (sg.decision === "pass") return "The draft passed the screen.";
-    if (sg.decision === "annotate") return `The screen raised ${flags} on this draft.`;
-    if (sg.decision === "regenerate") return `The screen raised ${flags} that need a new draft.`;
-    return sg.withheld ? "The draft is withheld until a supervisor releases it." : `The screen raised ${flags} that only a supervisor can clear.`;
+    const label = DECISION_LABEL[sg.decision] || sg.decision;
+    if (sg.decision === "pass") return `${label}. The draft passed the screen.`;
+    if (sg.decision === "annotate") return `${label}. The screen raised ${flags} on this draft.`;
+    if (sg.decision === "regenerate") return `${label}. The screen raised ${flags} that need a new draft.`;
+    return `${label}. ` + (sg.withheld ? "The draft is withheld until a supervisor signs in and releases it." : `The screen raised ${flags} that only a supervisor can clear.`);
   }
-  const SEVERITY_WORD = {annotate: "read and decide", regenerate: "needs a new draft", escalate: "supervisor only"};
+  // A flag's default action from the policy pack, as the card's pill shows it.
+  const SEVERITY_WORD = {annotate: `${DECISION_WORD.annotate}: read and decide`, regenerate: "regenerate: needs a new draft", escalate: "escalate: supervisor only"};
   // Headlines for flags that are not taxonomy categories.
   const PLAIN = {UNRESTORED: "A stand-in came back changed and was not restored"};
   const plainOf = (f) => ((window.TAXONOMY || {})[f.label] || {}).plain || PLAIN[f.label] || f.name || f.label;
@@ -49,6 +55,7 @@
     if (loadedScenario) packHint(`Kept from the scenario: ${$("pack").value}. Check that it fits your note.`);
     loadedScenario = null; compareWith = null;
     $("replay-row").hidden = true; $("replay").checked = false;
+    syncReplay();
   }
   document.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
     const s = window.SCENARIOS.find((x) => x.id === b.dataset.scenario);
@@ -64,10 +71,22 @@
     $("status").textContent = "Loaded: " + s.title;
     $("error").hidden = true;
     $("replay-row").hidden = !s.has_recording;
-    $("replay").checked = !!s.has_recording;  // the paper's account by default; untick for a live reply
+    $("replay").checked = !!s.has_recording;  // the recorded reply by default; untick for a live reply
+    const recs = s.recordings || [];
+    $("replay-model").innerHTML = recs.map((r) => `<option value="${esc(r.model)}">${esc(r.model)}, recorded ${esc(r.recorded_on)}</option>`).join("");
+    $("replay-model-field").hidden = !recs.length;
+    syncReplay();
     $("audience").value = "auto";
     syncSnippet();
   }));
+  // In a replay no model provider is called: the reply comes from the recording chosen here, so
+  // the drafting model selector does not apply until the box is unticked.
+  function syncReplay() {
+    const on = $("replay").checked && !!loadedScenario;
+    $("model").disabled = on;
+    $("replay-model").disabled = !on;
+  }
+  $("replay").addEventListener("change", syncReplay);
   ["instruction", "note"].forEach((id) => $(id).addEventListener("input", () => {
     if (loadedScenario && ($("instruction").value !== loadedScenario.instruction || $("note").value !== loadedScenario.note)) {
       clearScenario();
@@ -188,7 +207,7 @@
   async function guarded(instruction, note, opts) {
     opts = opts || {};
     const body = {model: $("model").value, messages: [{role: "user", content: instruction + "\n\n" + note}]};
-    if (opts.replay) body.replay_scenario = opts.replay;
+    if (opts.replay) { body.replay_scenario = opts.replay; if ($("replay-model").value) body.replay_model = $("replay-model").value; }
     const headers = authHeaders({"X-SoCareGuard-Pack": $("pack").value});
     if (opts.session) headers["X-SoCareGuard-Session"] = opts.session;
     const aud = opts.audience || $("audience").value;
@@ -225,7 +244,8 @@
       renderCompare();
       res.hidden = false; res.removeAttribute("aria-busy");
       scrollAffordance();
-      $("status").textContent = `Done in ${ext.sg.latency_s} s${ext.sg.replayed ? " (recorded model reply replayed, and the guard ran live)" : ""}. Session ${ext.sg.session}.`;
+      const rec = ext.sg.recording;
+      $("status").textContent = `Done in ${ext.sg.latency_s} s${ext.sg.replayed ? ` (recorded reply from ${rec && rec.model ? rec.model : "the model"}${rec && rec.recorded_on ? `, recorded ${rec.recorded_on}` : ""}, replayed; the guard and the screen ran live${rec && rec.screened_with_recorded_note ? ", and the screen read the reply against the note that its model was given" : ""})` : ""}. Session ${ext.sg.session}.`;
       res.scrollIntoView({behavior: "smooth", block: "start"});
     } catch (e) {
       $("status").textContent = "";
@@ -355,20 +375,38 @@
     if (sg.withheld || sg.decision === "escalate") {
       note.hidden = false;
       note.innerHTML = `<p><strong>Sent to a supervisor.</strong> ${sg.withheld ? "The draft is kept on this server and is not shown here until a supervisor releases it." : "This flag cannot be kept with a reason here."} The escalation is in the record below.</p>` +
-        `<div class="sessionid" id="escalate-session"><span>Session id</span><code id="esc-session">${esc(sg.session)}</code><button type="button" class="secondary small" id="copy-session">Copy</button><span id="copy-status" class="status" role="status"></span></div>`;
+        `<div class="sessionid" id="escalate-session"><span>Session id</span><code id="esc-session">${esc(sg.session)}</code><button type="button" class="secondary small" id="copy-session">Copy</button><span id="copy-status" class="status" role="status"></span></div>` +
+        (sg.withheld ? `<p id="escalate-next">Only a signed-in supervisor can release it. Your supervisor signs in at the <a href="/supervisor" id="escalate-supervisor-link">supervisor view</a>, opens this session from the queue under "Needs your release", reviews it and releases it with a reason. There is no release on this panel.</p>` : "");
       $("copy-session").addEventListener("click", async () => { $("copy-status").textContent = await copyText(sg.session, $("esc-session")); });
-      $("release").hidden = !sg.withheld; $("released").hidden = true; $("release-status").textContent = ""; $("release-prior").hidden = true;
+      // The release form is shown only on a supervisor's review page (readOnly), after sign-in.
+      $("release").hidden = true; $("released").hidden = true; $("release-status").textContent = ""; $("release-prior").hidden = true;
       $("release-confirm").hidden = true;
     } else { note.hidden = true; $("release").hidden = true; }
     const regen = $("regenerate");
     regen.hidden = sg.decision !== "annotate" || sg.withheld;
     $("closing").hidden = sg.flags.length > 0 || sg.withheld;
+    renderRecordedRef(run);
 
     renderLedger([{label: "this request", row: sg.ledger_row}].concat(run.extraRows || []));
     $("ledger-details").open = !!(run.extraRows && run.extraRows.length);
     renderRules(panel, sg);
     $("events").textContent = JSON.stringify(sg.events.map((e) => { const c = Object.assign({}, e); delete c.outbound_text; delete c.text; return c; }), null, 1);
     $("events-tag").textContent = `${sg.events.length} event${sg.events.length === 1 ? "" : "s"}`;
+  }
+
+  // The screen's verdict in a recorded run of the scenario (UC3), shown beside a replay as a
+  // labelled reference. It is a record of that run, never this run's result.
+  function renderRecordedRef(run) {
+    const box = $("recorded-ref");
+    const ref = run.sg.replayed && loadedScenario && loadedScenario.recorded_screen;
+    if (!ref || !(ref.flags || []).length) { box.hidden = true; box.innerHTML = ""; return; }
+    const now = new Set(run.sg.flags.map((f) => f.label));
+    const missing = ref.flags.filter((f) => !now.has(f.label)).map((f) => f.label);
+    box.hidden = false;
+    box.innerHTML = `<span class="cap">For reference: the recorded run of ${esc(ref.recorded_on)}</span>` +
+      `<p>${esc(ref.what)} The screen's decision there was ${esc(DECISION_WORD[ref.decision] || ref.decision)}, with these flags:</p><ul>` +
+      ref.flags.map((f) => `<li><span class="badge">${esc(f.label)}</span> ${esc(plainOf(f))}, SASW Code clause ${esc(f.clause)}, the screen's own confidence ${Number(f.confidence).toFixed(2)}. Flagged text: “${esc(String(f.evidence).replace(/[.]\s*$/, ""))}”${f.rewrite ? `. Suggested rewrite: “${esc(String(f.rewrite).replace(/[.]\s*$/, ""))}”` : ""}.</li>`).join("") +
+      `</ul><p class="hint">This is a record of that run, not the result of this request. The screen runs live here and its flags can differ between runs${missing.length ? `: this run did not raise ${esc(missing.join(" or "))}` : ""}.</p>`;
   }
 
   // Copy to the clipboard; without clipboard access, select the text for Ctrl+C.
@@ -430,7 +468,7 @@
 
   const LEDGER_KEYS = [["ts", "Time"], ["decision", "Decision"], ["actor", "Actor"], ["actor_attested", "Checked by a person"], ["pack", "Policy pack"], ["recipients", "Recipients of what left the premises"], ["transfer_basis", "Transfer basis"], ["replayed_reply", "Recorded reply replayed"], ["payload_sha256", "Hash of what left"], ["n_identifiers_substituted", "Identifiers replaced by stand-ins"], ["n_generalised", "Generalised"], ["leakcheck_passed", "Privacy check passed"], ["n_invented", "Invented by the model"], ["flags", "Flags"], ["withheld", "Draft withheld"], ["override_reason", "Reason"], ["request_row_sha256", "Refers to the request row"], ["prior_release_row_sha256", "Earlier release rows"], ["seq", "Row number"], ["prev_sha256", "Previous row hash"], ["row_sha256", "This row hash"]];
   // Row kinds in words; the ledger's own names stay in the data.
-  const ROW_DECISION = {pass: "pass", annotate: "flagged", regenerate: "regenerate", escalate: "escalate", override: "kept with a reason", rewrite_accepted: "rewrite used", withheld_released: "supervisor release", review_opened: "review opened", session_purged: "session purged"};
+  const ROW_DECISION = {pass: DECISION_WORD.pass, annotate: DECISION_WORD.annotate, regenerate: DECISION_WORD.regenerate, escalate: DECISION_WORD.escalate, override: "kept with a reason", rewrite_accepted: "rewrite used", withheld_released: "supervisor release", review_opened: "review opened", session_purged: "session purged"};
   const short = (h) => (typeof h === "string" && /^[0-9a-f]{64}$/.test(h)) ? `<span title="${h}">${h.slice(0, 16)}…</span>` : esc(h);
   function renderLedger(items) {
     const n = items.filter((x) => x && x.row).length;
@@ -475,7 +513,7 @@
     $("rules").innerHTML = (fired.length ? `<p>Generalised by the <strong>${esc(sg.pack)}</strong> pack (rule id · what you typed → what left):</p><ul>` +
       fired.map((r) => `<li><code>${esc(r.rule || "default")}</code> · <mark class="${r.type}">${esc(r.original)}</mark> → <em>${esc(r.outbound || "(removed)")}</em></li>`).join("") + "</ul>" : "<p>No generalisation rule fired on this note.</p>") +
       (kept.length ? `<p>Details detected but <strong>kept as typed</strong> (a public body, the recipient named in the instruction line, or a detail that this policy pack has no rule for): ${kept.map((r) => `<mark class="KEPT">${esc(r.original)}</mark>`).join(", ")}. If one of them should be generalised, switch pack or add a rule to the YAML.</p>` : "") +
-      `<p>${sur.length} identifier${sur.length === 1 ? "" : "s"} replaced by stand-ins of the same shape (same script and format, a different person). <a href="/v1/packs/${esc(sg.pack)}" target="_blank" rel="noopener">Open the pack</a>.</p>`;
+      `<p>${sur.length} identifier${sur.length === 1 ? "" : "s"} replaced by stand-ins of the same shape (same script and format, a different person). <a href="/packs/${esc(sg.pack)}" target="_blank" rel="noopener">Open the pack</a>.</p>`;
   }
 
   function unrestore(text, panel) {
@@ -549,9 +587,9 @@
     }
     const btn = ev.target.querySelector("button[type=submit]"); btn.disabled = true;
     try {
-      // On a review page the supervisor's sign-in cookie goes with the request in place of the
-      // role header and the session token; the session token is sent only when this browser has it.
-      const extra = {"X-SoCareGuard-Role": "supervisor", "X-SoCareGuard-Actor": $("release-actor").value.trim()};
+      // The supervisor's sign-in (the cookie, or a supervisor key) is what the server checks; the
+      // session token is sent only when this browser has it, for the restored view of the draft.
+      const extra = {"X-SoCareGuard-Actor": $("release-actor").value.trim()};
       if (current.sg.session_token) extra["X-SoCareGuard-Session-Token"] = current.sg.session_token;
       const h = authHeaders(extra);
       const r = await fetch(`/v1/sessions/${current.sg.session}/withheld?reason=${encodeURIComponent($("release-reason").value)}`, {headers: h});
@@ -644,8 +682,6 @@
     document.querySelectorAll("#result button:not(.more), #result input, #result textarea, #result select, #compose button, #compose input, #compose select, #compose textarea")
       .forEach((el) => { if (!(canRelease && el.closest("#release"))) el.disabled = true; });
     if (canRelease) {
-      $("release-practitioner-hint").hidden = true;
-      $("release-id-hint").hidden = true;
       const who = $("release-signed-in");
       who.hidden = false;
       who.textContent = `Signed in as ${actorLabel(sup.actor, sup.attested)}. The release goes into the record under this name, and the draft leaves the queue in the supervisor view.`;

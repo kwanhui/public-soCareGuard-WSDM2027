@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoCareGuard policy pack: {{ pack_id }}</title>
+<link rel="stylesheet" href="/static/panel.css">
+</head>
+<body class="supervisor">
+<header>
+  <div class="brand"><span class="logo">SoCareGuard</span><span class="tag">policy pack</span></div>
+  {% if sandbox %}<div class="banner"><p>Synthetic-data sandbox. Do not enter real client information.</p></div>{% endif %}
+</header>
+<main>
+  <p class="summary"><a href="/" class="back-link" id="back-to-panel">Back to the panel</a></p>
+  <section class="sup-block" id="pack" aria-labelledby="pack-h">
+    <h1 id="pack-h">{{ pack.label }} policy pack</h1>
+    <p class="summary" id="pack-meta">Pack id <code>{{ pack_id }}</code>, version {{ pack.version }}, status {{ pack.status }}.</p>
+    <p class="summary">Each policy pack is a YAML file. It names the sensitive details and the details that identify someone when combined, how each is generalised, what must stay on the premises, the conduct categories with their default actions (pass, annotate, regenerate or escalate), and the rules for keeping a flagged passage with a reason. This page shows the file <code>{{ file_name }}</code> as the server reads it.</p>
+    <p class="summary" id="pack-nav">Other packs: {% for p in packs %}{% if p != pack_id %}<a href="/packs/{{ p }}">{{ p }}</a>{% if not loop.last %} · {% endif %}{% endif %}{% endfor %}. For an application, the same pack is at <a href="/v1/packs/{{ pack_id }}" id="pack-json">/v1/packs/{{ pack_id }}</a> as JSON, and <a href="/v1/packs">/v1/packs</a> lists the packs.</p>
+    <pre id="pack-yaml" class="expanded" tabindex="0">{{ yaml_text }}</pre>
+  </section>
+  <p class="summary"><a href="/" class="back-link">Back to the panel</a></p>
+</main>
+<footer>
+  <span><a href="/">panel</a> · <a href="/ledger/check">check the record's chain</a> · <a href="/supervisor">supervisor view</a></span>
+</footer>
+</body>
+</html>

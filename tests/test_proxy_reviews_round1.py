@@ -130,9 +130,20 @@ def test_panel_map_of_a_withheld_session_carries_no_reply_text(tmp_path, monkeyp
     assert all(m["original"] in typed for m in body["replacements"] if m["kind"] != "derived")
 
 
+def _sign_in(client):
+    """The sandbox login: the only way to release a withheld draft without supervisor keys."""
+    r = client.post(
+        "/supervisor/login",
+        data={"username": "admin", "password": "demo1234"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+
+
 def test_withheld_release_refuses_a_reason_with_an_identifier(tmp_path, monkeypatch):
     client, sg = _client(tmp_path, monkeypatch, "I14", "escalate")
-    h = {"X-SoCareGuard-Role": "supervisor", "X-SoCareGuard-Session-Token": sg["session_token"]}
+    _sign_in(client)
+    h = {"X-SoCareGuard-Session-Token": sg["session_token"]}
     r = client.get(
         f"/v1/sessions/{sg['session']}/withheld?reason=released%20for%20S1234567D", headers=h
     )
@@ -142,12 +153,13 @@ def test_withheld_release_refuses_a_reason_with_an_identifier(tmp_path, monkeypa
 def test_second_release_links_the_earlier_release(tmp_path, monkeypatch):
     client, sg = _client(tmp_path, monkeypatch, "I14", "escalate")
     url = f"/v1/sessions/{sg['session']}/withheld?reason=safeguarding%20review"
-    tok = {"X-SoCareGuard-Role": "supervisor", "X-SoCareGuard-Session-Token": sg["session_token"]}
-    first = client.get(url, headers={**tok, "X-SoCareGuard-Actor": "sup-9007"}).json()
+    _sign_in(client)
+    tok = {"X-SoCareGuard-Session-Token": sg["session_token"]}
+    first = client.get(url, headers=tok).json()
     assert first["prior_releases"] == [] and first["ledger_row"]["prior_release_row_sha256"] is None
-    second = client.get(url, headers={**tok, "X-SoCareGuard-Actor": "sup-another"}).json()
+    second = client.get(url, headers=tok).json()
     prior = second["prior_releases"]
-    assert len(prior) == 1 and prior[0]["actor"].startswith("sup-9007")
+    assert len(prior) == 1 and prior[0]["actor"] == "admin (sandbox login)"
     assert prior[0]["row_sha256"] == first["ledger_row"]["row_sha256"]
     assert second["ledger_row"]["prior_release_row_sha256"] == [first["ledger_row"]["row_sha256"]]
 
@@ -160,14 +172,14 @@ def test_panel_page_carries_the_review_round_wording(tmp_path, monkeypatch):
     page = client.get("/").text
     # round 6 (first-time user): the Recipient hint names no flag code; the codes sit in its "More"
     assert "Who the draft is for. Some flags depend on it." in page
-    assert "In the sandbox the supervisor id is typed in and not checked." in page
+    assert "In the sandbox the supervisor id is typed in and not checked." not in page
     assert "outside the host is the deployer's step" in page
     assert '"I1": {"precision": 0.45' in page
     js = client.get("/static/panel.js").text
     for s in (
         "Draft taxonomy, not yet practitioner-reviewed",
         "measured precision on synthetic drafts",
-        "Give the session id to your supervisor.",
+        "Give the session id to your supervisor, who signs in at the supervisor view",
         "Released earlier by",
         '"typed in"',
         '"checked by a person"',

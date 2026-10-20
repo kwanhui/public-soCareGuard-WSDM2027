@@ -21,9 +21,9 @@ Applies to the panel, the supervisor view, the README, the pack notes and the vi
 | measured precision | accuracy, validated precision | the share of this category's flags that were correct on the synthetic drafts |
 | checked by a person | attested | an identity confirmed by a key this deployment issued |
 | typed in | self-asserted | an identity a visitor typed without a key |
-| decision | verdict, outcome, action | pass, flag, regenerate or escalate |
+| decision | verdict, outcome, action | pass, flagged (annotate), regenerate or escalate, the paper's four decisions |
 | pass | clean, OK, approved | no flag; use the draft |
-| flagged | annotate, annotated | one or more flags; read them, then use the rewrite or keep the passage with a reason |
+| flagged | annotated | one or more flags; read them, then use the rewrite or keep the passage with a reason. The banner's label adds the paper's name once, "Flagged (annotate)" |
 | regenerate | retry, redo | ask the model again with the flags as instructions |
 | escalate, withheld | blocked, held, quarantined | the draft is withheld until a supervisor releases it |
 | keep with a reason | override | the practitioner keeps a flagged passage and records why |

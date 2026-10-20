@@ -73,7 +73,7 @@
     {% else %}
     <p class="empty" id="queue-empty">No withheld draft is waiting for release.</p>
     {% endif %}
-    <p class="hint" id="queue-hint">A withheld draft stays here until a supervisor releases it with a reason. Choose "Review and release": the review page opens <span class="unframed-only">in a new tab</span><span class="framed-only" hidden>in this frame</span> with the release form at the foot, under the flags. The practitioner's panel has the same form. A review link is read-only apart from that release, lasts {{ review_minutes }} minutes and is written to the record.{% if not attested %} With the sandbox login, a session that another browser created opens with stand-ins only: what left the premises, what the model replied, the flags and the rows of the record.{% endif %}</p>
+    <p class="hint" id="queue-hint">A withheld draft stays here until a supervisor releases it with a reason. Choose "Review and release": the review page opens <span class="unframed-only">in a new tab</span><span class="framed-only" hidden>in this frame</span> with the release form at the foot, under the flags. Only a signed-in supervisor can release a draft, from that review page. The practitioner's panel shows the session id and points to this view. A review link is read-only apart from that release, lasts {{ review_minutes }} minutes and is written to the record.{% if not attested %} With the sandbox login, a session that another browser created opens with stand-ins only: what left the premises, what the model replied, the flags and the rows of the record.{% endif %}</p>
   </section>
 
   <section class="sup-block" id="filters" aria-labelledby="filters-h">
@@ -125,7 +125,7 @@
 </main>
 <footer>
   <span>Rows list no note or reply text. Reasons with an NRIC, phone number or case reference are refused when they are written.</span>
-  <span><a href="/" id="panel-link">panel</a> · <a href="/v1/ledger/verify">check the record's chain</a></span>
+  <span><a href="/" id="panel-link">panel</a> · <a href="/ledger/check">check the record's chain</a></span>
 </footer>
 <script src="/static/supervisor.js"></script>
 </body>

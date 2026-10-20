@@ -137,6 +137,8 @@ def load_scenarios() -> list[dict[str, Any]]:
                         for x in f.read_text().splitlines()
                         if x.strip()
                     ),
+                    "recordings": _recording_labels(head["id"]),
+                    "recorded_screen": head.get("recorded_screen"),
                 }
             )
     # The recipient check (the audience gate): one note, two recipients. Built on the disability scenario so the
@@ -164,6 +166,8 @@ def load_scenarios() -> list[dict[str, Any]]:
                 "note": uc1["note"],
                 "compare_instruction": None,
                 "has_recording": (_SCENARIO_DIR / "escalation.jsonl").exists(),
+                "recordings": _recording_labels("escalation"),
+                "recorded_screen": None,
             }
         )
     uc3 = next((s for s in out if s["id"] == "uc3-disability"), None)
@@ -186,6 +190,8 @@ def load_scenarios() -> list[dict[str, Any]]:
                     "Summarise this care plan update for my own case record and list the next steps."
                 ),
                 "has_recording": False,
+                "recordings": [],
+                "recorded_screen": None,
             }
         )
     return out
@@ -217,25 +223,58 @@ class ChatRequest(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     stream: bool = False
-    replay_scenario: str | None = None  # panel only: reuse a scenario's recorded model reply
+    replay_scenario: str | None = None  # reuse a shipped scenario's recorded model reply
+    replay_model: str | None = None  # which recording, when the scenario keeps one per provider
 
 
-def _fixture_for(scenario_id: str) -> dict[str, Any] | None:
-    """The recorded reply and seed of a shipped scenario, so the demo can replay the provider
-    call deterministically. The guard itself still runs live."""
+def _recordings(scenario_id: str) -> list[dict[str, Any]]:
+    """The recorded model replies of a shipped scenario, in file order. Each carries the seed of
+    the scenario's first turn, the provider, model and date of the recording, and the
+    pseudonymised text that the model was given (the ``send`` event before the reply), when the
+    script has it."""
     f = _SCENARIO_DIR / f"{scenario_id}.jsonl"
-    if not f.exists():
-        return None
-    seed, text = None, None
+    if not f.exists() or "/" in scenario_id or "\\" in scenario_id:
+        return []
+    seed, last_send, out = None, None, []
     for line in f.read_text().splitlines():
         if not line.strip():
             continue
         d = json.loads(line)
         if d.get("kind") == "user_turn" and seed is None:
             seed = d.get("seq")
-        elif d.get("kind") == "receive" and text is None:
-            text = d.get("text")
-    return {"seed": seed, "text": text} if text else None
+        elif d.get("kind") == "send":
+            last_send = d.get("outbound_text")
+        elif d.get("kind") == "receive" and d.get("text"):
+            out.append(
+                {
+                    "seed": seed,
+                    "text": d["text"],
+                    "provider": d.get("provider"),
+                    "model": d.get("model"),
+                    "recorded_at": d.get("recorded_at"),
+                    "outbound_text": last_send,
+                }
+            )
+            last_send = None
+    return out
+
+
+def _fixture_for(scenario_id: str, model: str | None = None) -> dict[str, Any] | None:
+    """The recorded reply and seed of a shipped scenario, so the demo can replay the provider
+    call deterministically. With ``model``, the recording from that model (a scenario may keep
+    one per provider); otherwise the first. The guard itself still runs live."""
+    recs = _recordings(scenario_id)
+    if model:
+        recs = [r for r in recs if r["model"] == model]
+    return recs[0] if recs else None
+
+
+def _recording_labels(scenario_id: str) -> list[dict[str, str]]:
+    """What the panel lists for a scenario's recordings: the model and the date it was recorded."""
+    return [
+        {"model": r["model"] or "", "recorded_on": (r["recorded_at"] or "")[:10]}
+        for r in _recordings(scenario_id)
+    ]
 
 
 class OverrideRequest(BaseModel):
@@ -779,8 +818,21 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             pack_id, pack_defaulted = DEFAULT_PACK, True
         if pack_id not in available_packs():
             raise HTTPException(400, f"unknown pack {pack_id}")
-        model_defaulted = req.model not in ALLOWED_MODELS
-        model = DEFAULT_MODEL if model_defaulted else req.model
+        fixture = None
+        if req.replay_scenario:
+            fixture = _fixture_for(req.replay_scenario, req.replay_model)
+            if fixture is None:
+                raise HTTPException(
+                    400,
+                    f"no recorded reply for scenario {req.replay_scenario}"
+                    + (f" from {req.replay_model}" if req.replay_model else ""),
+                )
+        if fixture is not None and fixture.get("model"):
+            # A replay makes no provider call: the record names the model that wrote the reply.
+            model, model_defaulted = fixture["model"], False
+        else:
+            model_defaulted = req.model not in ALLOWED_MODELS
+            model = DEFAULT_MODEL if model_defaulted else req.model
         kwargs = {
             k: v
             for k, v in (("temperature", req.temperature), ("max_tokens", req.max_tokens))
@@ -789,7 +841,6 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         actor = _actor(request) + ("" if _attested(request) else " (self-asserted)")
         sweep()
         t0 = time.time()
-        fixture = _fixture_for(req.replay_scenario) if req.replay_scenario else None
         try:
             res = _run(req, pack_id, model, kwargs, x_socareguard_session, actor, fixture, audience)
         except HTTPException:
@@ -826,6 +877,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             provider_kwargs=kwargs,
             actor=actor,
             reply_fixture=fixture["text"] if fixture else None,
+            reply_fixture_note=fixture.get("outbound_text") if fixture else None,
             seed=fixture["seed"] if fixture else None,
             audience=None if audience == "auto" else audience,
             audience_header=audience,
@@ -860,6 +912,15 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "events": [e.model_dump() for e in res.events],
                 "recipients": res.recipients,
                 "replayed": bool(fixture),
+                "recording": (
+                    {
+                        "model": fixture.get("model"),
+                        "recorded_on": (fixture.get("recorded_at") or "")[:10],
+                        "screened_with_recorded_note": bool(fixture.get("outbound_text")),
+                    }
+                    if fixture
+                    else None
+                ),
                 "ledger_row_sha256": res.ledger_row["row_sha256"],
                 "ledger_row": res.ledger_row,
                 "latency_s": round(time.time() - t0, 1),
@@ -967,7 +1028,6 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     def session_withheld(
         session: str,
         request: Request,
-        x_socareguard_role: str | None = Header(default=None),
         reason: str = Query(default=""),
     ):
         """The draft that an escalation withheld, released to a supervisor only.
@@ -975,38 +1035,37 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         A signed-in supervisor releases it without the practitioner's session token: a supervisor
         key in the Authorization header, the cookie of a key sign-in, or (in a deployment without
         keys) the cookie of the sandbox login, which stands in for the role header and the token
-        and is recorded as "admin (sandbox login)", typed in. Without a supervisor identity, a
-        deployment with keys refuses the release, and the sandbox requires the self-asserted
-        supervisor role and the session token, as the other session routes do, and the ledger row
-        marks the role as self-asserted. A reason is required, as for an override.
+        and is recorded as "admin (sandbox login)", typed in. Without a supervisor identity the
+        release is refused: a practitioner's session token, an API key or a typed-in supervisor id
+        (the ``X-SoCareGuard-Role`` header, which earlier versions accepted in the sandbox) releases
+        nothing. A reason is required, as for an override.
 
         The reply is re-identified when the caller may open the full view of the session (its own
         token, an API key or a supervisor key); otherwise it carries the stand-ins, and ``view``
         says ``pseudonymised``."""
         who = supervisor_identity(request)
-        if who is not None:
-            res = app.state.sessions.get(session)
-            if not res:
-                raise HTTPException(404, "unknown session")
-        else:
-            _require_key(request)
+        if who is None:
+            # A typed-in supervisor id is not a sign-in: the draft stays withheld until a
+            # supervisor signs in (a supervisor key, or the sandbox login where no key is set).
             if _keys_configured():
                 raise HTTPException(
                     403, "release requires a key listed in SOCAREGUARD_SUPERVISOR_KEYS"
                 )
-            res = authorised(session, request)
-            if (x_socareguard_role or "").lower() != "supervisor":
-                raise HTTPException(403, "a withheld draft is released to a supervisor only")
+            raise HTTPException(
+                403,
+                "a withheld draft is released by a signed-in supervisor only: sign in at "
+                "/supervisor and release it from the review page",
+            )
+        res = app.state.sessions.get(session)
+        if not res:
+            raise HTTPException(404, "unknown session")
         if not res.withheld:
             raise HTTPException(400, "nothing was withheld in this session")
         if not reason.strip():
             raise HTTPException(400, "a reason for the release is required")
         if _reason_has_identifier(reason):
             raise HTTPException(400, REASON_IDENTIFIER)
-        if who is not None:
-            actor, attested = who
-        else:
-            actor, attested = _actor(request) + " (self-asserted supervisor)", False
+        actor, attested = who
         prior = [
             {"row_sha256": r["row_sha256"], "actor": r.get("actor"), "ts": r.get("ts")}
             for r in app.state.guard.ledger.rows()
@@ -1095,6 +1154,9 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         every row from some point onwards still verifies here; compare ``head_sha256`` with the
         shipped log to detect it."""
         _require_key(request)
+        return chain_report(expected_rows)
+
+    def chain_report(expected_rows: int | None = None) -> dict[str, Any]:
         r = app.state.guard.ledger.report(expected_rows)
         n = r["rows"]
         if r["ok"]:
@@ -1113,6 +1175,44 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "the host is the deployer's step (ship the server log)"
             ),
         }
+
+    # ---------- HTML pages for a browser (the JSON routes above are unchanged) ----------
+    @app.get("/ledger/check", response_class=HTMLResponse)
+    def chain_page(request: Request):
+        """The chain check as a page with a way back to the panel; /v1/ledger/verify is the
+        same check as JSON."""
+        _require_key(request)
+        return templates.TemplateResponse(
+            request,
+            "chain.html",
+            {"sandbox": SANDBOX, "r": chain_report(), "default_pack": DEFAULT_PACK},
+        )
+
+    @app.get("/packs/{pack_id}", response_class=HTMLResponse)
+    def pack_page(pack_id: str, request: Request):
+        """A policy pack shown as its YAML source file, with a way back to the panel;
+        /v1/packs/{pack_id} is the same pack as JSON."""
+        _require_key(request)
+        if pack_id not in available_packs():
+            raise HTTPException(404, f"unknown pack {pack_id}")
+        p = load_pack(pack_id)
+        return templates.TemplateResponse(
+            request,
+            "pack.html",
+            {
+                "sandbox": SANDBOX,
+                "pack": p,
+                "pack_id": pack_id,
+                "packs": available_packs(),
+                "yaml_text": (PACK_DIR / f"{pack_id}.yaml").read_text(),
+                "file_name": f"policy-packs/{pack_id}.yaml",
+                "default_pack": DEFAULT_PACK,
+            },
+        )
+
+    @app.get("/packs", response_class=HTMLResponse)
+    def packs_page(request: Request):
+        return RedirectResponse(f"/packs/{DEFAULT_PACK}", status_code=303)
 
     # ---------- supervisor view ----------
     def summary_for(request: Request) -> tuple[dict[str, Any], dict[str, str]]:
