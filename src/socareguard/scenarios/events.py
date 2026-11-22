@@ -22,6 +22,10 @@ class ScenarioHeader(BaseModel):
     use_case: int
     summary: str
     corpus_note_id: str | None = None
+    recorded_screen: dict[str, Any] | None = Field(
+        default=None,
+        description="the screen's verdict in a recorded run, shown in the panel as a reference",
+    )
 
 
 class UserTurn(BaseModel):
@@ -146,6 +150,11 @@ class Screen(BaseModel):
     judge_model: str | None = None
     baseline_model: str | None = None
     audience: Literal["internal", "care-team", "external"] = "internal"
+    note_source: Literal["live", "recorded"] = Field(
+        "live",
+        description="the source note the judge read: this request's outbound text, or for a "
+        "replayed reply the pseudonymised text that its model was given when it was recorded",
+    )
 
 
 class Action(BaseModel):

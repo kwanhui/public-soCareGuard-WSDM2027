@@ -35,7 +35,9 @@ Polyclinics.
 
 Everything else is fictional. This covers all people, NRIC/FIN numbers (valid check letters,
 random bodies), phone numbers, block and unit numbers, and all case reference formats
-(`YC/2026/0412`, `FSC-2026-0288` and the like follow no real scheme). Schools, polytechnics,
+(`YC/2026/0412`, `FSC-2026-0288` and the like follow no real scheme). Because the NRIC/FIN numbers carry valid
+check letters and the phone numbers follow Singapore formats, a generated value can by chance
+match a number issued to a real person, although none was taken from or refers to anyone. Schools, polytechnics,
 shelters, family service centres, day activity centres and youth homes other than the Singapore
 Boys' Home are invented, and employers are generic descriptions ("a logistics firm in Tuas") that
 name no company. School stems were checked against MOE's school list on data.gov.sg in September

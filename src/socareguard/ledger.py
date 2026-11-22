@@ -2,9 +2,7 @@
 
 One JSON row per proxied request: what left the premises (hash and counts, never the
 payload), to which provider under the transfer-basis statement the deployer set, what came
-back, what the screen decided, and any practitioner override with its reason. PDPC's Advisory
-Guidelines on Use of Personal Data in Generative AI (section 9.3) ask deployers to keep this kind
-of record of prompts and outputs.
+back, what the screen decided, and any practitioner override with its reason.
 
 Each row carries its sequence number (``seq``, the row's position in the file) and the hash of
 the previous row, and both are inside the row's own hash. ``report`` therefore detects an edit

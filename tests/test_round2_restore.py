@@ -71,11 +71,11 @@ def test_a_surrogate_reordered_by_the_model_is_left_whole_and_flagged(monkeypatc
 def test_an_address_without_its_postal_code_restores_as_a_unit(monkeypatch, tmp_path):
     note = rec.use(monkeypatch, "wsdm_a_dv")
     g = _guard(tmp_path)
-    table = _send(g, note, "wsdm-a")
+    table = _send(g, note, "note-a")
     original = "Blk 512 Bedok North Street 3 #07-119, Singapore 460512"
     surrogate = table[original]
     without_postal = surrogate.split(",")[0]
-    res = _reply(g, note, "wsdm-a", f"She lives at {without_postal}, Singapore.")
+    res = _reply(g, note, "note-a", f"She lives at {without_postal}, Singapore.")
     assert "Blk 512 Bedok North Street 3 #07-119" in res.reply, res.reply
     for tok in without_postal.split()[1:]:
         if tok not in original:

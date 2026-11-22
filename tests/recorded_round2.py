@@ -1,4 +1,4 @@
-"""Synthetic test notes (2026-09-28) with the Presidio and GLiNER2 hits recorded on them.
+"""Synthetic test notes (2026-09-28), with the Presidio and GLiNER2 hits recorded on them.
 
 The sandbox runs both NER backends; the unit tests do not load them. ``use(monkeypatch, name)``
 replays the recorded hits for that note, so a test sees the spans that the recorded run saw. Messages

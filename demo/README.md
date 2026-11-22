@@ -1,6 +1,6 @@
 # Demo materials
 
-Materials for the WSDM 2027 Demonstrations submission and its live demo.
+Materials for the WSDM 2027 Demonstrations paper and for its live demo.
 
 ## Contents
 
@@ -29,16 +29,25 @@ on the drafts corpus instead.
 
 Model replies are recorded live through the proxy (`source: recorded`, model and timestamp in
 the file). `python3 -m socareguard.scenarios run --proxy` replays them through the guard with the
-live judge. All assertions pass at tag `results-v1.2`, the results the paper reports.
+live judge. The four scripts carry 24 assertions. With the screen switched off
+(`SOCAREGUARD_SCREEN=off`), which calls no model, `run --proxy` passes the 17 assertions that do
+not depend on the screen and reports the other 7 as pending, both at tag `results-v1.3` and at the
+current release. Those 7 depend on the live judge, which varies between runs: in twenty-five
+replays of Use Case 2 on 2026-10-20, the screen raised I1 every time and also raised I6, which
+escalates, in two, and those two runs fail that script's `annotate` assertion (see
+`CHANGELOG.md`). Results in the paper are at tag `results-v1.3`.
 
 ## Hosted demo
 
-The hosted demo runs at https://huggingface.co/spaces/kwanhui/socareguard, a Space with the
+The hosted demo runs at https://kwanhui-socareguard.hf.space (the Space page
+https://huggingface.co/spaces/kwanhui/socareguard shows the same app in a frame), a Space with the
 Docker SDK and with the provider keys held as Space secrets. The Space is a labelled
-synthetic-data sandbox with a per-address rate limit (`SOCAREGUARD_MAX_REQUESTS_PER_HOUR`), and
+synthetic-data sandbox with a per-address rate limit of 40 requests per hour
+(`SOCAREGUARD_MAX_REQUESTS_PER_HOUR`) and a shared daily model budget of USD 5
+(`SOCAREGUARD_DAILY_SPEND_USD`, reset at 00:00 UTC), and
 `docker compose up` provides the on-premise path for reproducing the demo.
 
-We recorded the final cut of the demo video on 2026-09-07 (2:32, captions only, no audio, with
-live model replies). The video was produced with separate recording tooling that is not part of
-this repository, and a link to it will be added here.
+The demo video is at https://youtu.be/vYSguiKSW-g (captions only, no audio, with live model
+replies). It was produced with separate recording tooling that is not part of this repository.
+"Run your own copy" in the top-level README describes how to host the same demo yourself.
 

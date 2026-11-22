@@ -16,3 +16,5 @@ secrets/
 logs/
 # provider keys
 .env
+# the public commit of a deployed build, written by the Space deploy only
+src/socareguard/build_commit.txt

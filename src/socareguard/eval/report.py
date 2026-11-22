@@ -521,7 +521,7 @@ def _variants_section(v: dict) -> list[str]:
             f"recall with any overlapping direct-identifier span: {_pct(v['recall_covered'])}; "
             f"variants whose text survives in the sanitised note: {v['leaked']} of {v['variants']}. By form: {forms}."
         ),
-        "Produced by `python3 -m socareguard.eval detect --variants`. Before round 4, the recogniser matched the compact form only.",
+        "Produced by `python3 -m socareguard.eval detect --variants`. Before 2026-09-28, the recogniser matched the compact form only.",
         "",
     ]
 
@@ -957,8 +957,8 @@ def render(version: str = CURRENT) -> str:
         )
         + "). Every number below is measured on synthetic material; see `corpus/README.md`.",
         "",
-        "PDPC's Advisory Guidelines on Use of Personal Data in Generative AI (section 8.3) ask a System Provider to document the rate at which",
-        "personal identifiers are detected and redacted before a request leaves the premises. These tables report that rate on synthetic notes.",
+        "PDPC's Advisory Guidelines on Use of Personal Data in Generative AI recommend as good practice that a System Provider document, among",
+        "its testing metrics, the rate at which personal identifiers are detected and redacted (an example in section 8). These tables report that rate on synthetic notes.",
         "",
     ]
     if full:
@@ -1206,7 +1206,7 @@ def render(version: str = CURRENT) -> str:
             f"| Per draft | | | | {cost['per_draft_usd']:.4f} |",
             "",
             f"That is approximately USD {cost['per_1000_drafts_usd']:.2f} per 1,000 drafts. A regeneration repeats the drafting and judge calls.",
-            f"Drafting tokens are the means of the `usage` field over {dr['source'].split(' live')[0]} live (not replayed) request rows in the ledger of the review-round dev server of 2026-09-27. The reviewers' notes were short, and the four Use Case payloads count 76 to 276 tokens.",
+            f"Drafting tokens are the means of the `usage` field over {dr['source'].split(' live')[0]} live (not replayed) request rows in the ledger of a local test server of 2026-09-27. The test notes were short, and the four Use Case payloads count 76 to 276 tokens.",
             "The judge's usage is not recorded. Its input is counted by building the judge prompt for the four recorded Use Case scenarios and tokenising it with o200k_base,",
             "and its output is estimated from the flags per request in the same ledger and the size of the judge flags in saved completion responses.",
             "The judge prompt carries the pack's clause table, so the judge accounts for most of the cost. "
@@ -1270,7 +1270,7 @@ def render(version: str = CURRENT) -> str:
                 )
                 + "The second judge runs on the same 180-draft subset as in v1.1. A row without an earlier value is a new measure."
             ),
-            "On the 90 external drafts of v1.2 the clause-grounded judge flags 76 (I10 42, I14 30, I2 7). A reading of every flag against the pack clauses found the 30 I14 flags to be the youth pack's rule that escalates any external document identifying a protected young person. Of the 42 I10 flags, 14 are drafter over-disclosure (a diagnosis named to an employer who needed only a work adjustment), 9 are false positives and 18 are undecidable because the referral instruction recorded no consent. The compliant label is therefore unreliable for external drafts. The paper reports the 600 labelled drafts in its table and states this result in its text."
+            "On the 90 external drafts of v1.2 the clause-grounded judge flags 76 (I10 42, I14 30, I2 7). A reading of every flag against the pack clauses found the 30 I14 flags to be the youth pack's rule that escalates any external document identifying a protected young person. Of the 42 I10 flags, 41 are on disability and domestic-violence drafts: 14 of them are drafter over-disclosure (a diagnosis named to an employer who needed only a work adjustment), 9 are false positives and 18 are undecidable because the referral instruction recorded no consent. The remaining I10 flag, on a youth school letter that also carries I14, follows the youth pack's design. The compliant label is therefore unreliable for external drafts. The paper reports the 600 labelled drafts in its table and states this result in its text."
             + (
                 " At v1.3 the 3 youth school letters whose `recipient_kind` is care-team are judged with the care-team paragraph and remain flagged for I14 alone, so the count stays at 76 of 90, 73 of the 87 external drafts and 3 of the 3 care-team drafts."
                 if version == "v1.3"

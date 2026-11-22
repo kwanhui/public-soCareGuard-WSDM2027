@@ -1,7 +1,7 @@
 """Span-level detection metrics against corpus gold spans.
 
 Reports exact and relaxed (overlap) precision, recall and F1 per category and overall,
-plus recall by name origin (the WSDM-relevance hook and a fairness finding), and two
+plus recall by name origin (a fairness check), and two
 leakage rates over gold DIRECT spans. Matched leakage counts a gold span as missed when no
 detection of the same category (names counted together) overlaps it under one-to-one matching.
 It is the recall complement and the number reported for corpus v1. Covered leakage counts a

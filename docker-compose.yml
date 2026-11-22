@@ -8,6 +8,8 @@ services:
     environment:
       SOCAREGUARD_SANDBOX: "0"
       SOCAREGUARD_MAX_REQUESTS_PER_HOUR: "0"
+      # The image sets the sandbox's daily spend ceiling; an agency server has none.
+      SOCAREGUARD_DAILY_SPEND_USD: "0"
       SOCAREGUARD_TRUST_PROXY: "0"
       # Vault mappings and sessions older than 30 days are purged. "0" keeps them until
       # DELETE /v1/sessions/{id}, and the proxy logs a WARNING at start-up when it is 0.

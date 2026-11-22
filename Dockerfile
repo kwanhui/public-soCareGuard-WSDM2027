@@ -21,7 +21,7 @@ RUN python -c "from socareguard.detect import backends; backends._presidio(); ba
 RUN mkdir -p /app/vault /app/.cache && useradd -m app && chown -R app /app
 USER app
 
-ENV PORT=7860 SOCAREGUARD_SANDBOX=1 SOCAREGUARD_MAX_REQUESTS_PER_HOUR=20 SOCAREGUARD_TRUST_PROXY=1 SOCAREGUARD_RETENTION_HOURS=24
+ENV PORT=7860 SOCAREGUARD_SANDBOX=1 SOCAREGUARD_MAX_REQUESTS_PER_HOUR=40 SOCAREGUARD_DAILY_SPEND_USD=5 SOCAREGUARD_TRUST_PROXY=1 SOCAREGUARD_RETENTION_HOURS=24
 EXPOSE 7860
 # /healthz answers without a key; the image has no curl, so Python makes the request.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \

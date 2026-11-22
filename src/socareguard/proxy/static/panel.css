@@ -207,3 +207,7 @@ footer details.about { width:100%; }
 footer details.about summary { cursor:pointer; color:var(--muted); }
 footer details.about p { margin:6px 0 0; }
 #release-actor[readonly] { background:#f4f5f7; }
+.chain-fields code, #pack-meta code { word-break:break-all; }
+.recorded-ref { background:#f6f8fb; border:1px dashed var(--line); border-radius:8px; padding:10px 14px; margin:0 0 14px; }
+.recorded-ref .cap { display:block; }
+.recorded-ref ul { margin:6px 0 0; padding-left:18px; }

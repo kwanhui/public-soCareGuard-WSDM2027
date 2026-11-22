@@ -12,7 +12,22 @@ short_description: Privacy and conduct guardrail proxy for social service LLMs
 
 # SoCareGuard
 
-> **Status:** public snapshot of the system demonstrated in the WSDM 2027 submission. Pinned versions in `requirements-lock.txt`.
+> **Status:** public snapshot of the system demonstrated in the paper accepted to the WSDM 2027 Demonstrations Track (notified 2026-11-22). Pinned versions in `requirements-lock.txt`.
+
+**Paper.** SoCareGuard: A Privacy and Professional-Ethics Guardrail Proxy for Commercial LLMs in Social Service Practice. Kwan Hui Lim, Terence Tuck Sheng Yow, You Jin Chung, Whee Peng Chan and
+Andrew Z H Yee. Accepted to the WSDM 2027 Demonstrations Track (notified 2026-11-22).
+
+- Hosted demo (synthetic data only): https://kwanhui-socareguard.hf.space, which the Space page
+  https://huggingface.co/spaces/kwanhui/socareguard also shows in a frame. The supervisor sign-in
+  `admin` / `demo1234` is a shared demonstration credential on a public sandbox. A deployment that
+  handles real case data needs proper authentication, with individual accounts, strong unique
+  passwords, rate limiting and rotated secrets.
+- Running version: the `build_commit` field of https://kwanhui-socareguard.hf.space/healthz
+  names the commit of this repository that the live demo runs. Each deployed commit is tagged in
+  this repository as `space-YYYY-MM-DD`, with `-2`, `-3` and so on for later deploys on the same day.
+- Demo video: https://youtu.be/vYSguiKSW-g
+- How to cite: [CITATION.cff](CITATION.cff), or the BibTeX entry under [Citation](#citation)
+- How to host your own copy: [Run your own copy](#run-your-own-copy)
 
 An on-premise, OpenAI-compatible guardrail proxy that lets Singapore social service
 agencies use commercial LLMs for drafting without sending client material across the
@@ -43,20 +58,110 @@ comparison and is wired as an optional comparator (see Conduct screen). The cont
 work is the inbound conduct screen, the generalisation of sensitive attributes as an operation
 distinct from entity redaction, the Singapore quasi-identifier model, and the audit ledger.
 
-## Companion Paper
+## Run your own copy
 
-- SoCareGuard: a privacy and professional-conduct guardrail proxy for commercial LLMs in social service practice. WSDM 2027 Demonstrations (under review).
+This section describes how to run the system that the hosted demo shows, on your own machine, in
+Docker, or as your own Hugging Face Space. The detectors run on CPU, and no GPU is needed. The
+steps were tested on Linux with Python 3.12.
 
-## Install
+### On your own machine
+
+You need Python 3.11 or 3.12, [uv](https://docs.astral.sh/uv/) and about 6 GB of free disk space
+for the CPU build of PyTorch and the detector models.
 
 ```bash
 git clone https://github.com/kwanhui/public-soCareGuard-WSDM2027.git
 cd public-soCareGuard-WSDM2027
 uv python install 3.12 && uv venv --python 3.12 .venv && source .venv/bin/activate
+uv pip install --index-url https://download.pytorch.org/whl/cpu torch   # CPU-only PyTorch, as in the Dockerfile
 make install            # package + dev tools
 make install-detect     # Presidio, spaCy (en_core_web_lg), GLiNER and GLiNER2-PII, for the sweep and the detectors
-cp .env.example .env    # then add OPENAI_API_KEY and ANTHROPIC_API_KEY
+cp .env.example .env    # provider keys, empty by default (see below)
+python3 -m socareguard.proxy --port 8080
 ```
+
+The proxy and the panel are served by the same process. Open http://127.0.0.1:8080/ for the
+panel and http://127.0.0.1:8080/supervisor for the supervisor view, and check that the server is
+up with `curl -s http://127.0.0.1:8080/healthz`. While no `SOCAREGUARD_API_KEYS` or
+`SOCAREGUARD_SUPERVISOR_KEYS` is set, the supervisor view accepts the demonstration sign-in
+`admin` / `demo1234`. The first guarded request loads the detector models, which are downloaded
+once from the Hugging Face Hub and can take a few minutes. Set `SOCAREGUARD_SANDBOX=1` in `.env`
+to run with the synthetic-data banner and the 24-hour retention of the hosted demo.
+
+The keys in `.env` decide what runs.
+
+| Keys in `.env` | What works |
+|---|---|
+| none | the four scenarios with their recorded model replies (replay). Detection, generalisation, stand-ins, the vault, restoration, the leak check and the record run live. The conduct screen is off, so no flags are raised. A request without a recorded reply fails with HTTP 503 |
+| `OPENAI_API_KEY` | everything in the hosted demo: the default drafting model (`openai/gpt-4.1-mini`), the screen's model (`openai/gpt-4.1`) and the moderation baseline |
+| `ANTHROPIC_API_KEY` as well | the Claude drafting model offered in the panel (`anthropic/claude-sonnet-5`) and the cross-provider runs of the evaluation |
+
+To replay a scenario without a key, load it in the panel and tick "Replay this scenario's recorded
+model reply". From the command line, the request carries `replay_scenario` with the scenario id:
+
+```bash
+python3 - <<'EOF'
+import json, urllib.request
+rows = [json.loads(l) for l in open("demo/sample-inputs/scenarios/uc1-youth-offending.jsonl") if l.strip()]
+head, turn = rows[0], next(r for r in rows if r["kind"] == "user_turn")
+body = {"messages": [{"role": "user", "content": turn["instruction"] + "\n\n" + turn["note"]}],
+        "replay_scenario": head["id"]}
+req = urllib.request.Request("http://127.0.0.1:8080/v1/chat/completions", json.dumps(body).encode(),
+                             {"Content-Type": "application/json", "X-SoCareGuard-Pack": head["pack"]})
+sg = json.load(urllib.request.urlopen(req))["socareguard"]
+print(sg["decision"], "replayed:", sg["replayed"], [e["kind"] for e in sg["events"]])
+EOF
+```
+
+The other scenario ids are the file names in `demo/sample-inputs/scenarios/`. A scenario that keeps
+more than one recording (Use Case 4) takes `"replay_model"` as well, for example
+`"anthropic/claude-sonnet-5"`. Without it the first recording is replayed. A replay calls no
+model provider, so the record names the model that wrote the recorded reply.
+
+### With Docker
+
+```bash
+cp .env.example .env    # add the provider keys, or leave them empty for replay only
+docker compose up --build
+```
+
+The compose file builds the same image as the hosted demo, serves it on http://127.0.0.1:8080
+and keeps the vault, its key and the record on a named volume. It switches the sandbox banner,
+the rate limit and the daily spend ceiling off and keeps identity mappings for 30 days.
+"Deploying for an agency" under Operating the proxy lists the settings that a real deployment needs.
+
+### As your own Hugging Face Space
+
+The `Dockerfile` and the front matter at the top of this README are what a Hugging Face Space
+with the Docker SDK reads (port 7860). The image warms the detector models at build time and sets
+`SOCAREGUARD_SANDBOX=1`, `SOCAREGUARD_MAX_REQUESTS_PER_HOUR=40`, `SOCAREGUARD_DAILY_SPEND_USD=5`,
+`SOCAREGUARD_TRUST_PROXY=1` and `SOCAREGUARD_RETENTION_HOURS=24`. The free CPU hardware is enough.
+
+1. Create a Space at https://huggingface.co/new-space with the Docker SDK and the blank
+   template, or duplicate the hosted demo from its page (the three-dot menu, then "Duplicate this
+   Space"), which copies the same files and lets you skip step 3.
+2. Under the Space's Settings, in "Variables and secrets", add `OPENAI_API_KEY` as a secret, and
+   `ANTHROPIC_API_KEY` if you want the Claude drafting model. Without either, the Space runs the
+   replays only. Add `SOCAREGUARD_SUPERVISOR_KEYS` as a secret to replace the shared
+   `admin` / `demo1234` sign-in with your own supervisor keys, and `HF_TOKEN` only if you have
+   access to the ExpGuard weights.
+3. Push the code. Hugging Face refuses binary files that are not stored with Git LFS or Xet, so
+   leave out the screenshots and the labelled drafts, which the app does not read:
+
+   ```bash
+   git checkout --orphan space
+   git rm -r -q --cached demo/screenshots corpus/drafts
+   git commit -q -m "Deploy SoCareGuard"
+   git push --force https://huggingface.co/spaces/<your-user>/<your-space> space:main
+   git checkout -f main
+   ```
+
+   Use a Hugging Face access token with write permission as the password when git asks.
+4. The Space builds the image (about ten minutes) and starts. The app is then at
+   `https://<your-user>-<your-space>.hf.space`, and `/healthz` there answers when it is up.
+
+The keys stay in the Space's secrets and are never written into the image. Only synthetic notes
+belong in a public Space, as the banner says.
 
 ## Run the proxy
 
@@ -105,7 +210,9 @@ who is signed in (the sandbox login or a supervisor key) sees the release form a
 review page of a withheld draft, and releases it there with a reason and a confirmation step. The
 sign-in stands in for the practitioner's session token, the `withheld_released` row names the
 supervisor (`admin (sandbox login)`, typed in, in the sandbox), and the draft leaves the queue. A
-review link without a sign-in, or a practitioner's API key, releases nothing.
+review link without a sign-in, a practitioner's session token or API key, or a typed-in supervisor
+id releases nothing, so the practitioner's panel has no release form: it shows the session id and
+points to the supervisor view.
 
 With `SOCAREGUARD_SUPERVISOR_KEYS` set, the view and the summary require a supervisor key
 (`Authorization: Bearer <key>`, or the key typed into the sign-in form), and the record marks the
@@ -118,13 +225,33 @@ or single sign-on, a supervisor role that the deployment checks, session expiry 
 any production deployment. The login is off whenever `SOCAREGUARD_SUPERVISOR_KEYS` or `SOCAREGUARD_API_KEYS` is
 set.
 
+The sign-in sets an HTTP-only cookie. Over https (the request's scheme or `X-Forwarded-Proto`, or
+`SOCAREGUARD_COOKIE_SECURE=1`) it is `SameSite=None; Secure; Partitioned`, so the sign-in holds
+when the app is shown in another site's frame, as on the Hugging Face Space page. Over plain http
+(a local run) it is `SameSite=Lax` without `Secure`. Since `SameSite=None` lets a browser send the
+cookie on requests from other sites, the proxy refuses the sign-in and sign-out forms, and every
+request that changes state with the cookie and no `Authorization` header (a review token, a
+release, an override, a purge), when its `Origin` (or else `Referer`) is neither the app's own
+host (`Host` or `X-Forwarded-Host`) nor listed in `SOCAREGUARD_ALLOWED_ORIGINS`. A browser that
+still blocks cookies in a frame (Safari without partitioned cookies, strict privacy modes) shows a
+message after the sign-in with a link that opens the supervisor view in a new tab, where the
+sign-in works as on the direct address. The message shows only when the cookie was dropped.
+
+The supervisor path is the same on the Space page (https://huggingface.co/spaces/kwanhui/socareguard,
+where the app sits in a frame) and on the direct address (https://kwanhui-socareguard.hf.space).
+"Review and release" opens the review page in place of the supervisor view, in the same tab, and
+the review page links back to the view. A new tab is not used, since a tab opened out of the frame
+is a top-level page where the cookie that the frame holds is absent.
+
 Every sandbox visitor shares that login, so the view that it opens is limited. The queue and the
-period table list the action rows of every session, but a review link into a session that another
-browser created returns only the content with stand-ins, that is, what left the premises, what the
-model replied, the flags quoted with stand-ins, and the rows of the record. The restored draft and
-the identity map open only for a session that this browser created (the panel keeps each session token in
-`sessionStorage`) or under a supervisor key. A release from such a review therefore shows the
-released draft with stand-ins, and the practitioner's panel shows the restored draft. `GET /v1/ledger` without a session still lists the
+period table list the action rows of every session, and a review under that login shows only the
+content with stand-ins, that is, what left the premises, what the model replied, the flags quoted
+with stand-ins, and the rows of the record. This holds whichever tab or browser created the
+session: the review page sends the review token and the sign-in cookie, never the practitioner's
+session token. The restored draft and the identity map open on a review only under a supervisor
+key, and a release from the review page under the sandbox login shows the released draft with
+stand-ins. (A client that holds the session's own token can still read its own session through
+the API, as before.) `GET /v1/ledger` without a session still lists the
 rows of all sessions only when API keys are configured and the call carries one.
 
 Each ledger row records the transfer-basis statement that the deployer sets through
@@ -142,9 +269,9 @@ In the terms of PDPC's Advisory Guidelines on Use of Personal Data in Generative
 runs the proxy is the System Deployer, SoCareGuard is a System Provider, and the provider of the
 drafting model and the judge is a Model Provider, which PDPC's guidance treats as a data
 intermediary at inference. Whether that status holds depends on the deployer's agreement with the
-provider. The ledger is the kind of record of prompts and outputs that the guidelines ask a
-deployer to keep (section 9.3), and `docs/metrics.md` reports the detection and redaction rates that
-they ask a System Provider to document (section 8.3).
+provider. The ledger records each transfer, the screen's decision and any override with its reason.
+`docs/metrics.md` reports the rate at which personal identifiers are detected and redacted, which
+the guidelines recommend as good practice for a System Provider to document (an example in section 8).
 
 To run inside a LiteLLM Proxy instead, register the guardrail class:
 
@@ -191,7 +318,8 @@ unrestored surrogate.
 ## Demo surface
 
 `python3 -m socareguard.proxy` also serves the transparency panel at `/`. A result opens with a
-banner that states the decision in one sentence (pass, flagged, regenerate or escalate), gives one
+banner that names the decision (Pass, Flagged (annotate), Regenerate or Escalate, the four decisions
+of the pack's default actions) and states it in one sentence, gives one
 next step, and offers one button for it: copy the draft, go to the first flag, regenerate, or copy
 the session id for a supervisor. The details (the policy pack, the counts, the privacy check, the
 harm classifier shown for contrast, the actor) sit under "More about this result". The panel then
@@ -199,13 +327,30 @@ shows what you typed, what left the premises and what you see side by side, with
 (surrogates) and generalised details highlighted. What the model replied, with stand-ins, opens
 with one click. Each flag is a card that leads with a plain-words headline, puts the clause, the
 screen's own confidence and the measured precision on one line under it, and offers the rewrite
-or keeping the passage with a reason that goes into the record. A release asks the supervisor to
-confirm before it is sent. The record, the pack rules that fired and the event stream are
-collapsed, each with a count. Each scenario loads with one click. The identity map that the panel
+or keeping the passage with a reason that goes into the record. A withheld draft shows the session
+id and points to the supervisor view, where a signed-in supervisor releases it from the review
+page after a confirmation step. The record, the pack rules that fired and the event stream are
+collapsed, each with a count. Each scenario loads with one click and replays a reply recorded
+through the proxy, while detection, the screen, the harm classifier and the record run live. Use
+Case 4 keeps a recording from each provider (openai/gpt-4.1-mini, recorded 2026-09-07, and
+anthropic/claude-sonnet-5, recorded 2026-10-20), chosen under "Recorded reply from". A replayed
+reply is screened against the pseudonymised note that its model was given when it was recorded,
+so the screen reads the source of the reply as it was, and What left the premises still shows this
+request's own outbound text. Since the screen runs live, its flags on a replay can differ from the
+recorded run, and Use Cases 2 and 3 show the verdict of the recorded demonstration (2026-09-28)
+beside the live one as a reference. In Use Case 2, for example, the recorded run raised I1 only and
+was annotated, while some live runs also raise I5, and a few raise I6, which escalates. Links in the footer open the chain check of the record (`/ledger/check`)
+and the policy pack as its YAML file (`/packs/{id}`), each with a link back to the panel, while
+`/v1/ledger/verify`, `/v1/packs` and `/v1/packs/{id}` still return JSON. The identity map that the panel
 fetches decodes the practitioner's own note and never the withheld reply. The words that the panel
 uses are listed in `docs/terminology.md`.
-`SOCAREGUARD_SANDBOX=1` shows the synthetic-data banner, and `SOCAREGUARD_MAX_REQUESTS_PER_HOUR`
-sets a per-address rate limit.
+`SOCAREGUARD_SANDBOX=1` shows the synthetic-data banner, `SOCAREGUARD_MAX_REQUESTS_PER_HOUR`
+sets a per-address rate limit, and `SOCAREGUARD_DAILY_SPEND_USD` sets a ceiling on the estimated
+model spend of the whole sandbox per UTC day. The hosted Space allows 40 requests per hour from
+each address and USD 5 of model calls per day for all visitors together. When the day's budget is
+used up, a new request is refused with HTTP 429 and the code `daily_budget_exhausted`, and the
+panel says that the limit is shared and resets at 00:00 UTC (08:00 Singapore time). Supervisor
+review and release, the record and the policy pack pages make no model call and keep working.
 
 On an agency server, `docker compose up` starts one container with its state on a named volume
 and its keys read from `.env`. For a hosted sandbox, the `Dockerfile` targets a Hugging Face Space
@@ -217,7 +362,8 @@ tooling that is not part of this repository.
 ## Conduct screen
 
 The reply is screened before local re-identification, so the judge provider does not see an
-original identifier either. Flags come from three sources.
+original identifier either. The judge also reads the practitioner's instruction as it left, with
+stand-ins (before 2026-10-20 it read the instruction as typed, so a name there reached it). Flags come from three sources.
 
 The first is a clause-grounded judge (`socareguard/screen/judge.py`), an LLM prompted with the
 pack's inbound categories, each quoting its SASW clause, together with the pack's setting rules.
@@ -242,8 +388,8 @@ request access and set `HF_TOKEN`.
 
 The decision is the highest default action among the flags in the pack (`pass`, `annotate`,
 `regenerate`, or `escalate`). Escalations cannot be overridden by the practitioner. A supervisor
-releases a withheld draft with a reason. Supervisor identity is self-asserted in the sandbox, and
-with SOCAREGUARD_SUPERVISOR_KEYS set a supervisor key is required. A second release of the same
+releases a withheld draft with a reason after signing in: with the sandbox login where no key is
+set, and with a supervisor key when SOCAREGUARD_SUPERVISOR_KEYS is set. A second release of the same
 draft is recorded with a link to the earlier release row. Any other decision can be overridden with a
 reason, which the ledger records. The policy packs are at v1. Every pack lists
 the cross-cutting categories, the youth pack adds I14, and the disability and youth packs add I11.
@@ -274,7 +420,9 @@ python3 -m socareguard.scenarios record uc2-domestic-violence   # re-record the 
 The repository ships the synthetic notes and drafts with their labels (`corpus/notes`,
 `corpus/drafts`), so `python3 -m socareguard.eval screen` recomputes the screen numbers from
 the drafts. See `corpus/README.md` for provenance and the caveat that conduct labels are
-generation-intent labels. The compliant drafts of corpus v1.1 are all internal summaries (for the
+generation-intent labels. The synthetic NRIC/FIN values carry valid check letters and the phone
+numbers follow Singapore formats, so a generated value can by chance match a number issued to a real
+person. The values were drawn at random and refer to no one. The compliant drafts of corpus v1.1 are all internal summaries (for the
 case file or a supervisor), so v1.1 does not test the audience gate against a compliant draft for an
 external recipient. Corpus v1.2 adds 90 compliant external drafts (referral, school and
 employer letters that stay within need-to-know), with v1.1 kept frozen. Scenario scripts live in `demo/sample-inputs/scenarios/`. Their model
@@ -310,11 +458,11 @@ section of `docs/metrics.md` gives the breakdown.
 
 | Step | Deliverable | Status |
 |---|---|---|
-| 1 | Corpus with three-layer gold annotation; four scenario scripts; policy packs v0 | done, tag `corpus-v1` |
-| 2 | Proxy core: detectors, generalisation, vault, ledger, metrics | done, tag `proxy-v1` |
-| 3 | Conduct screen: clause-grounded judge, rules, baseline; policy packs v1 | done, tag `screen-v1` (reported results at `results-v1.3`) |
-| 4 | Transparency panel, `docker compose`, hosted synthetic-only sandbox, video | done, tag `demo-v1` |
-| 5 | Paper | submission due 2026-10-15, under review after that date |
+| 1 | Corpus with three-layer gold annotation; four scenario scripts; policy packs v0 | done |
+| 2 | Proxy core: detectors, generalisation, vault, ledger, metrics | done |
+| 3 | Conduct screen: clause-grounded judge, rules, baseline; policy packs v1 | done (reported results at tag `results-v1.3`) |
+| 4 | Transparency panel, `docker compose`, hosted synthetic-only sandbox, video | done |
+| 5 | Paper | submitted 2026-10-15, accepted to the WSDM 2027 Demonstrations Track on 2026-11-22 |
 
 ## Development
 
@@ -338,8 +486,11 @@ Environment variables read at start-up (all optional):
 | `SOCAREGUARD_SUPERVISOR_KEYS` | unset | keys allowed to release a withheld draft (`GET /v1/sessions/{id}/withheld`) and to open the supervisor view (`/supervisor`). When set, the sandbox login is off |
 | `SOCAREGUARD_TRANSFER_BASIS` | a statement that the basis is still to be asserted | the transfer-basis statement written to every request row |
 | `SOCAREGUARD_SANDBOX` | `0` | banner, self-asserted actors, 24-hour retention |
-| `SOCAREGUARD_MAX_REQUESTS_PER_HOUR` | `0` (unlimited, and the Space image sets 20) | per-address rate limit |
+| `SOCAREGUARD_MAX_REQUESTS_PER_HOUR` | `0` (unlimited, and the Space image sets 40) | per-address rate limit |
+| `SOCAREGUARD_DAILY_SPEND_USD` | `0` (no ceiling, and the Space image sets 5) | ceiling on the estimated model spend of the process per UTC day. Each request is counted at the per-call costs under "Cost" in `docs/metrics.md` (the judge, USD 0.0057, on every request, and the drafting call, USD 0.0004, when the reply is live rather than replayed). Past the ceiling, `/v1/chat/completions` returns HTTP 429 with the code `daily_budget_exhausted` until 00:00 UTC. The tally is kept in memory, so a restart resets it. `/healthz` reports the ceiling, the estimate so far and their ratio |
 | `SOCAREGUARD_TRUST_PROXY` | `0` | honour `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host`, so the rate limit sees the client address and the panel's integration snippet shows the public `https` URL (set only behind a reverse proxy you control) |
+| `SOCAREGUARD_COOKIE_SECURE` | `auto` | `auto` marks the supervisor cookie `Secure` (with `SameSite=None` and `Partitioned`) when the request or `X-Forwarded-Proto` is https, `1` always, `0` never (then `SameSite=Lax`) |
+| `SOCAREGUARD_ALLOWED_ORIGINS` | unset | comma-separated origins, besides the app's own, from which a request that changes state with the supervisor cookie is accepted |
 | `SOCAREGUARD_RETENTION_HOURS` | `24` in sandbox, else `0` (`docker-compose.yml` sets `720`) | purge vault mappings older than this. `0` keeps them until `DELETE /v1/sessions/{id}`, and the proxy then logs a WARNING at start-up |
 | `SOCAREGUARD_MAX_SESSIONS` | `500` | sessions kept in the session index. Beyond it the oldest session is closed and its mappings purged |
 | `SOCAREGUARD_VAULT`, `SOCAREGUARD_LEDGER`, `SOCAREGUARD_VAULT_KEY` | `vault/socareguard.sqlite`, `vault/ledger.jsonl`, key file beside the vault (`vault/socareguard.key`) | where state lives. `SOCAREGUARD_VAULT_KEY` takes a path to a key file or the key itself (base64). The proxy refuses to mint a new key over an existing vault unless `SOCAREGUARD_VAULT_NEW_KEY=1` |
@@ -385,12 +536,27 @@ token),
 `DELETE /v1/sessions/{id}` (purge, ledgered), `GET /v1/ledger?session=`, `GET /supervisor`,
 `GET /v1/supervisor/summary` and `POST /v1/sessions/{id}/review-token` (supervisor key, or the
 sandbox login when no key is configured),
-`GET /v1/ledger/verify?expected_rows=`, `GET /healthz` (also the container healthcheck). Errors use
+`GET /v1/ledger/verify?expected_rows=`, `GET /healthz` (also the container healthcheck, with the
+rate limit, the day's estimated spend against its ceiling, and `build_commit`, the commit of this
+repository that the hosted Space was built from, or `null` in a local run). Errors use
 the OpenAI `error` envelope, and a body that is not valid JSON or fails validation returns HTTP 400.
 
 ## Citation
 
-To be added on acceptance.
+If you use SoCareGuard, please cite the paper, which was accepted to the WSDM 2027 Demonstrations
+Track (notified 2026-11-22). The DOI will be added after publication, and
+[CITATION.cff](CITATION.cff) carries the same record.
+
+```bibtex
+@inproceedings{Lim2027SoCareGuard,
+  title     = {SoCareGuard: A Privacy and Professional-Ethics Guardrail Proxy for Commercial LLMs in Social Service Practice},
+  author    = {Lim, Kwan Hui and Yow, Terence Tuck Sheng and Chung, You Jin and Chan, Whee Peng and Yee, Andrew Z H},
+  booktitle = {Proceedings of the Twentieth ACM International Conference on Web Search and Data Mining (WSDM '27)},
+  year      = {2027},
+  note      = {Demonstrations Track},
+  url       = {https://github.com/kwanhui/public-soCareGuard-WSDM2027}
+}
+```
 
 ## License
 

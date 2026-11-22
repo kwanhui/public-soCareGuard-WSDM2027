@@ -3,8 +3,8 @@
 Generated 2026-09-28 at commit `60b78c8` by `python3 -m socareguard.eval report` from the JSON files in this folder.
 Corpus: `corpus-v1.3` (300 synthetic notes, 4,874 gold spans, namely 4,173 entity spans scored by the detection tables and 701 attribute spans scored as attribute recall, and the screen runs on the 600 labelled drafts of v1.1, the 90 compliant external drafts of v1.2 and the 30 compliant care-team drafts that v1.3 adds). Every number below is measured on synthetic material; see `corpus/README.md`.
 
-PDPC's Advisory Guidelines on Use of Personal Data in Generative AI (section 8.3) ask a System Provider to document the rate at which
-personal identifiers are detected and redacted before a request leaves the premises. These tables report that rate on synthetic notes.
+PDPC's Advisory Guidelines on Use of Personal Data in Generative AI recommend as good practice that a System Provider document, among
+its testing metrics, the rate at which personal identifiers are detected and redacted (an example in section 8). These tables report that rate on synthetic notes.
 
 ## Outbound detection (full pipeline)
 
@@ -144,7 +144,7 @@ OpenAI list prices on 2026-09-27 (standard tier, USD per million tokens, https:/
 | Per draft | | | | 0.0061 |
 
 That is approximately USD 6.13 per 1,000 drafts. A regeneration repeats the drafting and judge calls.
-Drafting tokens are the means of the `usage` field over 26 live (not replayed) request rows in the ledger of a local test server of 2026-09-27. The notes were short, and the four Use Case payloads count 76 to 276 tokens.
+Drafting tokens are the means of the `usage` field over 26 live (not replayed) request rows in the ledger of a local test server of 2026-09-27. The test notes were short, and the four Use Case payloads count 76 to 276 tokens.
 The judge's usage is not recorded. Its input is counted by building the judge prompt for the four recorded Use Case scenarios and tokenising it with o200k_base,
 and its output is estimated from the flags per request in the same ledger and the size of the judge flags in saved completion responses.
 The judge prompt carries the pack's clause table, so the judge accounts for most of the cost. `docs/metrics/cost-v1.1.json` holds these figures; the cost was measured at v1.1 and has not been re-run on v1.3.
@@ -228,7 +228,7 @@ The v1 column is the result set of the first paper draft (code of commit `4868da
 The v1.1 column is the result set tagged `results-v1.1` (commit `b0a38ac`, corpus v1.1). Its tie-aware average precision is recomputed from the saved rows.
 The v1.2 column is the result set tagged `results-v1.2`. Its screen rows are on 690 drafts, the 600 of v1.1 and 90 compliant external drafts.
 The v1.3 column is this document's result set (tag `results-v1.3`). Its screen rows are on 720 drafts, the 690 of v1.2 and 30 compliant care-team drafts. The detection ablation rows, the utility run and the second judge are the v1.2 files, so those rows repeat the v1.2 values. On the 600 drafts of v1.1, every screen result equals its v1.2 value, as those rows were copied with an unchanged prompt. The second judge runs on the same 180-draft subset as in v1.1. A row without an earlier value is a new measure.
-On the 90 external drafts of v1.2 the clause-grounded judge flags 76 (I10 42, I14 30, I2 7). A reading of every flag against the pack clauses found the 30 I14 flags to be the youth pack's rule that escalates any external document identifying a protected young person. Of the 42 I10 flags, 14 are drafter over-disclosure (a diagnosis named to an employer who needed only a work adjustment), 9 are false positives and 18 are undecidable because the referral instruction recorded no consent. The compliant label is therefore unreliable for external drafts. The paper reports the 600 labelled drafts in its table and states this result in its text. At v1.3 the 3 youth school letters whose `recipient_kind` is care-team are judged with the care-team paragraph and remain flagged for I14 alone, so the count stays at 76 of 90, 73 of the 87 external drafts and 3 of the 3 care-team drafts.
+On the 90 external drafts of v1.2 the clause-grounded judge flags 76 (I10 42, I14 30, I2 7). A reading of every flag against the pack clauses found the 30 I14 flags to be the youth pack's rule that escalates any external document identifying a protected young person. Of the 42 I10 flags, 41 are on disability and domestic-violence drafts: 14 of them are drafter over-disclosure (a diagnosis named to an employer who needed only a work adjustment), 9 are false positives and 18 are undecidable because the referral instruction recorded no consent. The remaining I10 flag, on a youth school letter that also carries I14, follows the youth pack's design. The compliant label is therefore unreliable for external drafts. The paper reports the 600 labelled drafts in its table and states this result in its text. At v1.3 the 3 youth school letters whose `recipient_kind` is care-team are judged with the care-team paragraph and remain flagged for I14 alone, so the count stays at 76 of 90, 73 of the 87 external drafts and 3 of the 3 care-team drafts.
 
 | Measure | v1 | v1.1 | v1.2 | v1.3 |
 |---|---|---|---|---|

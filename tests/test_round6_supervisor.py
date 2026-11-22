@@ -105,13 +105,11 @@ def _review(client, session, headers=None):
 
 
 def _release(client, sg):
+    """A release needs a signed-in supervisor (here the sandbox login)."""
+    _login(client)
     return client.get(
         f"/v1/sessions/{sg['session']}/withheld?reason=reviewed%20with%20the%20worker",
-        headers={
-            "X-SoCareGuard-Role": "supervisor",
-            "X-SoCareGuard-Session-Token": sg["session_token"],
-            "X-SoCareGuard-Actor": "sup-007",
-        },
+        headers={"X-SoCareGuard-Session-Token": sg["session_token"]},
     )
 
 
@@ -187,7 +185,7 @@ def test_the_sandbox_login_is_required_refused_when_wrong_and_recorded(tmp_path,
     assert wrong.status_code == 401 and "wrong" in wrong.text
     assert client.get("/v1/supervisor/summary").status_code == 403
     ok = _login(client)
-    assert ok.status_code == 303 and ok.headers["location"] == "/supervisor"
+    assert ok.status_code == 303 and ok.headers["location"] == "/supervisor?signin=1"
     body = client.get("/v1/supervisor/summary").json()
     assert (body["actor"], body["actor_attested"]) == ("admin (sandbox login)", False)
     tok = _review(client, sg["session"])
@@ -387,13 +385,13 @@ def test_counts_equal_rows_by_kind(tmp_path, monkeypatch):
     assert listed == by_kind and body["total"] == sum(by_kind.values())
     # the table: time first, actor with how it was checked, category and clause, request row
     a = next(a for a in body["actions"] if a["kind"] == "withheld_released")
-    assert a["actor_label"] == "sup-007, typed in"
+    assert a["actor_label"] == "admin (sandbox login), typed in"
     assert a["categories"][0]["label"] == "I14" and a["categories"][0]["clause"]
     assert a["request_row_sha256"] and a["reason"] == "reviewed with the worker"
     page = client.get("/supervisor").text
     head = re.search(r'id="actions-table">\s*<thead><tr>(.*?)</tr>', page).group(1)
     assert re.findall(r"<th>(.*?)</th>", head)[:2] == ["Time", "Actor"]
-    assert "sup-007, typed in" in page
+    assert "admin (sandbox login), typed in" in page
     assert "Kept with a reason" in page and "Rewrite used" in page
 
 
@@ -411,7 +409,8 @@ def test_filters_by_pack_kind_and_date(tmp_path, monkeypatch):
     s = client.get("/v1/supervisor/summary?category=I14").json()
     assert {a["session"] for a in s["actions"]} == {esc["session"]}
     s = client.get("/v1/supervisor/summary?actor=admin%20(sandbox%20login)").json()
-    assert {a["kind"] for a in s["actions"]} == {"review_opened"}
+    # the release is the signed-in supervisor's too: a typed-in id no longer releases
+    assert {a["kind"] for a in s["actions"]} == {"review_opened", "withheld_released"}
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     tomorrow = datetime.fromtimestamp(time.time() + 86400, UTC).strftime("%Y-%m-%d")
     yesterday = datetime.fromtimestamp(time.time() - 86400, UTC).strftime("%Y-%m-%d")
@@ -482,15 +481,14 @@ def test_rows_since_reads_one_period(tmp_path):
 # ---------- the panel ----------
 
 
-def test_the_panel_keeps_tokens_and_has_the_review_mode(tmp_path, monkeypatch):
+def test_the_panel_has_the_review_mode(tmp_path, monkeypatch):
+    # Since 2026-10-20 the panel no longer keeps session tokens in sessionStorage: the review page
+    # sends the review token only, so it shows the same stand-in view in every tab and frame.
     client, _ = _app(tmp_path, monkeypatch)
     html = client.get("/").text
     assert 'id="supervisor-link"' in html and 'href="/supervisor"' in html
     js = (STATIC / "panel.js").read_text()
-    assert (
-        "sessionStorage.setItem(TOKENS_KEY" in js
-        and "keepToken(sg.session, sg.session_token)" in js
-    )
+    assert "sessionStorage" not in js and "keepToken" not in js
     assert '"X-SoCareGuard-Review-Token"' in js and "readOnly(session, full)" in js
 
 

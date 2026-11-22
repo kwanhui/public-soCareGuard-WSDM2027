@@ -5,7 +5,7 @@
   "judge_model": "openai/gpt-4.1",
   "temperature": 0,
   "pack": "domestic-violence",
-  "ethics_draft": "gpt-4.1-mini, recorded once on 2026-09-28 from the outbound text in round2/evidence/ethics-6-i6-self-determination.json (tests/test_round2_screen.py)",
+  "ethics_draft": "gpt-4.1-mini, recorded once on 2026-09-28 from the outbound text of the round-2 note ETHICS-6 (tests/test_round2_screen.py)",
   "runs": [
     {
       "note": "ethics-6 (round 2, documented low-risk assessment)",

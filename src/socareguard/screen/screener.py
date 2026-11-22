@@ -35,7 +35,11 @@ class Screener:
         leaks: list | None = None,
         context: str = "",
         audience: str | None = None,
+        judge_instruction: str | None = None,
     ) -> list[Flag]:
+        """``instruction`` is what the practitioner typed, for the local rules. The judge, which
+        is a provider outside the premises, receives ``judge_instruction`` (the instruction as it
+        left, with stand-ins) when the caller has it."""
         out: list[Flag] = []
         oc = rules.over_caution(draft, instruction)
         if oc and pack.action_for("OVER_CAUTION"):
@@ -75,7 +79,13 @@ class Screener:
         if audience == "care-team":
             extra["audience"] = audience
             extra["care_team_kind"] = rules.care_team_kind(instruction, pack.id)
-        judged = self.judge(pack, instruction, draft, context, **extra)
+        judged = self.judge(
+            pack,
+            instruction if judge_instruction is None else judge_instruction,
+            draft,
+            context,
+            **extra,
+        )
         for jf in judged:
             if jf.label in rules.AUDIENCE_DEPENDENT and not external:
                 continue
@@ -114,10 +124,13 @@ class Screener:
         leaks: list | None = None,
         context: str = "",
         audience: str | None = None,
+        judge_instruction: str | None = None,
     ) -> tuple[list[Flag], str, list]:
         if audience not in rules.AUDIENCES:
             audience = rules.resolve_audience(instruction, pack.id)
-        flags = self.flags_for(draft, pack, instruction, leaks, context, audience)
+        flags = self.flags_for(
+            draft, pack, instruction, leaks, context, audience, judge_instruction=judge_instruction
+        )
         baseline: list[str] = []
         if self.use_baseline:
             from socareguard.screen.baseline import moderation_flags

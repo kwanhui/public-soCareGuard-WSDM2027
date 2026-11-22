@@ -10,7 +10,10 @@ or ``SOCAREGUARD_API_KEYS`` is set: a keyed deployment signs a supervisor in wit
 instead. A sandbox sign-in is recorded in the ledger as ``admin (sandbox login)``, and the ledger
 marks that actor as typed in, not checked.
 
-A sign-in sets an HTTP-only cookie that names an entry in this process's memory. Every visitor who
+A sign-in sets an HTTP-only cookie that names an entry in this process's memory. Over https the
+cookie is SameSite=None, Secure and Partitioned, so that it holds inside the Hugging Face Space
+page's frame, and ``socareguard.proxy.app`` checks the Origin (or Referer) of every request that
+changes state with it, in place of the protection that SameSite=Strict gave. Every visitor who
 types the shared credential is the same supervisor, so the view that the login opens is limited
 (see ``socareguard.proxy.app``): it lists every session's action rows, but it opens another
 browser's session with stand-ins only.

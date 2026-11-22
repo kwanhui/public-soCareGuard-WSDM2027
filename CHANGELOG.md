@@ -1,5 +1,156 @@
 # Changelog
 
+## 2026-11-22: accepted to the WSDM 2027 Demonstrations Track
+
+- The README, its BibTeX entry and `CITATION.cff` cite the paper as accepted to the WSDM 2027
+  Demonstrations Track, with the DOI to follow after publication. The hosted demo is now linked at
+  its direct address, https://kwanhui-socareguard.hf.space.
+- The README says that `admin` / `demo1234` is a shared demonstration credential on a public
+  sandbox, and that a deployment with real case data needs proper authentication.
+- `/healthz` reports `build_commit`, the public commit that the hosted Space was built from
+  (`null` in a local run), and the README points to it as the way to see which commit the live
+  demo runs. Each deployed commit is tagged `space-YYYY-MM-DD`. Package version 0.2.0 is used
+  throughout.
+- The test fixtures name invented schools only, and their one e-mail address is at example.org.
+  The snapshot build refuses an address outside example.org in the drafts or the tests.
+- The corpus tests that check the drafts for the replaced institutions and for internal markers
+  hold those names as truncated hashes, so the repository no longer carries them in plain text.
+- Comments and docstrings describe each check by what it tests and the date of the fix, and two
+  older entries of this changelog and two sentences of `docs/metrics.md` are reworded to match.
+  The report generator now writes the same two sentences, so a regenerated `docs/metrics.md`
+  matches the committed one apart from its date and commit line.
+  Code, assertions, stored model replies and result files are unchanged.
+- The reading of PDPC's Advisory Guidelines on Use of Personal Data in Generative AI is corrected
+  in the README, `docs/metrics.md` and the ledger's docstring: documenting the detection and
+  redaction rate is an example of good practice for a System Provider (section 8), and section 9.3
+  does not ask a deployer to keep a record.
+- `docs/metrics.md` accounts for all 42 I10 flags on the external drafts (41 on disability and
+  domestic-violence drafts, and one on a youth school letter that also carries I14).
+- The detectors, the screen, the thresholds, the packs and the reported numbers are unchanged.
+
+## 2026-10-20 (late night): 40 requests per hour per address and a USD 5 daily spend ceiling
+
+- The hosted sandbox now allows 40 chat requests per hour from each address, up from 20
+  (`SOCAREGUARD_MAX_REQUESTS_PER_HOUR=40` in the `Dockerfile`). A refusal names the limit and
+  carries the code `rate_limit_exceeded`.
+- New setting `SOCAREGUARD_DAILY_SPEND_USD`: a ceiling on the estimated model spend of the whole
+  process per UTC day. Unset or 0 means no ceiling. The `Dockerfile` sets 5 and
+  `docker-compose.yml` sets 0 for an agency server. Each chat request is counted at the per-call
+  costs under "Cost" in `docs/metrics.md`: the openai/gpt-4.1 judge (USD 0.0057) on every request,
+  replay included, and the drafting call (USD 0.0004) when the reply is live. A request is charged
+  before it runs, so concurrent requests cannot together pass the ceiling, and the charge stays if
+  the request fails. The tally is kept in memory and a restart starts it again from zero.
+- Past the ceiling, `/v1/chat/completions` returns HTTP 429 with the code
+  `daily_budget_exhausted` and a message that the sandbox's daily model budget is used up for
+  everyone, that this is not a per-person limit, and that it resets at 00:00 UTC (08:00 Singapore
+  time). The panel shows it as its own notice. A request refused for the budget does not count
+  against the address's hourly limit. Supervisor review and release, the record, the chain check
+  and the policy pack pages make no model call and keep working.
+- `/healthz` also reports `max_requests_per_hour` and `daily_spend` (ceiling, estimate so far,
+  their ratio and the next reset), or `null` when there is no ceiling.
+- The judge, its prompt, the taxonomy, the packs, the thresholds and the decision rules are
+  unchanged.
+
+## 2026-10-20 (night): Use Case 2 states its recorded verdict; the screen is unchanged
+
+- A link check on the Space ran Use Case 2 twice: one run raised I1 and was annotated, as in the
+  paper and the demonstration video, and the other raised I1 and I6 and escalated, withholding the
+  draft. Fifteen local replays through the Space's code path (the chat route with
+  `replay_scenario`, the recorded note, the live guard and the openai/gpt-4.1 judge at
+  temperature 0) sent the judge a prompt that was the same byte for byte in every run, and the
+  note that the judge read equals the note that left the premises in this request and in the
+  2026-09-28 take. I1 came back in fifteen, I5 in seven and I6 in two (confidence 0.80 and 0.70),
+  and the two runs with I6 escalated under the pack's rule for I6. No hint from the closure rule
+  was sent. The judge is called as in the evaluation (`eval/run_screen.py` uses the same
+  `LLMJudge`, temperature 0 and no seed), and the 0.5 threshold and the decision rule are applied
+  as evaluated. The I6 flag is therefore the judge's own variation on the same input, not a
+  difference in what it read, and the judge, its prompt, the taxonomy, the packs, the thresholds
+  and the decision rules are unchanged.
+- Ten more local replays after this change, with the same prompt, raised I1 in ten, I5 in two and
+  I6 in none, so I6 came back in two of twenty-five replays in all.
+- Use Case 2 says that the screen flagged I1 under A.7.c in the recorded demonstration of
+  2026-09-28 and was annotated, and that live runs can also raise I5 and, in a few runs, I6, which
+  escalates. A replay shows the I1 card of that run (transcribed from the video) as a labelled
+  reference, as Use Case 3 does.
+- The reference beside a replay names the flags that this run raised and the recorded run did
+  not ("this run also raised I5 and I6"), as well as those it did not raise.
+
+## 2026-10-20 (evening): the same supervisor path on the Space page and the direct address
+
+- "Review and release" (and "Open read-only") now opens the review page in place of the
+  supervisor view, in the same tab, on both addresses. Before, it opened in the same frame on the
+  Space page and in a new tab on the direct address. A tab opened out of the Space page's frame
+  would not carry the sign-in cookie, so the same tab is the behaviour that works on both. The
+  review page links back to the supervisor view.
+- The review page sends the review token and the sign-in cookie, never the practitioner's session
+  token, so under the sandbox login it shows the stand-in columns whichever tab or frame created
+  the session, as the paper describes the supervisor's review. Before, a review opened in the frame
+  that had created the session showed the restored draft, and one opened on the direct address
+  showed stand-ins only. The panel no longer keeps session tokens in `sessionStorage`, and a
+  release from the review page under the sandbox login returns the draft with stand-ins. The API
+  is unchanged: a client with the session's own token still reads its own session.
+- The sign-in page and the supervisor view no longer carry a line that only a framed page showed.
+  The message with the new-tab link stays as the fallback for a browser that drops the cookie in
+  the frame, and it shows only when the cookie was dropped.
+- The queue hint and the review notes name no browser or frame: "the review page opens in place
+  of this view", and "a review opens with stand-ins only" under the sandbox login.
+
+## 2026-10-20 (later): the sandbox against the paper's account
+
+- The screen's model is a provider outside the premises, and it read the practitioner's
+  instruction as typed, so a client's name in the instruction line reached it. It now reads the
+  instruction as it left, with stand-ins, as it already read the note and the draft.
+- A replayed reply is screened against the pseudonymised note that its model was given when it
+  was recorded (the scenario's `send` event), not against this request's outbound text, which can
+  differ after a later change to the outbound rules. What left the premises still shows this
+  request's own text, and the screen event says `note_source: recorded`. Use Case 3 was the case
+  in point: its reply was recorded when the instruction line still left as "an employer
+  supervisor" and the age as "29". On the live screen, eight runs on the code of the morning's
+  release raised I10 in none, and sixteen runs after this change raised it in ten (I3, for the
+  added word "moderate", in nine; one run raised no flag). At the release used for the
+  demonstration video (space-2026-09-28-2), eight runs raised I10 in eight.
+- Use Case 3 says that the screen flagged I10 in the recorded demonstration of 2026-09-28 and that
+  its flags can differ between runs, and a replay shows the two cards of that run (I10 and I3,
+  transcribed from the video) as a labelled reference beside the live result.
+- Use Case 4 keeps a reply from each provider. The anthropic/claude-sonnet-5 reply was recorded on
+  2026-10-20 with one live call through the guard; it does not mention the self-harm history, and
+  the scenario card says so. The panel lists each recording with its model and date under
+  "Recorded reply from", and a request takes `replay_model` to choose one. A replay names the
+  recording's model in the record, since no provider is called.
+- Only a signed-in supervisor releases a withheld draft. The practitioner's panel has no release
+  form: it shows the session id and points to the supervisor view, where the review page carries
+  the release. A typed-in supervisor id with the practitioner's session token no longer releases
+  anything in the sandbox. Where keys are set, a supervisor key still does.
+- The banner opens with the decision's name (Pass, Flagged (annotate), Regenerate, Escalate), and
+  a flag card's pill names its default action.
+- `/packs/{id}` shows a policy pack as its YAML file and `/ledger/check` shows the chain check of
+  the record, each with a link back to the panel and to its JSON route. The footer and "Open the
+  pack" link to them. `/v1/packs`, `/v1/packs/{id}` and `/v1/ledger/verify` are unchanged.
+- "Use this from your own application" adds a curl line for `/v1/packs` and one for a replay with
+  `replay_scenario`.
+- The review page no longer repeats the practitioner's line that there is no release on the panel,
+  since the review page is where the release is. While a replay runs, the status line says that
+  the recorded reply is replayed (usually 3 to 9 seconds on the Space, longer for the first request
+  after it wakes) and no longer that the model provider is called.
+
+## 2026-10-20: supervisor sign-in inside the Space page's frame
+
+- The Hugging Face Space page shows the app in a frame from another site, where the browser
+  dropped the `SameSite=Strict` supervisor cookie and the sign-in form came back with no message.
+  Over https the cookie is now `SameSite=None; Secure; Partitioned`, and over plain http
+  `SameSite=Lax`. Sign-out clears it with the same attributes. `SOCAREGUARD_COOKIE_SECURE`
+  (`auto`, `1`, `0`) overrides the choice.
+- An origin check replaces the protection that `SameSite=Strict` gave: the sign-in and sign-out
+  forms, and every request that changes state with the cookie and no `Authorization` header
+  (including the release of a withheld draft, a GET that writes a ledger row), are refused with 403
+  when their `Origin` (or else `Referer`) is another site. `SOCAREGUARD_ALLOWED_ORIGINS` lists
+  further origins to accept.
+- The sign-in redirects to `/supervisor?signin=1`. Arriving there without a sign-in shows a message
+  that the browser did not keep the cookie, with a link to open the supervisor view in a new tab.
+  In a frame, the sign-in page and the supervisor view show that link, and a review link opens in
+  the same frame, where the cookie is kept. The queue hint then says that the review page opens in this
+  frame, not in a new tab.
+
 ## 2026-09-28: care-team tier, household surrogates and the supervisor view
 
 ### Supervisor view

@@ -11,8 +11,9 @@ recipients and the ledger row, which the transparency panel renders.
 for a release, and one period of escalations, releases, overrides, accepted rewrites and opened
 reviews. With ``SOCAREGUARD_SUPERVISOR_KEYS`` set it needs a supervisor key. Without keys it
 offers the sandbox login of ``socareguard.proxy.demo_login``, which is for demonstration only.
-Under that shared login, a review link into a session that another browser created opens the
-pseudonymised columns only (what left, what came back, the flags and the ledger rows).
+Under that shared login, the review page opens the pseudonymised columns only (what left, what
+came back, the flags and the ledger rows), since it sends the review token without the session's
+own token.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ import uuid
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, quote
+from urllib.parse import parse_qs, quote, urlsplit
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -36,6 +37,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from socareguard import __version__
+from socareguard.build_info import build_commit
 from socareguard.detect import sg as sg_recognisers
 from socareguard.policy.loader import PACK_DIR, available_packs, load_pack
 from socareguard.proxy import demo_login
@@ -63,10 +66,30 @@ SUPERVISOR_KEYS = {
 SANDBOX = os.environ.get("SOCAREGUARD_SANDBOX", "0") == "1"
 # honour X-Forwarded-For, X-Forwarded-Proto and X-Forwarded-Host (only behind a proxy you control)
 TRUST_PROXY = os.environ.get("SOCAREGUARD_TRUST_PROXY", "0") == "1"
+# The supervisor cookie. With Secure on (https, forwarded https, or SOCAREGUARD_COOKIE_SECURE=1)
+# it is SameSite=None and Partitioned, so the sign-in holds when the app is shown in another
+# site's frame (the Hugging Face Space page frames the app from hf.space). Over plain http
+# (local runs) it is SameSite=Lax without Secure. "1" forces Secure on, "0" off, "auto" decides.
+COOKIE_SECURE = os.environ.get("SOCAREGUARD_COOKIE_SECURE", "auto").strip().lower()
+# Origins, besides the app's own, from which a cookie-authenticated request that changes state is
+# accepted (comma-separated, e.g. https://agency.example). The app's own origin needs no entry.
+ALLOWED_ORIGINS = {
+    o.strip().rstrip("/").lower()
+    for o in os.environ.get("SOCAREGUARD_ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+}
 RETENTION_HOURS = float(
     os.environ.get("SOCAREGUARD_RETENTION_HOURS", "24" if SANDBOX else "0")
 )  # 0 = keep until purged by DELETE /v1/sessions/{id}
 MAX_PER_HOUR = int(os.environ.get("SOCAREGUARD_MAX_REQUESTS_PER_HOUR", "0"))  # 0 = unlimited
+# A ceiling on the estimated model spend of the whole process per UTC day, in USD. Unset or 0
+# means no ceiling. The estimate counts each request's calls at the per-call costs in
+# docs/metrics.md ("Cost", docs/metrics/cost-v1.1.json): the conduct judge on every request,
+# replay included, and the drafting call when the reply is live. The tally is kept in memory, so
+# a restart starts the day's count again from zero.
+DAILY_SPEND_USD = float(os.environ.get("SOCAREGUARD_DAILY_SPEND_USD", "0") or 0)
+JUDGE_CALL_USD = 0.0057  # openai/gpt-4.1, 2334 input and 135 output tokens at list price
+DRAFT_CALL_USD = 0.0004  # openai/gpt-4.1-mini, 169 input and 197 output tokens at list price
 MAX_SESSIONS = int(os.environ.get("SOCAREGUARD_MAX_SESSIONS", "500"))
 BAD_JSON = "the request body is not valid JSON"
 _HERE = Path(__file__).resolve().parent
@@ -125,6 +148,8 @@ def load_scenarios() -> list[dict[str, Any]]:
                         for x in f.read_text().splitlines()
                         if x.strip()
                     ),
+                    "recordings": _recording_labels(head["id"]),
+                    "recorded_screen": head.get("recorded_screen"),
                 }
             )
     # The recipient check (the audience gate): one note, two recipients. Built on the disability scenario so the
@@ -152,6 +177,8 @@ def load_scenarios() -> list[dict[str, Any]]:
                 "note": uc1["note"],
                 "compare_instruction": None,
                 "has_recording": (_SCENARIO_DIR / "escalation.jsonl").exists(),
+                "recordings": _recording_labels("escalation"),
+                "recorded_screen": None,
             }
         )
     uc3 = next((s for s in out if s["id"] == "uc3-disability"), None)
@@ -174,6 +201,8 @@ def load_scenarios() -> list[dict[str, Any]]:
                     "Summarise this care plan update for my own case record and list the next steps."
                 ),
                 "has_recording": False,
+                "recordings": [],
+                "recorded_screen": None,
             }
         )
     return out
@@ -199,31 +228,133 @@ class RateLimiter:
             return True
 
 
+class SpendMeter:
+    """Estimated model spend of this process for the current UTC day, against a ceiling. A
+    request is charged before it runs, so concurrent requests cannot together pass the ceiling,
+    and the charge is kept if the request then fails, since a provider call may already have
+    been made."""
+
+    def __init__(self, ceiling_usd: float):
+        self.ceiling = ceiling_usd
+        self.day = ""
+        self.spent = 0.0
+        self.lock = threading.Lock()
+
+    @staticmethod
+    def _today() -> str:
+        return time.strftime("%Y-%m-%d", time.gmtime())
+
+    def _roll(self) -> None:
+        today = self._today()
+        if today != self.day:
+            self.day, self.spent = today, 0.0
+
+    def has_room(self, cost: float) -> bool:
+        if self.ceiling <= 0:
+            return True
+        with self.lock:
+            self._roll()
+            return self.spent + cost <= self.ceiling + 1e-9
+
+    def charge(self, cost: float) -> bool:
+        """Add ``cost`` to today's tally and return True, or return False and add nothing when it
+        would take the tally past the ceiling."""
+        with self.lock:
+            self._roll()
+            if self.ceiling > 0 and self.spent + cost > self.ceiling + 1e-9:
+                return False
+            self.spent += cost
+            return True
+
+    @staticmethod
+    def resets_at() -> str:
+        """The next 00:00 UTC, as an ISO 8601 timestamp."""
+        t = time.gmtime(time.time() + 86400)
+        return time.strftime("%Y-%m-%dT00:00:00Z", t)
+
+    def report(self) -> dict[str, Any] | None:
+        if self.ceiling <= 0:
+            return None
+        with self.lock:
+            self._roll()
+            spent = self.spent
+        return {
+            "ceiling_usd": self.ceiling,
+            "spent_usd_estimate": round(spent, 4),
+            "ratio": round(min(spent / self.ceiling, 1.0), 4),
+            "resets_at": self.resets_at(),
+        }
+
+
+def _spend_message(ceiling: float) -> str:
+    left = 86400 - int(time.time()) % 86400
+    h, m = divmod(left // 60, 60)
+    return (
+        f"The sandbox's daily model budget (USD {ceiling:g}) is used up for everyone today. "
+        "This is a shared limit, not a per-person one. It resets at 00:00 UTC (08:00 Singapore "
+        f"time), in {h} h {m:02d} min. Supervisor review and release, the record and the policy "
+        "packs still work in the meantime"
+    )
+
+
 class ChatRequest(BaseModel):
     model: str | None = None
     messages: list[dict[str, Any]]
     temperature: float | None = None
     max_tokens: int | None = None
     stream: bool = False
-    replay_scenario: str | None = None  # panel only: reuse a scenario's recorded model reply
+    replay_scenario: str | None = None  # reuse a shipped scenario's recorded model reply
+    replay_model: str | None = None  # which recording, when the scenario keeps one per provider
 
 
-def _fixture_for(scenario_id: str) -> dict[str, Any] | None:
-    """The recorded reply and seed of a shipped scenario, so the demo can replay the provider
-    call deterministically. The guard itself still runs live."""
+def _recordings(scenario_id: str) -> list[dict[str, Any]]:
+    """The recorded model replies of a shipped scenario, in file order. Each carries the seed of
+    the scenario's first turn, the provider, model and date of the recording, and the
+    pseudonymised text that the model was given (the ``send`` event before the reply), when the
+    script has it."""
     f = _SCENARIO_DIR / f"{scenario_id}.jsonl"
-    if not f.exists():
-        return None
-    seed, text = None, None
+    if not f.exists() or "/" in scenario_id or "\\" in scenario_id:
+        return []
+    seed, last_send, out = None, None, []
     for line in f.read_text().splitlines():
         if not line.strip():
             continue
         d = json.loads(line)
         if d.get("kind") == "user_turn" and seed is None:
             seed = d.get("seq")
-        elif d.get("kind") == "receive" and text is None:
-            text = d.get("text")
-    return {"seed": seed, "text": text} if text else None
+        elif d.get("kind") == "send":
+            last_send = d.get("outbound_text")
+        elif d.get("kind") == "receive" and d.get("text"):
+            out.append(
+                {
+                    "seed": seed,
+                    "text": d["text"],
+                    "provider": d.get("provider"),
+                    "model": d.get("model"),
+                    "recorded_at": d.get("recorded_at"),
+                    "outbound_text": last_send,
+                }
+            )
+            last_send = None
+    return out
+
+
+def _fixture_for(scenario_id: str, model: str | None = None) -> dict[str, Any] | None:
+    """The recorded reply and seed of a shipped scenario, so the demo can replay the provider
+    call deterministically. With ``model``, the recording from that model (a scenario may keep
+    one per provider); otherwise the first. The guard itself still runs live."""
+    recs = _recordings(scenario_id)
+    if model:
+        recs = [r for r in recs if r["model"] == model]
+    return recs[0] if recs else None
+
+
+def _recording_labels(scenario_id: str) -> list[dict[str, str]]:
+    """What the panel lists for a scenario's recordings: the model and the date it was recorded."""
+    return [
+        {"model": r["model"] or "", "recorded_on": (r["recorded_at"] or "")[:10]}
+        for r in _recordings(scenario_id)
+    ]
 
 
 class OverrideRequest(BaseModel):
@@ -322,6 +453,96 @@ def _base_url(request: Request) -> str:
     return str(url).rstrip("/")
 
 
+def _cookie_secure(request: Request) -> bool:
+    """Whether the supervisor cookie is marked Secure. Behind the Space's proxy the app may see
+    plain http, so the forwarded scheme counts as well as the configuration."""
+    if COOKIE_SECURE in ("1", "true", "yes", "on"):
+        return True
+    if COOKIE_SECURE in ("0", "false", "no", "off"):
+        return False
+    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    return proto == "https" or request.url.scheme == "https"
+
+
+def _set_supervisor_cookie(
+    resp: Response, request: Request, value: str, clear: bool = False
+) -> None:
+    """Set (or clear) the supervisor cookie, with the same attributes both times. Secure:
+    SameSite=None and Partitioned (CHIPS), so it is kept in a cross-site frame. Plain http (local
+    runs): SameSite=Lax, since a browser refuses SameSite=None without Secure. Starlette sets
+    Partitioned only on Python 3.14 and later, so the attribute is appended to the header here."""
+    secure = _cookie_secure(request)
+    resp.set_cookie(
+        demo_login.COOKIE,
+        value,
+        max_age=0 if clear else None,
+        expires=0 if clear else None,
+        path="/",
+        httponly=True,
+        secure=secure,
+        samesite="none" if secure else "lax",
+    )
+    if secure:
+        name, header = next(
+            (k, v)
+            for k, v in reversed(resp.raw_headers)
+            if k == b"set-cookie" and v.startswith(demo_login.COOKIE.encode() + b"=")
+        )
+        i = resp.raw_headers.index((name, header))
+        resp.raw_headers[i] = (name, header + b"; Partitioned")
+
+
+def _norm_origin(scheme: str, netloc: str) -> str:
+    netloc = netloc.lower()
+    if (scheme == "https" and netloc.endswith(":443")) or (
+        scheme == "http" and netloc.endswith(":80")
+    ):
+        netloc = netloc.rsplit(":", 1)[0]
+    return netloc
+
+
+def _same_origin(request: Request) -> bool:
+    """False when the request names a source (Origin, else Referer) that is neither this app's
+    host (the Host or X-Forwarded-Host header) nor in SOCAREGUARD_ALLOWED_ORIGINS. With neither
+    header, a browser's Sec-Fetch-Site of cross-site or same-site is refused too; a request with
+    no such header at all (a script, curl, a test client) passes."""
+    source = request.headers.get("origin") or request.headers.get("referer")
+    if not source:
+        return request.headers.get("sec-fetch-site", "").lower() not in ("cross-site", "same-site")
+    if source.strip().lower() == "null":
+        return False
+    parts = urlsplit(source.strip())
+    scheme = parts.scheme.lower()
+    if not scheme or not parts.netloc:
+        return False
+    if f"{scheme}://{parts.netloc.lower()}".rstrip("/") in ALLOWED_ORIGINS:
+        return True
+    own = {
+        h.strip()
+        for h in (
+            request.headers.get("host", ""),
+            request.headers.get("x-forwarded-host", "").split(",")[0],
+        )
+        if h.strip()
+    }
+    netloc = _norm_origin(scheme, parts.netloc)
+    return any(netloc in (_norm_origin("https", h), _norm_origin("http", h)) for h in own)
+
+
+def _csrf_guarded(request: Request) -> bool:
+    """The requests that the origin check applies to: the sign-in and sign-out forms, and every
+    request that changes state and carries the supervisor cookie without an Authorization
+    header. The release of a withheld draft is a GET that writes a ledger row, so it counts."""
+    path, method = request.url.path, request.method.upper()
+    if method == "POST" and path in ("/supervisor/login", "/supervisor/logout"):
+        return True
+    if demo_login.COOKIE not in request.cookies or request.headers.get("authorization"):
+        return False
+    if method not in ("GET", "HEAD", "OPTIONS"):
+        return True
+    return path.startswith("/v1/sessions/") and path.endswith("/withheld")
+
+
 def _require_key(request: Request) -> None:
     if not API_KEYS:
         return
@@ -355,7 +576,7 @@ def _keys_configured() -> bool:
     return bool(API_KEYS or SUPERVISOR_KEYS)
 
 
-# The event kinds a review token opens on another browser's session. The detection event carries
+# The event kinds a review token opens without the session's own token or a key. The detection event carries
 # the typed text and is left out. The generalisation event keeps its rule ids only, and the leak
 # check keeps its counts and the stand-ins the model reformatted, without the echoed originals.
 _REVIEW_EVENTS = {
@@ -390,12 +611,13 @@ def _pseudonymise(text: str | None, pairs: list[tuple[str, str]]) -> str | None:
 
 
 def create_app(guard: Guard | None = None) -> FastAPI:
-    app = FastAPI(title="SoCareGuard", version="0.2.0")
+    app = FastAPI(title="SoCareGuard", version=__version__)
     app.state.guard = guard or Guard()
     # The session index (result, token hash, pack, withheld state, flags) lives in the vault's
     # SQLite file, so a restart keeps every open session readable and releasable.
     app.state.sessions = SessionStore(app.state.guard.vault, MAX_SESSIONS)
     app.state.limiter = RateLimiter(MAX_PER_HOUR)
+    app.state.spend = SpendMeter(DAILY_SPEND_USD)
     app.state.logins = demo_login.Logins()
     app.state.last_sweep = 0.0
     if RETENTION_HOURS <= 0:
@@ -541,6 +763,17 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     templates = Jinja2Templates(directory=_HERE / "templates")
     scenarios = load_scenarios()
 
+    @app.middleware("http")
+    async def _origin_guard(request: Request, call_next):
+        """The supervisor cookie is SameSite=None so that it holds in the Space's frame, which
+        drops the protection SameSite=Strict gave against cross-site requests. This check puts it
+        back for the requests that ``_csrf_guarded`` names."""
+        if _csrf_guarded(request) and not _same_origin(request):
+            return _openai_error(
+                403, "cross-origin request refused: the origin is not this app", "bad_origin"
+            )
+        return await call_next(request)
+
     @app.exception_handler(HTTPException)
     async def _http_error(_request: Request, exc: HTTPException):
         return _openai_error(exc.status_code, str(exc.detail))
@@ -601,7 +834,15 @@ def create_app(guard: Guard | None = None) -> FastAPI:
 
     @app.get("/healthz")
     def healthz():
-        return {"ok": True, "packs": available_packs(), "sandbox": SANDBOX}
+        return {
+            "ok": True,
+            "packs": available_packs(),
+            "sandbox": SANDBOX,
+            "max_requests_per_hour": MAX_PER_HOUR,
+            "daily_spend": app.state.spend.report(),
+            # the public commit the deployed build was made from, or null in a local run
+            "build_commit": build_commit(),
+        }
 
     @app.get("/v1/models")
     def models(request: Request):
@@ -654,10 +895,20 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             raise HTTPException(
                 400, "X-SoCareGuard-Audience must be internal, care-team, external or auto"
             )
+        # The calls this request would pay for: the judge (when the screen is on) and, unless the
+        # reply is replayed, the drafting call. Checked before the per-address limit, so a
+        # request refused for the shared budget does not use up one of the address's requests.
+        cost = (JUDGE_CALL_USD if app.state.guard.screener is not None else 0.0) + (
+            0.0 if req.replay_scenario else DRAFT_CALL_USD
+        )
+        if not app.state.spend.has_room(cost):
+            return _openai_error(429, _spend_message(DAILY_SPEND_USD), "daily_budget_exhausted")
         if not app.state.limiter.allow(_client_ip(request)):
-            raise HTTPException(
+            return _openai_error(
                 429,
-                "rate limit: this sandbox allows a fixed number of requests per hour per address",
+                f"rate limit: this sandbox allows {MAX_PER_HOUR} requests per hour from each "
+                "address. Try again later in the hour",
+                "rate_limit_exceeded",
             )
         if req.stream:
             raise HTTPException(400, "streaming is not supported by the guardrail proxy")
@@ -666,17 +917,31 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             pack_id, pack_defaulted = DEFAULT_PACK, True
         if pack_id not in available_packs():
             raise HTTPException(400, f"unknown pack {pack_id}")
-        model_defaulted = req.model not in ALLOWED_MODELS
-        model = DEFAULT_MODEL if model_defaulted else req.model
+        fixture = None
+        if req.replay_scenario:
+            fixture = _fixture_for(req.replay_scenario, req.replay_model)
+            if fixture is None:
+                raise HTTPException(
+                    400,
+                    f"no recorded reply for scenario {req.replay_scenario}"
+                    + (f" from {req.replay_model}" if req.replay_model else ""),
+                )
+        if fixture is not None and fixture.get("model"):
+            # A replay makes no provider call: the record names the model that wrote the reply.
+            model, model_defaulted = fixture["model"], False
+        else:
+            model_defaulted = req.model not in ALLOWED_MODELS
+            model = DEFAULT_MODEL if model_defaulted else req.model
         kwargs = {
             k: v
             for k, v in (("temperature", req.temperature), ("max_tokens", req.max_tokens))
             if v is not None
         }
         actor = _actor(request) + ("" if _attested(request) else " (self-asserted)")
+        if not app.state.spend.charge(cost):
+            return _openai_error(429, _spend_message(DAILY_SPEND_USD), "daily_budget_exhausted")
         sweep()
         t0 = time.time()
-        fixture = _fixture_for(req.replay_scenario) if req.replay_scenario else None
         try:
             res = _run(req, pack_id, model, kwargs, x_socareguard_session, actor, fixture, audience)
         except HTTPException:
@@ -713,6 +978,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             provider_kwargs=kwargs,
             actor=actor,
             reply_fixture=fixture["text"] if fixture else None,
+            reply_fixture_note=fixture.get("outbound_text") if fixture else None,
             seed=fixture["seed"] if fixture else None,
             audience=None if audience == "auto" else audience,
             audience_header=audience,
@@ -747,6 +1013,15 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "events": [e.model_dump() for e in res.events],
                 "recipients": res.recipients,
                 "replayed": bool(fixture),
+                "recording": (
+                    {
+                        "model": fixture.get("model"),
+                        "recorded_on": (fixture.get("recorded_at") or "")[:10],
+                        "screened_with_recorded_note": bool(fixture.get("outbound_text")),
+                    }
+                    if fixture
+                    else None
+                ),
                 "ledger_row_sha256": res.ledger_row["row_sha256"],
                 "ledger_row": res.ledger_row,
                 "latency_s": round(time.time() - t0, 1),
@@ -854,7 +1129,6 @@ def create_app(guard: Guard | None = None) -> FastAPI:
     def session_withheld(
         session: str,
         request: Request,
-        x_socareguard_role: str | None = Header(default=None),
         reason: str = Query(default=""),
     ):
         """The draft that an escalation withheld, released to a supervisor only.
@@ -862,38 +1136,37 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         A signed-in supervisor releases it without the practitioner's session token: a supervisor
         key in the Authorization header, the cookie of a key sign-in, or (in a deployment without
         keys) the cookie of the sandbox login, which stands in for the role header and the token
-        and is recorded as "admin (sandbox login)", typed in. Without a supervisor identity, a
-        deployment with keys refuses the release, and the sandbox requires the self-asserted
-        supervisor role and the session token, as the other session routes do, and the ledger row
-        marks the role as self-asserted. A reason is required, as for an override.
+        and is recorded as "admin (sandbox login)", typed in. Without a supervisor identity the
+        release is refused: a practitioner's session token, an API key or a typed-in supervisor id
+        (the ``X-SoCareGuard-Role`` header, which earlier versions accepted in the sandbox) releases
+        nothing. A reason is required, as for an override.
 
         The reply is re-identified when the caller may open the full view of the session (its own
         token, an API key or a supervisor key); otherwise it carries the stand-ins, and ``view``
         says ``pseudonymised``."""
         who = supervisor_identity(request)
-        if who is not None:
-            res = app.state.sessions.get(session)
-            if not res:
-                raise HTTPException(404, "unknown session")
-        else:
-            _require_key(request)
+        if who is None:
+            # A typed-in supervisor id is not a sign-in: the draft stays withheld until a
+            # supervisor signs in (a supervisor key, or the sandbox login where no key is set).
             if _keys_configured():
                 raise HTTPException(
                     403, "release requires a key listed in SOCAREGUARD_SUPERVISOR_KEYS"
                 )
-            res = authorised(session, request)
-            if (x_socareguard_role or "").lower() != "supervisor":
-                raise HTTPException(403, "a withheld draft is released to a supervisor only")
+            raise HTTPException(
+                403,
+                "a withheld draft is released by a signed-in supervisor only: sign in at "
+                "/supervisor and release it from the review page",
+            )
+        res = app.state.sessions.get(session)
+        if not res:
+            raise HTTPException(404, "unknown session")
         if not res.withheld:
             raise HTTPException(400, "nothing was withheld in this session")
         if not reason.strip():
             raise HTTPException(400, "a reason for the release is required")
         if _reason_has_identifier(reason):
             raise HTTPException(400, REASON_IDENTIFIER)
-        if who is not None:
-            actor, attested = who
-        else:
-            actor, attested = _actor(request) + " (self-asserted supervisor)", False
+        actor, attested = who
         prior = [
             {"row_sha256": r["row_sha256"], "actor": r.get("actor"), "ts": r.get("ts")}
             for r in app.state.guard.ledger.rows()
@@ -982,6 +1255,9 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         every row from some point onwards still verifies here; compare ``head_sha256`` with the
         shipped log to detect it."""
         _require_key(request)
+        return chain_report(expected_rows)
+
+    def chain_report(expected_rows: int | None = None) -> dict[str, Any]:
         r = app.state.guard.ledger.report(expected_rows)
         n = r["rows"]
         if r["ok"]:
@@ -1000,6 +1276,44 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "the host is the deployer's step (ship the server log)"
             ),
         }
+
+    # ---------- HTML pages for a browser (the JSON routes above are unchanged) ----------
+    @app.get("/ledger/check", response_class=HTMLResponse)
+    def chain_page(request: Request):
+        """The chain check as a page with a way back to the panel; /v1/ledger/verify is the
+        same check as JSON."""
+        _require_key(request)
+        return templates.TemplateResponse(
+            request,
+            "chain.html",
+            {"sandbox": SANDBOX, "r": chain_report(), "default_pack": DEFAULT_PACK},
+        )
+
+    @app.get("/packs/{pack_id}", response_class=HTMLResponse)
+    def pack_page(pack_id: str, request: Request):
+        """A policy pack shown as its YAML source file, with a way back to the panel;
+        /v1/packs/{pack_id} is the same pack as JSON."""
+        _require_key(request)
+        if pack_id not in available_packs():
+            raise HTTPException(404, f"unknown pack {pack_id}")
+        p = load_pack(pack_id)
+        return templates.TemplateResponse(
+            request,
+            "pack.html",
+            {
+                "sandbox": SANDBOX,
+                "pack": p,
+                "pack_id": pack_id,
+                "packs": available_packs(),
+                "yaml_text": (PACK_DIR / f"{pack_id}.yaml").read_text(),
+                "file_name": f"policy-packs/{pack_id}.yaml",
+                "default_pack": DEFAULT_PACK,
+            },
+        )
+
+    @app.get("/packs", response_class=HTMLResponse)
+    def packs_page(request: Request):
+        return RedirectResponse(f"/packs/{DEFAULT_PACK}", status_code=303)
 
     # ---------- supervisor view ----------
     def summary_for(request: Request) -> tuple[dict[str, Any], dict[str, str]]:
@@ -1024,7 +1338,9 @@ def create_app(guard: Guard | None = None) -> FastAPI:
             raise HTTPException(400, f"filter not understood: {e}") from e
         return summary, raw
 
-    def login_page(request: Request, status: int = 200, error: str = "") -> HTMLResponse:
+    def login_page(
+        request: Request, status: int = 200, error: str = "", cookie_lost: bool = False
+    ) -> HTMLResponse:
         return templates.TemplateResponse(
             request,
             "supervisor.html",
@@ -1033,6 +1349,7 @@ def create_app(guard: Guard | None = None) -> FastAPI:
                 "keyed": _keys_configured(),
                 "sandbox": SANDBOX,
                 "error": error,
+                "cookie_lost": cookie_lost,
                 "review_minutes": int(REVIEW_TTL_S // 60),
             },
             status_code=status,
@@ -1045,7 +1362,10 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         (a supervisor key when keys are configured, the sandbox login otherwise)."""
         who = supervisor_identity(request)
         if who is None:
-            return login_page(request, 403 if _bearer(request) else 200)
+            # A sign-in redirects here with ?signin=1. Arriving without a sign-in after one means
+            # that the browser did not keep the cookie (a frame whose cookies are blocked).
+            lost = request.query_params.get("signin") == "1"
+            return login_page(request, 403 if _bearer(request) else 200, cookie_lost=lost)
         try:
             summary, raw = summary_for(request)
             error = ""
@@ -1118,16 +1438,18 @@ def create_app(guard: Guard | None = None) -> FastAPI:
         resp: Response = (
             JSONResponse({"ok": True, "actor": actor, "attested": attested})
             if is_json
-            else RedirectResponse("/supervisor", status_code=303)
+            else RedirectResponse("/supervisor?signin=1", status_code=303)
         )
-        resp.set_cookie(demo_login.COOKIE, cookie, httponly=True, samesite="strict", path="/")
+        _set_supervisor_cookie(resp, request, cookie)
         return resp
 
     @app.post("/supervisor/logout")
     def supervisor_logout(request: Request):
         app.state.logins.end(request.cookies.get(demo_login.COOKIE))
         resp = RedirectResponse("/supervisor", status_code=303)
-        resp.delete_cookie(demo_login.COOKIE, path="/")
+        # Cleared with the attributes it was set with; a Partitioned cookie is only replaced by
+        # a Partitioned one.
+        _set_supervisor_cookie(resp, request, "", clear=True)
         return resp
 
     @app.get("/v1/supervisor/summary")

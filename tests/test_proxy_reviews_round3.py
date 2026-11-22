@@ -114,16 +114,15 @@ def test_a_withheld_draft_can_be_released_after_a_restart(tmp_path, monkeypatch)
     sg = _send(client)
     assert sg["withheld"]
     url = f"/v1/sessions/{sg['session']}/withheld?reason=safeguarding%20review"
-    h = {
-        "X-SoCareGuard-Role": "supervisor",
-        "X-SoCareGuard-Session-Token": sg["session_token"],
-        "X-SoCareGuard-Actor": "sup-9007",
-    }
+    login = {"username": "admin", "password": "demo1234"}
+    h = {"X-SoCareGuard-Session-Token": sg["session_token"]}
+    client.post("/supervisor/login", data=login, follow_redirects=False)
     first = client.get(url, headers=h).json()
     g.vault.close()
 
     client2, _ = _app(tmp_path, monkeypatch, "I14", "escalate")
-    r = client2.get(url, headers={**h, "X-SoCareGuard-Actor": "sup-another"})
+    client2.post("/supervisor/login", data=login, follow_redirects=False)
+    r = client2.get(url, headers=h)
     assert r.status_code == 200, r.text
     body = r.json()
     assert "charged with theft" in body["reply"]
@@ -407,7 +406,7 @@ def test_readme_names_the_three_pdpc_roles_once_and_the_new_limits():
         in flat
     )
     assert "in preparation" not in readme.split("## Roadmap")[1].split("##")[0]
-    assert "under review after that date" in flat
+    assert "accepted to the WSDM 2027 Demonstrations Track on 2026-11-22" in flat
     assert "Open sessions survive a restart" in flat
 
 
