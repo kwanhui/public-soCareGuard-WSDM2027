@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-23: the conduct screen is described as advisory (version 0.2.1)
+
+- The panel now says that the conduct screen is advisory and can miss a violation, so the
+  practitioner remains responsible for the reply. The sentence opens the legend above the flag
+  cards and follows "No flag." on the line shown when the screen raises none.
+- Package version 0.2.1, reported by `/openapi.json`.
+- The detectors, the screen, the thresholds, the packs and the reported numbers are unchanged.
+
 ## 2026-11-22: accepted to the WSDM 2027 Demonstrations Track
 
 - The README, its BibTeX entry and `CITATION.cff` cite the paper as accepted to the WSDM 2027

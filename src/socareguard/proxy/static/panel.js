@@ -38,7 +38,7 @@
   const PLAIN = {UNRESTORED: "A stand-in came back changed and was not restored"};
   const plainOf = (f) => ((window.TAXONOMY || {})[f.label] || {}).plain || PLAIN[f.label] || f.name || f.label;
   const recipientWord = (a) => String(a || "").replace("-", " ");
-  const FLAG_LEGEND = "Clause codes refer to the SASW Code or to the statute named on the card. DV-n and similar codes are pack rules. Precision is measured on synthetic drafts (v1.3). Confidence is the screen's own estimate. Wording that the note itself uses may be echoed without a flag.";
+  const FLAG_LEGEND = "The conduct screen is advisory and can miss a violation, so you remain responsible for the reply. Clause codes refer to the SASW Code or to the statute named on the card. DV-n and similar codes are pack rules. Precision is measured on synthetic drafts (v1.3). Confidence is the screen's own estimate. Wording that the note itself uses may be echoed without a flag.";
   const BASELINE_CAPTION = "generic harm classifier, shown for contrast";
   let current = null;      // the run shown in the columns
   let runs = {};           // {internal, external} for the recipient check

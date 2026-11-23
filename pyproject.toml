@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "socareguard"
-version = "0.2.0"
+version = "0.2.1"
 description = "On-premise guardrail proxy for commercial LLMs in Singapore social service practice: reversible pseudonymisation outbound, professional-conduct screening inbound."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
