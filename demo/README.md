@@ -47,7 +47,7 @@ synthetic-data sandbox with a per-address rate limit of 40 requests per hour
 (`SOCAREGUARD_DAILY_SPEND_USD`, reset at 00:00 UTC), and
 `docker compose up` provides the on-premise path for reproducing the demo.
 
-The demo video is at https://youtu.be/vYSguiKSW-g (captions only, no audio, with live model
+The demo video is at https://youtu.be/a5n2YeiDrzY (captions only, no audio, with live model
 replies). It was produced with separate recording tooling that is not part of this repository.
 "Run your own copy" in the top-level README describes how to host the same demo yourself.
 

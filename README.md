@@ -25,7 +25,7 @@ Andrew Z H Yee. Accepted to the WSDM 2027 Demonstrations Track (notified 2026-11
 - Running version: the `build_commit` field of https://kwanhui-socareguard.hf.space/healthz
   names the commit of this repository that the live demo runs. Each deployed commit is tagged in
   this repository as `space-YYYY-MM-DD`, with `-2`, `-3` and so on for later deploys on the same day.
-- Demo video: https://youtu.be/vYSguiKSW-g
+- Demo video: https://youtu.be/a5n2YeiDrzY
 - How to cite: [CITATION.cff](CITATION.cff), or the BibTeX entry under [Citation](#citation)
 - How to host your own copy: [Run your own copy](#run-your-own-copy)
 
